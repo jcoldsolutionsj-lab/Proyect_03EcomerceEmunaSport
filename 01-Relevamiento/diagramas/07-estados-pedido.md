@@ -1,40 +1,42 @@
 # 07 – Diagrama de estados del pedido
 
-Transiciones permitidas. Cualquier otra se rechaza. Todas las ejecuta `orders.services.change_status()` y quedan en el historial. Fuente: `03-flujo-pedidos-estados.md`.
+Transiciones permitidas. Cualquier otra se rechaza. Todas las ejecuta `pedidos.servicios.cambiar_estado()` y quedan en `TBL_LPEDIDO_ESTADO`. Fuente: `03-flujo-pedidos-estados.md`.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> NEW : cliente envía el pedido
+  [*] --> NUEVO : cliente envía pedido (AGENCIA o DELIVERY_LIMA)
+  [*] --> COTIZADO : cliente envía pedido (PUNTO_ENCUENTRO o RECOJO, envío S/ 0)
 
-  NEW : NEW - Nuevo
-  QUOTED : QUOTED - Cotizado
-  PAID : PAID - Pago confirmado
-  SHIPPED : SHIPPED - Enviado
-  DELIVERED : DELIVERED - Entregado
-  CANCELLED : CANCELLED - Cancelado
-  REJECTED : REJECTED - Rechazado
+  NUEVO : NUEVO - Falta cotizar envío
+  COTIZADO : COTIZADO - Total definido
+  PAGADO : PAGADO - Pago confirmado y stock descontado
+  ENVIADO : ENVIADO - En agencia o delivery
+  ENTREGADO : ENTREGADO - Recibido por el cliente
+  CANCELADO : CANCELADO - Desistió o no pagó
+  RECHAZADO : RECHAZADO - No aceptado por Richard
 
-  NEW --> QUOTED : Richard cotiza el envío
-  NEW --> CANCELLED : sin efecto en stock
-  NEW --> REJECTED : sin efecto en stock
+  NUEVO --> COTIZADO : Richard cotiza el envío
+  NUEVO --> CANCELADO : sin efecto en stock
+  NUEVO --> RECHAZADO : sin efecto en stock
 
-  QUOTED --> NEW : corregir cotización
-  QUOTED --> PAID : confirma pago y descuenta stock
-  QUOTED --> CANCELLED : sin efecto en stock
-  QUOTED --> REJECTED : sin efecto en stock
+  COTIZADO --> NUEVO : corregir cotización
+  COTIZADO --> PAGADO : confirma pago y descuenta stock (VENTA)
+  COTIZADO --> CANCELADO : sin efecto en stock
+  COTIZADO --> RECHAZADO : sin efecto en stock
 
-  PAID --> SHIPPED : exige datos de envío completos
-  PAID --> CANCELLED : devuelve stock
-  PAID --> REJECTED : devuelve stock
+  PAGADO --> ENVIADO : despacho por agencia o delivery
+  PAGADO --> ENTREGADO : entrega en mano (punto de encuentro, recojo o presencial)
+  PAGADO --> CANCELADO : devuelve stock (DEVOLUCION)
+  PAGADO --> RECHAZADO : devuelve stock (DEVOLUCION)
 
-  SHIPPED --> DELIVERED : marcado a mano (opcional)
-  SHIPPED --> CANCELLED : devuelve stock si hay devolución física
+  ENVIADO --> ENTREGADO : recepción confirmada
+  ENVIADO --> CANCELADO : devuelve stock si hay devolución física
 
-  DELIVERED --> [*]
-  CANCELLED --> [*]
-  REJECTED --> [*]
+  ENTREGADO --> [*]
+  CANCELADO --> [*]
+  RECHAZADO --> [*]
 ```
 
 ## Notas
-- Un pedido de recojo nace directamente en `QUOTED` con envío S/ 0.
-- Un pedido en `PAID` o posterior tiene movimientos `SALE`; en `SHIPPED` tiene un `Shipment` completo.
+- La acción rápida **«Confirmar pago y entregar»** (para entregas personales en Lima) ejecuta `COTIZADO` → `PAGADO` → `ENTREGADO` dentro de una sola transacción.
+- Una venta presencial directa (`origen = PRESENCIAL`) nace y pasa en el mismo acto a `PAGADO` o `ENTREGADO`.

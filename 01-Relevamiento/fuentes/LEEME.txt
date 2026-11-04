@@ -6,8 +6,8 @@ PROPÓSITO
   Guardar tal cual lo que dijo o entregó el cliente, para poder volver a la fuente.
 
 QUÉ VA
-  Chats exportados, capturas, fotos, archivos que entregue Richard, logo original.
-  Hoy: chat de relevamiento (ClaudeWeb) y logo original.
+  Chats exportados, capturas, fotos, archivos que entregue Richard, logo original y copia intacta de los documentos iniciales (`documentos-originales/`).
+  Hoy: chat de relevamiento (ClaudeWeb), logo original y los 12 documentos originales.
 
 QUÉ NO VA
   Resúmenes ni interpretaciones (van en los documentos 01, 02 y 03).

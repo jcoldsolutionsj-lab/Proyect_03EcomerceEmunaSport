@@ -1,6 +1,6 @@
 # 01 – Diagrama de actividades: pedido de punta a punta
 
-Calles (swimlanes): Cliente, Sistema, Richard. Entre paréntesis, el estado del pedido. Fuente: `03-flujo-pedidos-estados.md`.
+Calles (swimlanes): Cliente, Sistema, Richard. Contempla tanto el envío a provincia/delivery como la cita en punto de encuentro en Lima (donde el cliente yapea al recibir). Fuente: `03-flujo-pedidos-estados.md`.
 
 ```mermaid
 flowchart TD
@@ -9,48 +9,47 @@ flowchart TD
   subgraph CLI["Cliente (celular)"]
     c1["Ver catálogo y elegir talla y cantidad"]
     c2["Agregar al carrito"]
-    c3["Completar datos y elegir entrega"]
-    c4["Enviar pedido (sin pagar)"]
+    c3["Completar datos y elegir modalidad:<br/>AGENCIA, DELIVERY_LIMA, PUNTO_ENCUENTRO o RECOJO"]
+    c4["Enviar pedido (sin pagar aún)"]
     c5["Abrir página del pedido:<br/>total final, QR de Yape, titular y número"]
     c6["Pagar por Yape y enviar voucher por WhatsApp"]
-    c7["Seguir el envío en la app de la agencia"]
+    c7["Acudir al punto de encuentro en Lima,<br/>recibir prendas y yapear ahí mismo"]
+    c8["Seguir el envío en la app de la agencia"]
   end
 
   subgraph SIS["Sistema"]
-    s1["Validar datos (DNI 8 dígitos, teléfono 9 dígitos)<br/>y recalcular precios en el servidor"]
+    s1["Validar datos y recalcular precios en el servidor"]
     s2["Crear pedido con código no adivinable<br/>y copias de nombre, talla y precio"]
-    s3{"¿Entrega por recojo?"}
-    s4["Estado NEW (falta cotizar)"]
-    s5["Estado QUOTED con envío S/ 0"]
+    s3{"¿Modalidad de entrega?"}
+    s4["Estado NUEVO (falta cotizar envío)"]
+    s5["Estado COTIZADO con envío S/ 0.00"]
     s6["Mostrar página del pedido, PDF y botón de WhatsApp"]
-    s7["Descontar stock en una transacción<br/>y estado PAID"]
-    s8["Estado SHIPPED con datos de envío"]
+    s7["Descontar stock en transacción<br/>y estado PAGADO"]
+    s8["Estado ENVIADO con datos de agencia"]
+    s9["Descontar stock y pasar<br/>COTIZADO → PAGADO → ENTREGADO"]
   end
 
-  subgraph RIC["Richard (admin)"]
-    r1["Abrir pedido NEW en el admin"]
-    r2["Consultar flete a la agencia<br/>e ingresar costo"]
-    r3["Estado QUOTED y avisar al cliente<br/>con botón de WhatsApp"]
-    r4["Revisar voucher recibido"]
-    r5{"¿Pago válido?"}
-    r6["Confirmar pago"]
-    r7["Despachar en la agencia<br/>y registrar envío"]
-    r8["Marcar Entregado (opcional)"]
-    r9["Cancelar o rechazar pedido"]
+  subgraph RIC["Richard (panel)"]
+    r1["Abrir pedido NUEVO en el panel"]
+    r2["Consultar tarifa e ingresar costo de envío"]
+    r3["Estado COTIZADO y avisar al cliente por WhatsApp"]
+    r4["Coordinar lugar y hora del punto de encuentro"]
+    r5["Revisar voucher recibido"]
+    r6{"¿Pago válido?"}
+    r7["Confirmar pago"]
+    r8["Despachar y registrar envío"]
+    r9["Entregar en mano en el punto de encuentro,<br/>verificar Yape y pulsar Confirmar pago y entregar"]
+    r10["Cancelar o rechazar pedido"]
   end
 
   c1 --> c2 --> c3 --> c4 --> s1 --> s2 --> s3
-  s3 -- "Sí" --> s5
-  s3 -- "No (agencia o Lima)" --> s4
-  s4 --> r1 --> r2 --> r3
-  s5 --> s6
-  r3 --> s6
-  s6 --> c5 --> c6 --> r4 --> r5
-  r5 -- "Sí" --> r6 --> s7 --> r7 --> s8 --> c7 --> r8 --> FIN(("Fin"))
-  r5 -- "No" --> r9 --> FIN
+  s3 -- "AGENCIA o DELIVERY_LIMA" --> s4 --> r1 --> r2 --> r3 --> s6
+  s3 -- "PUNTO_ENCUENTRO o RECOJO" --> s5 --> r4 --> c7 --> r9 --> s9 --> FIN(("Fin"))
+  s6 --> c5 --> c6 --> r5 --> r6
+  r6 -- "Sí" --> r7 --> s7 --> r8 --> s8 --> c8 --> FIN
+  r6 -- "No" --> r10 --> FIN
 ```
 
 ## Notas
-- El stock **solo** se descuenta al confirmar el pago (ver `03-actividad-confirmar-pago.md`).
-- Si el cliente desconfía de pagar así, sigue por WhatsApp con el PDF del pedido.
-- La cotización, el pago y el despacho los registra siempre Richard.
+- El stock **solo** se descuenta cuando Richard confirma el pago (`s7` o `s9`).
+- El detalle de la cita en Lima y la venta presencial directa está en `08-actividad-entrega-lima-y-venta-presencial.md`.

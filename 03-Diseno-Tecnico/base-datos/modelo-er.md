@@ -1,116 +1,162 @@
 # Modelo Entidad-Relación
 
+> Generado por `generar_diccionario.py`. **No editar a mano.**
+
 Con los nombres físicos del estándar (`../12-estandar-base-datos.md`). Detalle de columnas en `diccionario-datos.md`. `AUTH_USER` es la tabla `auth_user` de Django.
 
 ```mermaid
 erDiagram
-  TBL_RCATEGORY ||--o{ TBL_RPRODUCT : "clasifica"
-  TBL_RPRODUCT ||--o{ TBL_RPRODUCT_IMAGE : "tiene fotos"
-  TBL_RPRODUCT ||--o{ TBL_RVARIANT : "tiene variantes"
-  TBL_RPRODUCT ||--o{ TBL_RPRICE_RULE : "tiene precios por mayor"
-  TBL_RVARIANT ||--o{ TBL_TSTOCK_MOVEMENT : "mueve stock"
-  TBL_RVARIANT ||--o{ TBL_TORDER_ITEM : "se vende en"
-  TBL_TORDER ||--|{ TBL_TORDER_ITEM : "contiene"
-  TBL_TORDER ||--o{ TBL_TSTOCK_MOVEMENT : "origina"
-  TBL_TORDER ||--o{ TBL_LORDER_STATUS : "registra estados"
-  TBL_TORDER ||--o| TBL_TSHIPMENT : "se envía con"
-  TBL_TORDER ||--o{ TBL_HORDER : "historial"
-  AUTH_USER ||--o{ TBL_TSTOCK_MOVEMENT : "crea"
-  AUTH_USER ||--o{ TBL_LORDER_STATUS : "cambia"
+  TBL_RCATEGORIA ||--o{ TBL_RPRODUCTO : "clasifica"
+  TBL_RPRODUCTO ||--o{ TBL_RIMAGEN_PRODUCTO : "tiene fotos"
+  TBL_RPRODUCTO ||--o{ TBL_RVARIANTE : "tiene variantes"
+  TBL_RPRODUCTO ||--o{ TBL_RREGLA_PRECIO : "tiene precios por mayor"
+  TBL_RVARIANTE ||--o{ TBL_TMOVIMIENTO_STOCK : "mueve stock"
+  TBL_RVARIANTE ||--o{ TBL_TPEDIDO_ITEM : "se vende en"
+  TBL_TPEDIDO ||--|{ TBL_TPEDIDO_ITEM : "contiene"
+  TBL_TPEDIDO ||--o{ TBL_TMOVIMIENTO_STOCK : "origina"
+  TBL_TPEDIDO ||--o{ TBL_LPEDIDO_ESTADO : "registra estados"
+  TBL_TPEDIDO ||--o| TBL_TENVIO : "se envía con"
+  TBL_TPEDIDO ||--o{ TBL_HPEDIDO : "historial"
+  TBL_RMETODO_PAGO |o--o{ TBL_TPEDIDO : "se paga con"
+  AUTH_USER ||--o{ TBL_TMOVIMIENTO_STOCK : "registra"
+  AUTH_USER ||--o{ TBL_LPEDIDO_ESTADO : "cambia"
+  AUTH_USER |o--o{ TBL_TPEDIDO : "registra ventas presenciales"
 
-  TBL_RSTORE_SETTING {
-    bigint STO_NID PK
-    varchar STO_CNAME
-    varchar STO_CWHATSAPP_NUMBER
-    int STO_NLOW_STOCK_THRESHOLD
-    boolean STO_OSHOW_BRANDS
+  TBL_RCONFIGURACION_TIENDA {
+    bigint CTI_NID PK
+    varchar CTI_CNOMBRE
+    varchar CTI_CNUMERO_WHATSAPP
+    varchar CTI_CTEXTO_PIE
+    integer CTI_NUMBRAL_STOCK_BAJO
+    boolean CTI_OMOSTRAR_MARCAS
+    integer CTI_NDIAS_SIN_VENTAS
+    integer CTI_NHORAS_PEDIDO_PENDIENTE
   }
-  TBL_RPAYMENT_METHOD {
-    bigint PAY_NID PK
-    varchar PAY_CTYPE
-    varchar PAY_CHOLDER_NAME
-    varchar PAY_CACCOUNT_NUMBER
-    varchar PAY_CQR_IMAGE
-    boolean PAY_OACTIVE
+  TBL_RMETODO_PAGO {
+    bigint MPA_NID PK
+    varchar MPA_CTIPO UK
+    varchar MPA_CTITULAR
+    varchar MPA_CNUMERO_CUENTA
+    varchar MPA_CIMAGEN_QR
+    boolean MPA_OACTIVO
+    integer MPA_NORDEN
   }
-  TBL_RCATEGORY {
+  TBL_RCATEGORIA {
     bigint CAT_NID PK
-    varchar CAT_CNAME
-    varchar CAT_CSLUG
-    boolean CAT_OACTIVE
+    varchar CAT_CNOMBRE
+    varchar CAT_CSLUG UK
+    integer CAT_NORDEN
+    boolean CAT_OACTIVA
   }
-  TBL_RPRODUCT {
-    bigint PRD_NID PK
+  TBL_RPRODUCTO {
+    bigint PRO_NID PK
     bigint CAT_NID FK
-    varchar PRD_CNAME
-    varchar PRD_CSKU UK
-    numeric PRD_NUNIT_PRICE
-    boolean PRD_OACTIVE
+    varchar PRO_CNOMBRE
+    varchar PRO_CSLUG UK
+    varchar PRO_CSKU UK
+    text PRO_CDESCRIPCION
+    varchar PRO_CMARCA
+    numeric PRO_NPRECIO_UNIDAD
+    boolean PRO_OACTIVO
+    boolean PRO_ODESTACADO
   }
-  TBL_RPRODUCT_IMAGE {
-    bigint PIM_NID PK
-    bigint PRD_NID FK
-    varchar PIM_CORIGINAL_PATH
-    boolean PIM_OPRIMARY
+  TBL_RIMAGEN_PRODUCTO {
+    bigint IMA_NID PK
+    bigint PRO_NID FK
+    varchar IMA_CRUTA_ORIGINAL
+    varchar IMA_CRUTA_MINIATURA
+    varchar IMA_CRUTA_DETALLE
+    integer IMA_NORDEN
+    boolean IMA_OPRINCIPAL
   }
-  TBL_RVARIANT {
+  TBL_RVARIANTE {
     bigint VAR_NID PK
-    bigint PRD_NID FK
-    varchar VAR_CSIZE
+    bigint PRO_NID FK
+    varchar VAR_CTALLA
+    varchar VAR_CCOLOR
+    varchar VAR_CMODELO
     varchar VAR_CSKU UK
-    int VAR_NSTOCK_QUANTITY
+    integer VAR_NCANTIDAD_STOCK
+    integer VAR_NUMBRAL_STOCK_BAJO
+    boolean VAR_OACTIVA
   }
-  TBL_RPRICE_RULE {
-    bigint PRU_NID PK
-    bigint PRD_NID FK
-    int PRU_NMIN_QUANTITY
-    numeric PRU_NUNIT_PRICE
+  TBL_RREGLA_PRECIO {
+    bigint REG_NID PK
+    bigint PRO_NID FK
+    integer REG_NCANTIDAD_MINIMA
+    numeric REG_NPRECIO_UNIDAD
   }
-  TBL_TSTOCK_MOVEMENT {
-    bigint SMO_NID PK
+  TBL_TMOVIMIENTO_STOCK {
+    bigint MOV_NID PK
     bigint VAR_NID FK
-    bigint ORD_NID FK
-    bigint USR_NID_CREATED_BY FK
-    varchar SMO_CTYPE
-    int SMO_NQUANTITY
+    varchar MOV_CTIPO
+    integer MOV_NCANTIDAD
+    varchar MOV_CMOTIVO
+    bigint PED_NID FK
+    bigint USU_NID_CREADO_POR FK
   }
-  TBL_TORDER {
-    bigint ORD_NID PK
-    varchar ORD_CCODE UK
-    varchar ORD_CSTATUS
-    varchar ORD_CCUSTOMER_DNI
-    varchar ORD_CDELIVERY_TYPE
-    numeric ORD_NSUBTOTAL
-    numeric ORD_NSHIPPING_COST
-    numeric ORD_NTOTAL
+  TBL_TPEDIDO {
+    bigint PED_NID PK
+    varchar PED_CCODIGO UK
+    varchar PED_CESTADO
+    varchar PED_CORIGEN
+    varchar PED_CCLIENTE_NOMBRE
+    varchar PED_CCLIENTE_DNI
+    varchar PED_CCLIENTE_TELEFONO
+    varchar PED_CTIPO_ENTREGA
+    varchar PED_CAGENCIA
+    varchar PED_CAGENCIA_CIUDAD
+    varchar PED_CAGENCIA_REFERENCIA
+    varchar PED_CPUNTO_ENCUENTRO
+    timestamptz PED_DENTREGA_PROGRAMADA
+    numeric PED_NSUBTOTAL
+    numeric PED_NCOSTO_ENVIO
+    numeric PED_NTOTAL
+    bigint MPA_NID FK
+    bigint USU_NID_CREADO_POR FK
+    text PED_CNOTAS
+    timestamptz PED_DFECHA_COTIZADO
+    timestamptz PED_DFECHA_PAGADO
+    timestamptz PED_DFECHA_ENVIADO
+    timestamptz PED_DFECHA_ENTREGADO
+    timestamptz PED_DFECHA_CIERRE
   }
-  TBL_TORDER_ITEM {
-    bigint ORI_NID PK
-    bigint ORD_NID FK
+  TBL_TPEDIDO_ITEM {
+    bigint ITE_NID PK
+    bigint PED_NID FK
     bigint VAR_NID FK
-    varchar ORI_CPRODUCT_NAME
-    numeric ORI_NUNIT_PRICE
-    int ORI_NQUANTITY
-    numeric ORI_NSUBTOTAL
+    varchar ITE_CNOMBRE_PRODUCTO
+    varchar ITE_CSKU
+    varchar ITE_CTALLA
+    varchar ITE_CCOLOR
+    numeric ITE_NPRECIO_UNIDAD
+    integer ITE_NCANTIDAD
+    numeric ITE_NSUBTOTAL
   }
-  TBL_LORDER_STATUS {
-    bigint OSL_NID PK
-    bigint ORD_NID FK
-    bigint USR_NID_CHANGED_BY FK
-    varchar OSL_CFROM_STATUS
-    varchar OSL_CTO_STATUS
+  TBL_LPEDIDO_ESTADO {
+    bigint PES_NID PK
+    bigint PED_NID FK
+    varchar PES_CESTADO_ANTERIOR
+    varchar PES_CESTADO_NUEVO
+    bigint USU_NID_CAMBIADO_POR FK
+    varchar PES_CNOTA
   }
-  TBL_HORDER {
-    bigint HOR_NID PK
-    bigint ORD_NID FK
+  TBL_HPEDIDO {
+    bigint HPE_NID PK
+    bigint PED_NID FK
   }
-  TBL_TSHIPMENT {
-    bigint SHI_NID PK
-    bigint ORD_NID FK
-    varchar SHI_CAGENCY_ORDER_NUMBER
-    varchar SHI_CPICKUP_KEY
-    numeric SHI_NFREIGHT_COST
-    varchar SHI_CPAYER
+  TBL_TENVIO {
+    bigint ENV_NID PK
+    bigint PED_NID FK,UK
+    varchar ENV_CAGENCIA
+    varchar ENV_CNUMERO_ORDEN_AGENCIA
+    varchar ENV_CCLAVE_RECOJO
+    varchar ENV_CIMAGEN_BOLETA
+    numeric ENV_NCOSTO_FLETE
+    varchar ENV_CQUIEN_PAGA
+    boolean ENV_OCOBRADO
+    timestamptz ENV_DFECHA_DESPACHO
+    text ENV_CNOTAS
   }
   AUTH_USER {
     bigint id PK
@@ -119,6 +165,7 @@ erDiagram
 ```
 
 ## Notas
-- `TBL_RSTORE_SETTING` y `TBL_RPAYMENT_METHOD` no se relacionan con otras tablas.
-- `TBL_HORDER` en el diagrama es una simplificación: `django-simple-history` la genera con sus propias columnas (`history_id`, `history_date`…).
-- `TBL_TORDER_ITEM` guarda **copias** del nombre, talla y precio; su relación con `TBL_RVARIANT` es protegida, para no perder el vínculo.
+- `TBL_HPEDIDO` es una simplificación: `django-simple-history` la genera con sus propias columnas.
+- `TBL_TPEDIDO_ITEM` guarda **copias** del nombre, talla y precio; su relación con `TBL_RVARIANTE` es protegida.
+- `TBL_TENVIO` existe solo para pedidos con entrega `AGENCIA`.
+- `TBL_RCONFIGURACION_TIENDA` no se relaciona con otras tablas.

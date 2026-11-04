@@ -1,0 +1,756 @@
+openapi: 3.0.3
+info:
+  title: API Emuná Sport
+  version: 1.0.0
+  description: >
+    Contrato OpenAPI de la tienda web y panel de administración de **Emuná Sport**.
+    Todos los endpoints llaman a funciones de `servicios.py` (escrituras) o `selectores.py` (lecturas).
+    Los montos se expresan en soles peruanos (`PEN`) con 2 decimales y la zona horaria es `America/Lima`.
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Entorno local
+  - url: https://emuna-sport-demo.onrender.com/api/v1
+    description: Entorno piloto (Render)
+
+tags:
+  - name: Publico-Catalogo
+    description: Consulta pública de categorías, productos, variantes y precios por mayor.
+  - name: Publico-Carrito
+    description: Carrito en sesión del servidor y cálculo de precios por mayor.
+  - name: Publico-Pedidos
+    description: Creación de pedido sin registro, consulta por código no adivinable y descarga de PDF.
+  - name: Auth
+    description: Autenticación con JWT para Richard (grupo Dueño) y Jonathan (superusuario).
+  - name: Admin-Pedidos
+    description: Gestión completa de pedidos (cotizar, confirmar pago, punto de encuentro en Lima, venta presencial, envío, cancelar/rechazar).
+  - name: Admin-Catalogo-Stock
+    description: Gestión de productos, variantes y movimientos de stock.
+  - name: Admin-Tablero
+    description: Alertas operativas, métricas de ventas y exportación CSV.
+
+paths:
+  /catalogo/categorias/:
+    get:
+      tags: [Publico-Catalogo]
+      summary: Listar categorías activas
+      description: >
+        **Servicio/Selector:** `catalogo.selectores.listar_categorias_activas()`
+        Devuelve las categorías visibles ordenadas por `CAT_NORDEN`.
+      responses:
+        '200':
+          description: Lista de categorías
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Categoria'
+
+  /catalogo/productos/:
+    get:
+      tags: [Publico-Catalogo]
+      summary: Listar productos activos del catálogo
+      description: >
+        **Selector:** `catalogo.selectores.listar_productos_catalogo()`
+        Permite filtrar por categoría, búsqueda de texto y destacados. No expone la marca salvo que `mostrar_marcas` esté activo.
+      parameters:
+        - in: query
+          name: categoria
+          schema: { type: string }
+          description: Slug de la categoría
+        - in: query
+          name: buscar
+          schema: { type: string }
+          description: Texto a buscar en nombre o SKU
+        - in: query
+          name: destacados
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Lista paginada de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductoResumen'
+
+  /catalogo/productos/{slug}/:
+    get:
+      tags: [Publico-Catalogo]
+      summary: Obtener detalle de un producto con tallas, stock y precios por mayor
+      description: >
+        **Selector:** `catalogo.selectores.obtener_producto_detalle(slug)`
+        Incluye galería de fotos, variantes con su `cantidad_stock` y escalas de `ReglaPrecio`.
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Detalle del producto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductoDetalle'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /carrito/:
+    get:
+      tags: [Publico-Carrito]
+      summary: Ver carrito actual con precios recalculados en el servidor
+      description: >
+        **Selector:** `pedidos.selectores.obtener_carrito_detallado(sesion)`
+        Calcula precios por mayor sumando las unidades del mismo producto.
+      responses:
+        '200':
+          description: Estado actual del carrito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carrito'
+
+  /carrito/items/:
+    post:
+      tags: [Publico-Carrito]
+      summary: Agregar o actualizar una variante en el carrito
+      description: >
+        **Servicio:** `pedidos.servicios.agregar_al_carrito(sesion, variante_id, cantidad)`
+        Verifica que la variante esté activa y tenga stock disponible antes de agregarla.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variante_id, cantidad]
+              properties:
+                variante_id: { type: integer, example: 12 }
+                cantidad: { type: integer, minimum: 1, example: 6 }
+      responses:
+        '200':
+          description: Carrito actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carrito'
+        '400':
+          $ref: '#/components/responses/ErrorNegocio'
+
+  /pedidos/:
+    post:
+      tags: [Publico-Pedidos]
+      summary: Crear un pedido desde el checkout (sin registrarse)
+      description: >
+        **Servicio:** `pedidos.servicios.crear_pedido_web(...)`
+        Recalcula precios en el servidor, crea `TBL_TPEDIDO` y `TBL_TPEDIDO_ITEM` con copias (snapshots) de nombre, talla y precio.
+        - Si `tipo_entrega` es `AGENCIA` o `DELIVERY_LIMA`, nace en estado `NUEVO` con `costo_envio = null`.
+        - Si `tipo_entrega` es `PUNTO_ENCUENTRO` o `RECOJO`, nace en `COTIZADO` con `costo_envio = 0.00`.
+        Protegido con límite de intentos (`django-ratelimit`) y campo trampa (`honeypot`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearPedidoWebInput'
+      responses:
+        '201':
+          description: Pedido creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoPublico'
+        '400':
+          $ref: '#/components/responses/ErrorNegocio'
+        '429':
+          description: Demasiados intentos desde la misma IP
+
+  /pedidos/{codigo}/:
+    get:
+      tags: [Publico-Pedidos]
+      summary: Consultar estado y detalle público de un pedido por su código
+      description: >
+        **Selector:** `pedidos.selectores.obtener_pedido_publico(codigo)`
+        Muestra ítems, totales, estado y, solo cuando está en `COTIZADO`, los datos de Yape (QR, titular y número).
+        **Privacidad:** nunca devuelve el DNI completo ni la clave de recojo de la agencia.
+      parameters:
+        - in: path
+          name: codigo
+          required: true
+          schema: { type: string, example: EMU-7K3Q9X }
+      responses:
+        '200':
+          description: Resumen público del pedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoPublico'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /pedidos/{codigo}/pdf/:
+    get:
+      tags: [Publico-Pedidos]
+      summary: Descargar el PDF profesional del pedido
+      description: >
+        **Servicio:** `pedidos.servicios.generar_pdf_pedido(codigo)`
+        Genera el comprobante en PDF con ReportLab (logo, código, ítems, modalidad de entrega y totales).
+      parameters:
+        - in: path
+          name: codigo
+          required: true
+          schema: { type: string, example: EMU-7K3Q9X }
+      responses:
+        '200':
+          description: Archivo PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /auth/token/:
+    post:
+      tags: [Auth]
+      summary: Obtener par de tokens JWT (acceso y refresco) para el personal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Tokens emitidos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access: { type: string }
+                  refresh: { type: string }
+        '401':
+          description: Credenciales inválidas
+
+  /auth/token/refrescar/:
+    post:
+      tags: [Auth]
+      summary: Renovar token de acceso usando el token de refresco
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties:
+                refresh: { type: string }
+      responses:
+        '200':
+          description: Nuevo token de acceso
+
+  /admin/pedidos/:
+    get:
+      tags: [Admin-Pedidos]
+      security: [{ bearerAuth: [] }]
+      summary: Listar y buscar pedidos en el panel (incluye datos completos del cliente)
+      description: >
+        **Selector:** `pedidos.selectores.listar_pedidos_admin(filtros)`
+        Permite filtrar por `estado`, `tipo_entrega`, `origen`, rango de fechas y búsqueda por código, nombre o teléfono.
+      parameters:
+        - in: query
+          name: estado
+          schema: { $ref: '#/components/schemas/EstadoPedido' }
+        - in: query
+          name: tipo_entrega
+          schema: { $ref: '#/components/schemas/TipoEntrega' }
+        - in: query
+          name: buscar
+          schema: { type: string }
+      responses:
+        '200':
+          description: Lista de pedidos para administración
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PedidoAdmin'
+
+  /admin/pedidos/venta-presencial/:
+    post:
+      tags: [Admin-Pedidos]
+      security: [{ bearerAuth: [] }]
+      summary: Registrar una venta presencial directa de Richard
+      description: >
+        **Servicio:** `pedidos.servicios.registrar_venta_presencial(...)`
+        Crea el pedido con `origen = PRESENCIAL`, descuenta el stock de forma atómica (`MovimientoStock` tipo `VENTA`)
+        y lo deja directamente en `PAGADO` o `ENTREGADO`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VentaPresencialInput'
+      responses:
+        '201':
+          description: Venta presencial registrada y stock descontado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoAdmin'
+        '400':
+          $ref: '#/components/responses/ErrorNegocio'
+
+  /admin/pedidos/{codigo}/cotizar/:
+    post:
+      tags: [Admin-Pedidos]
+      security: [{ bearerAuth: [] }]
+      summary: Cotizar el costo de envío (NUEVO → COTIZADO)
+      description: >
+        **Servicio:** `pedidos.servicios.cotizar_envio(pedido, costo_envio, usuario, nota)`
+        Guarda `PED_NCOSTO_ENVIO`, recalcula `PED_NTOTAL`, pasa a `COTIZADO` y devuelve el enlace de WhatsApp listo para enviar al cliente.
+      parameters:
+        - in: path
+          name: codigo
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [costo_envio]
+              properties:
+                costo_envio: { type: string, example: "15.00" }
+                nota: { type: string }
+      responses:
+        '200':
+          description: Pedido cotizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoAdmin'
+        '400':
+          $ref: '#/components/responses/ErrorNegocio'
+
+  /admin/pedidos/{codigo}/confirmar-pago/:
+    post:
+      tags: [Admin-Pedidos]
+      security: [{ bearerAuth: [] }]
+      summary: Confirmar el pago y descontar el stock de forma atómica (COTIZADO → PAGADO)
+      description: >
+        **Servicio:** `pedidos.servicios.confirmar_pago(pedido, metodo_pago_id, entregar_en_acto, usuario, nota)`
+        Dentro de `transaction.atomic()` bloquea las variantes con `select_for_update()`, verifica stock,
+        crea un `MovimientoStock` tipo `VENTA` por cada ítem y pasa a `PAGADO`.
+        - Si `entregar_en_acto = true` (caso de **punto de encuentro en Lima**, donde Richard entrega y recibe el Yape ahí mismo),
+          en la misma transacción registra también el paso `PAGADO` → `ENTREGADO`.
+      parameters:
+        - in: path
+          name: codigo
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [metodo_pago_id]
+              properties:
+                metodo_pago_id: { type: integer, example: 1 }
+                entregar_en_acto:
+                  type: boolean
+                  default: false
+                  description: En true, deja el pedido en ENTREGADO en el mismo paso (cita en punto de encuentro en Lima).
+                nota: { type: string }
+      responses:
+        '200':
+          description: Pago confirmado y stock descontado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoAdmin'
+        '400':
+          $ref: '#/components/responses/ErrorNegocio'
+
+  /admin/pedidos/{codigo}/despachar/:
+    post:
+      tags: [Admin-Pedidos]
+      security: [{ bearerAuth: [] }]
+      summary: Registrar datos de envío en agencia y pasar a ENVIADO (PAGADO → ENVIADO)
+      description: >
+        **Servicio:** `envios.servicios.registrar_despacho(pedido, datos_envio, usuario)`
+        Crea `TBL_TENVIO` (agencia, número de orden, clave de 4 dígitos, foto de boleta, costo del flete y quién paga),
+        cambia el pedido a `ENVIADO` y devuelve el enlace de WhatsApp con los datos para el cliente.
+      parameters:
+        - in: path
+          name: codigo
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DespachoInput'
+      responses:
+        '200':
+          description: Envío registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoAdmin'
+        '400':
+          $ref: '#/components/responses/ErrorNegocio'
+
+  /admin/pedidos/{codigo}/entregar/:
+    post:
+      tags: [Admin-Pedidos]
+      security: [{ bearerAuth: [] }]
+      summary: Marcar el pedido como ENTREGADO (desde PAGADO o ENVIADO)
+      description: >
+        **Servicio:** `pedidos.servicios.cambiar_estado(pedido, 'ENTREGADO', usuario, nota)`
+      parameters:
+        - in: path
+          name: codigo
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nota: { type: string }
+      responses:
+        '200':
+          description: Pedido marcado como entregado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoAdmin'
+
+  /admin/pedidos/{codigo}/cerrar/:
+    post:
+      tags: [Admin-Pedidos]
+      security: [{ bearerAuth: [] }]
+      summary: Cancelar o rechazar un pedido (devuelve stock si ya estaba PAGADO)
+      description: >
+        **Servicio:** `pedidos.servicios.cerrar_pedido(pedido, estado_destino, devolucion_fisica, usuario, nota)`
+        Si el pedido estaba en `PAGADO` (o en `ENVIADO` con `devolucion_fisica = true`), crea movimientos `DEVOLUCION`
+        por cada ítem dentro de una transacción atómica.
+      parameters:
+        - in: path
+          name: codigo
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estado_destino]
+              properties:
+                estado_destino:
+                  type: string
+                  enum: [CANCELADO, RECHAZADO]
+                devolucion_fisica:
+                  type: boolean
+                  default: false
+                  description: Obligatorio en true para devolver stock cuando el pedido ya estaba ENVIADO.
+                nota: { type: string }
+      responses:
+        '200':
+          description: Pedido cerrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoAdmin'
+        '400':
+          $ref: '#/components/responses/ErrorNegocio'
+
+  /admin/inventario/movimientos/:
+    post:
+      tags: [Admin-Catalogo-Stock]
+      security: [{ bearerAuth: [] }]
+      summary: Registrar una entrada o ajuste manual de stock
+      description: >
+        **Servicio:** `inventario.servicios.registrar_movimiento(variante_id, tipo, cantidad, motivo, usuario)`
+        Única vía permitida para modificar `VAR_NCANTIDAD_STOCK` fuera de un pedido.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variante_id, tipo, cantidad, motivo]
+              properties:
+                variante_id: { type: integer }
+                tipo: { type: string, enum: [ENTRADA, AJUSTE] }
+                cantidad: { type: integer, description: "Positiva o negativa, distinta de 0" }
+                motivo: { type: string }
+      responses:
+        '201':
+          description: Movimiento registrado y stock actualizado
+        '400':
+          $ref: '#/components/responses/ErrorNegocio'
+
+  /admin/tablero/resumen/:
+    get:
+      tags: [Admin-Tablero]
+      security: [{ bearerAuth: [] }]
+      summary: Obtener alertas y resumen de ventas para Richard
+      description: >
+        **Selector:** `tablero.selectores.obtener_resumen_tablero(desde, hasta)`
+        Devuelve variantes con stock bajo, productos sin ventas en N días, más vendidos, pedidos pendientes hace más de 24 h y totales vendidos.
+      parameters:
+        - in: query
+          name: desde
+          schema: { type: string, format: date }
+        - in: query
+          name: hasta
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Métricas y alertas del tablero
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    NoEncontrado:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorRespuesta'
+    ErrorNegocio:
+      description: Error de validación o regla de negocio (`StockInsuficienteError`, `TransicionInvalidaError`, `DatosEnvioIncompletosError`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorRespuesta'
+
+  schemas:
+    EstadoPedido:
+      type: string
+      enum: [NUEVO, COTIZADO, PAGADO, ENVIADO, ENTREGADO, CANCELADO, RECHAZADO]
+    TipoEntrega:
+      type: string
+      enum: [AGENCIA, DELIVERY_LIMA, PUNTO_ENCUENTRO, RECOJO]
+    OrigenPedido:
+      type: string
+      enum: [WEB, PRESENCIAL]
+
+    Categoria:
+      type: object
+      properties:
+        id: { type: integer }
+        nombre: { type: string }
+        slug: { type: string }
+
+    ReglaPrecio:
+      type: object
+      properties:
+        cantidad_minima: { type: integer, example: 12 }
+        precio_unidad: { type: string, example: "32.00" }
+
+    VariantePublica:
+      type: object
+      properties:
+        id: { type: integer }
+        sku: { type: string }
+        talla: { type: string, example: "M" }
+        color: { type: string }
+        modelo: { type: string }
+        cantidad_stock: { type: integer, minimum: 0 }
+        agotada: { type: boolean }
+
+    ProductoResumen:
+      type: object
+      properties:
+        id: { type: integer }
+        nombre: { type: string }
+        slug: { type: string }
+        sku: { type: string }
+        precio_unidad: { type: string, example: "38.00" }
+        precio_desde: { type: string, example: "32.00" }
+        imagen_miniatura: { type: string, format: uri }
+        agotado: { type: boolean }
+
+    ProductoDetalle:
+      allOf:
+        - $ref: '#/components/schemas/ProductoResumen'
+        - type: object
+          properties:
+            descripcion: { type: string }
+            marca: { type: string, nullable: true }
+            imagenes:
+              type: array
+              items:
+                type: object
+                properties:
+                  miniatura: { type: string }
+                  detalle: { type: string }
+                  es_principal: { type: boolean }
+            variantes:
+              type: array
+              items:
+                $ref: '#/components/schemas/VariantePublica'
+            reglas_precio:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReglaPrecio'
+
+    Carrito:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              variante_id: { type: integer }
+              nombre_producto: { type: string }
+              talla: { type: string }
+              cantidad: { type: integer }
+              precio_unidad_aplicado: { type: string }
+              subtotal: { type: string }
+        subtotal: { type: string, example: "192.00" }
+
+    CrearPedidoWebInput:
+      type: object
+      required: [tipo_entrega, cliente_nombre, cliente_telefono]
+      properties:
+        tipo_entrega: { $ref: '#/components/schemas/TipoEntrega' }
+        cliente_nombre: { type: string }
+        cliente_dni:
+          type: string
+          pattern: '^[0-9]{8}$'
+          description: Obligatorio cuando tipo_entrega es AGENCIA.
+        cliente_telefono:
+          type: string
+          pattern: '^9[0-9]{8}$'
+        agencia:
+          type: string
+          enum: [SHALOM, OLVA, OTRA]
+        agencia_ciudad: { type: string }
+        agencia_referencia: { type: string }
+        punto_encuentro:
+          type: string
+          description: Lugar propuesto en Lima cuando tipo_entrega es PUNTO_ENCUENTRO.
+        notas: { type: string }
+        sitio_web:
+          type: string
+          description: Campo trampa (honeypot); debe llegar vacío.
+
+    ItemPedido:
+      type: object
+      properties:
+        nombre_producto: { type: string }
+        sku: { type: string }
+        talla: { type: string }
+        color: { type: string }
+        precio_unidad: { type: string }
+        cantidad: { type: integer }
+        subtotal: { type: string }
+
+    PedidoPublico:
+      type: object
+      properties:
+        codigo: { type: string, example: EMU-7K3Q9X }
+        estado: { $ref: '#/components/schemas/EstadoPedido' }
+        tipo_entrega: { $ref: '#/components/schemas/TipoEntrega' }
+        punto_encuentro: { type: string, nullable: true }
+        entrega_programada: { type: string, format: date-time, nullable: true }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemPedido'
+        subtotal: { type: string }
+        costo_envio: { type: string, nullable: true }
+        total: { type: string }
+        url_pdf: { type: string }
+        url_whatsapp_richard: { type: string }
+        pago_yape:
+          type: object
+          nullable: true
+          description: Solo presente cuando el estado es COTIZADO.
+          properties:
+            titular: { type: string }
+            numero_cuenta: { type: string }
+            imagen_qr: { type: string }
+
+    PedidoAdmin:
+      allOf:
+        - $ref: '#/components/schemas/PedidoPublico'
+        - type: object
+          properties:
+            id: { type: integer }
+            origen: { $ref: '#/components/schemas/OrigenPedido' }
+            cliente_nombre: { type: string }
+            cliente_dni: { type: string, nullable: true }
+            cliente_telefono: { type: string, nullable: true }
+            agencia: { type: string, nullable: true }
+            agencia_ciudad: { type: string, nullable: true }
+            agencia_referencia: { type: string, nullable: true }
+            url_whatsapp_cliente: { type: string }
+
+    VentaPresencialInput:
+      type: object
+      required: [items, metodo_pago_id]
+      properties:
+        cliente_nombre: { type: string }
+        cliente_telefono: { type: string }
+        tipo_entrega:
+          type: string
+          enum: [PUNTO_ENCUENTRO, RECOJO]
+          default: PUNTO_ENCUENTRO
+        punto_encuentro: { type: string }
+        metodo_pago_id: { type: integer }
+        entregar_en_acto: { type: boolean, default: true }
+        notas: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [variante_id, cantidad]
+            properties:
+              variante_id: { type: integer }
+              cantidad: { type: integer, minimum: 1 }
+
+    DespachoInput:
+      type: object
+      required: [agencia, numero_orden_agencia, clave_recojo, imagen_boleta, costo_flete, quien_paga]
+      properties:
+        agencia: { type: string, enum: [SHALOM, OLVA, OTRA] }
+        numero_orden_agencia: { type: string }
+        clave_recojo: { type: string, pattern: '^[0-9]{4}$' }
+        imagen_boleta: { type: string, format: binary }
+        costo_flete: { type: string }
+        quien_paga: { type: string, enum: [CLIENTE_ADELANTADO, CLIENTE_EN_DESTINO, RICHARD_ADELANTO] }
+        cobrado: { type: boolean }
+        notas: { type: string }
+
+    ErrorRespuesta:
+      type: object
+      properties:
+        codigo_error: { type: string, example: stock_insuficiente }
+        mensaje: { type: string, example: "No hay stock suficiente para la talla M (disponible: 2)." }
+        detalles: { type: object, additionalProperties: true }

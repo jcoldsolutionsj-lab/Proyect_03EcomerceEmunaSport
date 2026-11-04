@@ -6,10 +6,12 @@ PROPÓSITO
   Reunir todo lo de la base de datos con el estándar de nombres aplicado.
 
 QUÉ VA
-  diccionario-datos.md   Cada tabla y columna con su nombre físico, tipo y descripción.
-  modelo-er.md           Modelo Entidad-Relación en Mermaid.
-  scripts/               Scripts SQL puntuales.
-  scripts-bd/            Script completo de la base por cada paso a producción.
+  generar_diccionario.py   Fuente única: valida el estándar y genera los 3 archivos siguientes.
+  diccionario-datos.md     Cada tabla y columna con su nombre físico, tipo y descripción.
+  diccionario-datos.xlsx   El mismo diccionario en Excel con filtros (Tablas, Columnas, Valores, Indices).
+  modelo-er.md             Modelo Entidad-Relación en Mermaid.
+  scripts/                 Scripts SQL puntuales.
+  scripts-bd/              Script completo de la base por cada paso a producción.
 
 QUÉ NO VA
   Datos reales (clientes, pedidos). Solo estructura y datos de ejemplo.

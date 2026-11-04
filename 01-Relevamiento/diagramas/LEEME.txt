@@ -14,7 +14,8 @@ QUÉ VA
   04-actividad-despacho-envio.md
   05-actividad-cancelar-rechazar.md
   06-actividad-gestion-catalogo.md
-  07-estados-pedido.md                Diagrama de estados.
+  07-estados-pedido.md                                  Diagrama de estados.
+  08-actividad-entrega-lima-y-venta-presencial.md       Cita en Lima con Yape al momento y venta presencial.
 
 CÓMO LEERLOS
   Los diagramas de actividades usan calles (subgraph) por actor: Cliente, Sistema, Richard.

@@ -1,0 +1,16 @@
+03-Diseno-Tecnico/api
+=====================
+NIVEL DE INFORMACIÓN: CONTRATO DE LA API (OpenAPI / Swagger)
+
+PROPÓSITO
+  Definir de antemano cómo opera cada endpoint de la API para la web y la futura app móvil de Richard.
+
+QUÉ VA
+  openapi.yaml    Especificación OpenAPI 3.0.3 completa (esquemas, parámetros, respuestas y seguridad JWT).
+                  Se puede abrir en https://editor.swagger.io o con Swagger UI, y en Django se sirve con drf-spectacular en /api/docs/.
+
+QUÉ NO VA
+  Tokens reales, claves ni datos reales de clientes.
+
+QUIÉN / CUÁNDO
+  Se actualiza cada vez que se agrega o cambia un endpoint. El resumen explicativo está en ../13-especificacion-api-swagger.md.

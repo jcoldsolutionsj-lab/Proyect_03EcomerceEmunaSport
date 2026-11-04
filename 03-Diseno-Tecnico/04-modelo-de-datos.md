@@ -1,37 +1,37 @@
 # 04 – Modelo de datos
 
-Convenciones: claves primarias `id`; `created_at` y `updated_at` en todos; dinero `DecimalField(max_digits=10, decimal_places=2)` en PEN; zona `America/Lima`; textos de interfaz en español. Los nombres **físicos** de tablas y columnas en la base siguen `12-estandar-base-datos.md` (diccionario en `base-datos/diccionario-datos.md`).
+Convenciones: claves primarias `id` (en base `PPP_NID`); `fecha_creacion` y `fecha_actualizacion` en todos (salvo tablas inmutables); dinero `DecimalField(max_digits=10, decimal_places=2)` en PEN; zona `America/Lima`; código, modelos, campos y textos de interfaz en **español**. Los nombres **físicos** de tablas y columnas en la base van en MAYÚSCULAS según `12-estandar-base-datos.md` (diccionario completo en `base-datos/diccionario-datos.md` y `base-datos/diccionario-datos.xlsx`).
 
 ## Apps y modelos
-### core
-- **StoreSettings** (único): nombre de la tienda, número de WhatsApp de Richard, texto de pie, umbral de stock bajo por defecto, mostrar marcas (bool, apagado). Se edita en el admin.
-- **PaymentMethod**: tipo (`yape`, `plin`, …), titular, número (copiable), imagen del QR, activo, orden.
+### `nucleo` (`TBL_RCONFIGURACION_TIENDA`, `TBL_RMETODO_PAGO`)
+- **ConfiguracionTienda** (único): `nombre`, `numero_whatsapp`, `texto_pie`, `umbral_stock_bajo`, `mostrar_marcas` (bool, apagado), `dias_sin_ventas`, `horas_pedido_pendiente`. Se edita en el admin.
+- **MetodoPago**: `tipo` (`YAPE`, `PLIN`, `EFECTIVO`), `titular`, `numero_cuenta` (copiable), `imagen_qr`, `activo`, `orden`.
 
-### catalog
-- **Category**: nombre, slug, orden, activa.
-- **Product**: nombre, slug, sku único, descripción, categoría, marca (texto, opcional), precio por unidad (`unit_price`), activo, destacado.
-- **ProductImage**: producto, imagen (original), versiones generadas (miniatura ~400 px y detalle ~900 px en WebP), orden, imagen principal.
-- **Variant**: producto, talla (obligatoria), color (opcional), modelo (opcional), sku único, `stock_quantity` (entero ≥ 0), umbral de stock bajo (opcional), activa. Única por (producto, talla, color, modelo).
-- **PriceRule**: producto, `min_quantity`, `unit_price`. El precio base está en `Product.unit_price`.
+### `catalogo` (`TBL_RCATEGORIA`, `TBL_RPRODUCTO`, `TBL_RIMAGEN_PRODUCTO`, `TBL_RVARIANTE`, `TBL_RREGLA_PRECIO`)
+- **Categoria**: `nombre`, `slug`, `orden`, `activa`.
+- **Producto**: `nombre`, `slug`, `sku` único, `descripcion`, `categoria`, `marca` (texto, opcional), `precio_unidad` (precio base), `activo`, `destacado`.
+- **ImagenProducto**: `producto`, `ruta_original` (privado), versiones generadas (`ruta_miniatura` ~400 px y `ruta_detalle` ~900 px en WebP), `orden`, `es_principal`.
+- **Variante**: `producto`, `talla` (obligatoria), `color` (opcional), `modelo` (opcional), `sku` único, `cantidad_stock` (entero ≥ 0), `umbral_stock_bajo` (opcional), `activa`. Única por (`producto`, `talla`, `color`, `modelo`).
+- **ReglaPrecio**: `producto`, `cantidad_minima`, `precio_unidad`. El precio base está en `Producto.precio_unidad`.
 
-### inventory
-- **StockMovement**: variante, tipo (`IN`, `SALE`, `ADJUSTMENT`, `RETURN`), cantidad (positiva o negativa), motivo, pedido (opcional), creado por. Inmutable: no se edita ni se borra. `Variant.stock_quantity` siempre es la suma de sus movimientos.
+### `inventario` (`TBL_TMOVIMIENTO_STOCK`)
+- **MovimientoStock**: `variante`, `tipo` (`ENTRADA`, `VENTA`, `AJUSTE`, `DEVOLUCION`), `cantidad` (positiva o negativa, distinta de 0), `motivo`, `pedido` (opcional), `creado_por`. Inmutable: no se edita ni se borra. `Variante.cantidad_stock` siempre es la suma de sus movimientos.
 
-### orders
-- **Order**: código público único no adivinable, estado, cliente (nombres, DNI, teléfono), tipo de entrega (`AGENCY`, `LIMA`, `PICKUP`), agencia destino (`SHALOM`, `OLVA`, otra), ciudad y referencia de la agencia, subtotal, costo de envío (nulo hasta cotizar), total, notas, fechas de cambio de estado. Historial con `django-simple-history`.
-- **OrderItem**: pedido, variante (FK protegida), **copias**: nombre del producto, sku, talla, color, precio unitario aplicado, cantidad, subtotal.
-- **OrderStatusLog**: pedido, de, a, usuario, nota, fecha.
+### `pedidos` (`TBL_TPEDIDO`, `TBL_TPEDIDO_ITEM`, `TBL_LPEDIDO_ESTADO`, `TBL_HPEDIDO`)
+- **Pedido**: `codigo` público único no adivinable, `estado` (`NUEVO`, `COTIZADO`, `PAGADO`, `ENVIADO`, `ENTREGADO`, `CANCELADO`, `RECHAZADO`), `origen` (`WEB`, `PRESENCIAL`), cliente (`cliente_nombre`, `cliente_dni`, `cliente_telefono`), `tipo_entrega` (`AGENCIA`, `DELIVERY_LIMA`, `PUNTO_ENCUENTRO`, `RECOJO`), agencia destino (`agencia`: `SHALOM`, `OLVA`, `OTRA`; `agencia_ciudad`, `agencia_reference`), entrega personal en Lima (`punto_encuentro`, `entrega_programada`), `subtotal`, `costo_envio` (nulo hasta cotizar), `total`, `metodo_pago`, `creado_por` (en ventas presenciales), `notas`, fechas de cambio de estado (`fecha_cotizado`, `fecha_pagado`, `fecha_enviado`, `fecha_entregado`, `fecha_cierre`). Historial con `django-simple-history` (`TBL_HPEDIDO`).
+- **ItemPedido**: `pedido`, `variante` (FK protegida), **copias**: `nombre_producto`, `sku`, `talla`, `color`, `precio_unidad`, `cantidad`, `subtotal`.
+- **RegistroEstadoPedido**: `pedido`, `estado_anterior`, `estado_nuevo`, `cambiado_por`, `nota`, `fecha_creacion`. Inmutable.
 
-### shipping
-- **Shipment**: pedido (uno a uno), agencia, número de orden de la agencia, **clave de recojo (4 dígitos, privada)**, foto de boleta (bucket privado), costo del flete, quién paga (`CUSTOMER_AT_DEST`, `CUSTOMER_PREPAID`, `RICHARD_ADVANCED`), cobrado/pendiente de cobro, fecha de despacho, notas.
+### `envios` (`TBL_TENVIO`)
+- **Envio**: `pedido` (uno a uno, solo cuando `tipo_entrega = AGENCIA`), `agencia`, `numero_orden_agencia`, **`clave_recojo` (4 dígitos, privada)**, `imagen_boleta` (bucket privado), `costo_flete`, `quien_paga` (`CLIENTE_ADELANTADO`, `CLIENTE_EN_DESTINO`, `RICHARD_ADELANTO`), `cobrado`, `fecha_despacho`, `notas`.
 
 ## Invariantes (deben cumplirse siempre)
-1. `Variant.stock_quantity >= 0` y es igual a la suma de sus `StockMovement`.
-2. `Order.total = subtotal + shipping_cost` y `subtotal = suma de OrderItem.subtotal`.
-3. Un pedido en `PAID` o posterior tiene movimientos `SALE` por cada ítem.
-4. Un pedido en `SHIPPED` tiene un `Shipment` completo.
+1. `Variante.cantidad_stock >= 0` y es igual a la suma de sus `MovimientoStock`.
+2. `Pedido.total = subtotal + coalesce(costo_envio, 0)` y `subtotal = suma de ItemPedido.subtotal`.
+3. Un pedido en `PAGADO`, `ENVIADO` o `ENTREGADO` tiene movimientos `VENTA` por cada ítem.
+4. Un pedido en `ENVIADO` con `tipo_entrega = AGENCIA` tiene un `Envio` completo.
 5. Los códigos de pedido y SKU son únicos.
-6. Validaciones: DNI = 8 dígitos; teléfono peruano = 9 dígitos que empieza con 9; cantidad ≥ 1.
+6. Validaciones: DNI = 8 dígitos (obligatorio en `AGENCIA`); teléfono peruano = 9 dígitos que empieza con 9 (obligatorio en pedidos `WEB`); cantidad ≥ 1.
 
 ## Índices sugeridos
-`Order(status, created_at)`, `Order(code)`, `Variant(product)`, `StockMovement(variant, created_at)`.
+`TBL_TPEDIDO(PED_CESTADO, PED_DFECHA_CREACION)`, `TBL_TPEDIDO(PED_CCODIGO)`, `TBL_RVARIANTE(PRO_NID)`, `TBL_TMOVIMIENTO_STOCK(VAR_NID, MOV_DFECHA_CREACION)`.

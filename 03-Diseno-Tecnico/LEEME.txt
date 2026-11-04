@@ -11,10 +11,12 @@ QUÉ VA
   06-diseno-ui.md                  Colores, tipografía y pantallas.
   07-seguridad-datos.md            Protección de DNI, accesos y límites.
   09-referencias-repos-librerias.md  Dónde mirar para no reinventar.
-  12-estandar-base-datos.md        Estándar de nombres y scripts de la base de datos.
-  base-datos/                      Diccionario de datos, modelo ER y scripts SQL.
-  estandares/                      Manuales de estándares de referencia (PDF).
-  assets/                          Logo y recursos de marca.
+  12-estandar-base-datos.md          Estándar de nombres y scripts de la base de datos.
+  13-especificacion-api-swagger.md   Cómo opera cada endpoint de la API y Swagger.
+  api/                               Contrato OpenAPI 3.0.3 (`openapi.yaml`).
+  base-datos/                        Diccionario de datos (`.md` y `.xlsx`), generador, modelo ER y scripts SQL.
+  estandares/                        Manuales de estándares de referencia (PDF).
+  assets/                            Logo y recursos de marca.
 
 QUÉ NO VA
   Requisitos del negocio (01) ni código de la aplicación (04-Desarrollo).
