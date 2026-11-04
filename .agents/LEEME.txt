@@ -1,0 +1,15 @@
+.agents
+=======
+NIVEL DE INFORMACIÓN: CONFIGURACIÓN DE LA IA
+
+PROPÓSITO
+  Carpeta que Antigravity lee automáticamente. Debe estar en la raíz del proyecto abierto.
+
+QUÉ VA
+  rules/    Reglas de trabajo de la IA (siempre activas).
+
+QUÉ NO VA
+  Documentación del negocio ni código. Eso va en las carpetas 01 a 05.
+
+QUIÉN / CUÁNDO
+  Jonathan, cuando cambie la forma de trabajar con la IA.

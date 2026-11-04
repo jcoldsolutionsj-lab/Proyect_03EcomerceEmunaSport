@@ -1,0 +1,50 @@
+Variantes: ¿las camisetas tienen tallas, colores o modelos? ¿El stock se lleva por talla?
+claro si, bueno igual que psaria si no los tuviera igual seria manejable en todo los ecenarios 
+la pagina la logica tiene que tener esa cpacidad, pero lo basico es tener camisetas por tallas y los modelos ya dependera de le si lo agrea por tema de publicidad de marcas ya tendriamos que manejarlo bien eso pero debe tener la opcion a desicion de el. algunaduda?
+Precios: ¿hay precio por unidad y precio por mayor, por ejemplo por docena?
+claro que si, bueno como recien empieza entre 1 ha 3 por docena capaz sucede eso ya seria concuestion de decirle no? qu eopinas cabia algo? o si la mejora puede ir normal est abien a eso apunta como cualquier negocio no? 
+Stock: ¿se descuenta cuando el cliente envía el pedido o cuando Richard confirma el pago?
+ahi si como seria amigo, claro lo normal es que richard lo confirme como responsable final, a menos que ahiga una forma que el sistema se encargue de verificar el pago la forma y recien ahi se haga el descuento pero eso si no se si por por api de stripe confgiuracion pago por medio no lo se recien yo como desarrollador estoy entrando en eso. que opinas
+Entrega: ¿hay envíos, recojo en tienda o ambos? ¿Se cobra delivery?
+[7:44 p.m., 31/10/2026] Richar Barrio Chimui: El delivery lo paga el cliente mano
+[7:44 p.m., 31/10/2026] Richar Barrio Chimui: Solo se le cotiza
+[7:44 p.m., 31/10/2026] Richar Barrio Chimui: Cuánto es hasta su destino
+me dice esto: Provincia con la agencia shalon y Olva en peru lima
+Datos del cliente: ¿qué debe pedirse en el pedido (nombre, celular, dirección, DNI)?
+claro que si 
+📦 DATOS PARA ENVÍO - SHALOM
+Para gestionar el envío de tus camisetas, por favor ayúdanos completando los siguientes datos:
+
+Nombres y Apellidos: 
+
+DNI 
+
+Número de teléfono 
+
+Agencia Shalom de destino (Ciudad  y 
+Referencia)
+Quién edita el catálogo: ¿Richard mismo desde el panel o lo harías tú?
+EL COMO DUEÑO DEL SISTEMA WEB ECOMERCE Y YO JONATHAN VERA EL RESPOSNABLE DEL SISTEMA
+Fotos: ¿cuántos productos son y ya tiene fotos buenas?
+si tiene mas de 100 fotos, al final el sube las fotos cuando tenga los pedidos los v ay compra por mayor.. no pierde
+Pago: ¿tienes ya el QR de Yape y el nombre de la cuenta que debe verse?
+SI ahora le pido...
+Pedidos: ¿quiere ver un historial de pedidos en el panel o solo recibirlos por WhatsApp?
+Claro como negocio no debemos perder ni un moviento ingreso venta o rechazo de camisetas , al final richar tiene que tener rapido ese acceso de poder revisar modificar lo que salio vendio o si no vendio no? tod muy bien controlado seria den de django o una sub ulr parte de admin no para el? o mas adelante le hago un app de celular para rapido lleve todo esos registros y que consuma de apis desde web static eso le daria mas facilidad un app no pero primero las pruebas desde web como primer alcanze y sus obsrvaciones
+Dominio: ¿ya está comprado o es solo el nombre previsto?
+no todabia primero le entragaremos un piloto pero ya inclinado a la necesidad que el tiene y obiviamente vamos a refactorizar codigo proponer mejoras bajo sus observaciones qu ele gusta o que no que opina que le vino en mente como negociante seguro no pregunta puedes agreagrt esta funcional y bueno debemos ser escalables para no hcer codigo espaquite no repetir funcionalidade y metodes  no reinventar codigo un codigo limpio con arquitectura que permita integrar otras funcionales base este sistema seguridad tokens para el acceso por eso ahi donde necesito por ahi algunso link de git hub para mejorar el sistema y qu el IA se apoyo base esa informacion pero deben tener buenas estrellas de colaboracion esos git hub,alguna duda mas seguimso conversando. no hay problema
+
+
+
+
+Cuenta del cliente: ¿que compre sin registrarse, solo con nombre y teléfono? Yo recomiendo que sí, para no frenar la compra.
+RPTA: bueno lo que pasa ahi es que el ya tiene clientes por l que me conto y envez de compartile PDF le compartir un web no donde puedan visualizar las camiseta y todo un diseño y el procedimeinto de ver si estan en stock las cantidades y cuando teng alisto tiene la opcion pagar yape confirmando el nombre que parece en la web y le pasa el boucher o la opcion de copiar numero telefono o si no le gusta ese metodo por desconfiar dirigir al whatsap de richar y le envia todo el detalle en PDF bien profesional igual es como usuario puede verlo o descargarlo para saber como le costara solo las camisetas! por que que el deliveri richard lo cotiza aparte por shalon y Olva me imagino que esas agencas le dan el costo y el lo agrega a su detalle de compra , como lo vez hasta hi te vas enterando mas!
+Rechazados: ¿”rechazado” significa que Richard rechaza el pedido, o que el cliente no recoge el envío? Cambia cómo guardamos el estado.
+- si por ahira richard hasta ahora el es el que amdinsitra toda la losgistica solo el lleva el control y es responsable de agregar stock revisar bueno el sistema debe mandarle notificacion no que le ayudan a tomar desicion de queda una camiseta hace 1 semana tenias 10 camisetas ahora tienes 20 ? osea no estas vendiendo no cosas asi.. no en la notificaciones que le ayude , por que parte par atoma de desicion veremos dashboard .
+Categorías: ¿las camisetas se agrupan por equipo, liga, marca o tipo (fútbol, running, casual)?
+eso es lo que te queri apreguntar el medice que sube las camisetas pero sin la marca por puede ser como fraude no? solo sube las camisetas como manejramos eso aqui, amigo
+
+.. otra cosas mas uso cloudflare para el dominio mas adelante y tmabien BUCKET PARA las fotos con una calidad de 720 que te parece y otra duda es si creo una nueva cuenta para richard en cloud flare que sera donde gestionare todo dominio , bucket de fotos s3 , por que yo tengo mi cuenta de la empresa cloudsolutions ti la cuenta pero no se si es buena practica crearlo en la misma que yo tengo? por temas de dueño del producto no ?
+
+
+aqui duda: Delivery: Richard lo cotiza aparte con Shalom u Olva y lo suma a su detalle. eso podria ser genial richar entra a su sistema admin y ve el codigo del pedido y comienza a revisar y darle y anotar los apuntes de shalom u olva los datos que le pide ellos es la boleta y ya pero tmabien me dice el los envia al cliente alla y ellos lo pagan, crees que le debe preguntar algo sobre esto? por que es un control de ssu gastos como se registrara en el sistema y para tener evidencias no? 

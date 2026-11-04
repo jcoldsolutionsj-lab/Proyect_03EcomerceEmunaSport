@@ -1,0 +1,27 @@
+EMUNÁ SPORT – TIENDA WEB
+========================
+NIVEL DE INFORMACIÓN: RAÍZ DEL PROYECTO (mapa general)
+
+PROPÓSITO
+  Punto de entrada. Cada carpeta tiene un propósito y un LEEME.txt que explica qué nivel de información guarda. Así cualquier persona (o IA) sabe dónde mirar y dónde guardar.
+
+LEER PRIMERO (en este orden)
+  1. .agents/rules/            Reglas de la IA.
+  2. 00-Gestion/ESTADO-ACTUAL.md   Dónde quedamos y cuál es el siguiente paso.
+  3. 00-Gestion/00-LEEME-indice.md Índice de documentos y orden de lectura.
+
+CARPETAS
+  .agents/rules/              Reglas siempre activas para la IA.
+  00-Gestion/                 ¿Dónde estamos y por qué? Estado, bitácora, decisiones.
+  01-Relevamiento/            ¿Qué necesita el cliente? Visión, reglas de negocio, flujos y diagramas.
+  02-Planificacion/           ¿Qué hacemos y en qué orden? Plan por fases.
+  03-Diseno-Tecnico/          ¿Cómo se construye? Datos, arquitectura, UI, seguridad, base de datos.
+  04-Desarrollo/              ¿Dónde está el código? Aplicación Django.
+  05-Despliegue/              ¿Cómo se publica y se opera? Entornos y salida a producción.
+  06-Observaciones-Piloto/    ¿Qué dijo el cliente al probarlo? Feedback priorizado.
+
+REGLAS DE ORO
+  - Cada dato vive en un solo documento; los demás lo enlazan.
+  - Si el código y los documentos se contradicen, se avisa y se decide cuál actualizar.
+  - Nada de secretos ni datos reales de clientes en el repositorio (ver .gitignore).
+  - Estructura completa: 00-Gestion/ESTANDAR-ESTRUCTURA.md

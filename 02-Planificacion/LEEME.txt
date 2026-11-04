@@ -1,0 +1,16 @@
+02-Planificacion
+================
+NIVEL DE INFORMACIÓN: PLAN (qué se hace, en qué orden y cuándo está terminado)
+
+PROPÓSITO
+  Dividir el proyecto en fases con un resultado visible al final de cada una.
+
+QUÉ VA
+  10-plan-fases.md     Fases 0 a 6, definición de terminado y reglas para la IA.
+  Después: backlog, criterios de aceptación y tareas que salgan de las observaciones del piloto.
+
+QUÉ NO VA
+  Reglas de negocio (01), diseño técnico (03) ni estado del día a día (00-Gestion/ESTADO-ACTUAL.md).
+
+QUIÉN / CUÁNDO
+  Jonathan con la IA. Se revisa al empezar y al terminar cada fase.

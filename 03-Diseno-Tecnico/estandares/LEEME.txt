@@ -1,0 +1,16 @@
+03-Diseno-Tecnico/estandares
+============================
+NIVEL DE INFORMACIÓN: REFERENCIA EXTERNA (normas que seguimos)
+
+PROPÓSITO
+  Guardar los manuales de estándares en los que se apoya el proyecto.
+
+QUÉ VA
+  estandares-area-desarrollo-2.pdf   Manual de estándares del área de desarrollo (ed. 1.6): base de datos, código, versionado y carpetas.
+                                     Su adaptación a Emuná Sport está en ../12-estandar-base-datos.md
+
+QUÉ NO VA
+  Adaptaciones ni decisiones propias: van en los documentos numerados.
+
+NOTA
+  El PDF tiene derechos de autor de terceros. Mantener el repositorio remoto PRIVADO.

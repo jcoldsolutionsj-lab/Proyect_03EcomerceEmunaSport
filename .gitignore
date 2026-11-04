@@ -1,0 +1,41 @@
+# ===== Secretos y datos sensibles (NUNCA al repositorio) =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+**/media/private/
+# QR de Yape, boletas de agencia, vouchers y datos reales de clientes
+**/*qr*yape*
+**/*voucher*
+**/*boleta*
+**/*dni*
+datos-reales/
+backups/
+*.dump
+*.bak
+
+# ===== Python / Django =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.sqlite3
+db.sqlite3
+staticfiles/
+media/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ===== Node (si se usa para estilos o diagramas) =====
+node_modules/
+
+# ===== Editor y sistema =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

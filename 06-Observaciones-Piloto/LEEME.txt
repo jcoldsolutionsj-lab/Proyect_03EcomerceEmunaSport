@@ -1,0 +1,20 @@
+06-Observaciones-Piloto
+=======================
+NIVEL DE INFORMACIÓN: RETROALIMENTACIÓN DEL CLIENTE (lo que dijo Richard al probar)
+
+PROPÓSITO
+  Registrar y priorizar las observaciones del piloto para decidir qué mejorar.
+
+QUÉ VA
+  Una nota por ronda de pruebas:  AAAA-MM-DD-observaciones.md
+  Cada observación lleva:
+    - Qué dijo (lo más textual posible)
+    - Prioridad: Alta / Media / Baja
+    - Decisión: se hace ahora / después del piloto / descartada, y por qué
+    - Documento afectado y su línea en 00-Gestion/11-decisiones-cambios.md
+
+QUÉ NO VA
+  Cambios ya aplicados al código (van en la bitácora) ni reglas de negocio nuevas sin pasar por 01.
+
+QUIÉN / CUÁNDO
+  Jonathan, después de cada prueba con Richard. Las observaciones aceptadas pasan a 02-Planificacion como tareas.

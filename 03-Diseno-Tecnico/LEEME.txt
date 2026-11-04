@@ -1,0 +1,23 @@
+03-Diseno-Tecnico
+=================
+NIVEL DE INFORMACIÓN: TÉCNICO (cómo se construye)
+
+PROPÓSITO
+  Traducir las reglas del negocio a decisiones técnicas antes de programar.
+
+QUÉ VA
+  04-modelo-de-datos.md            Modelo lógico: tablas, campos e invariantes.
+  05-arquitectura-stack.md         Tecnologías, apps, capas, estructura del código.
+  06-diseno-ui.md                  Colores, tipografía y pantallas.
+  07-seguridad-datos.md            Protección de DNI, accesos y límites.
+  09-referencias-repos-librerias.md  Dónde mirar para no reinventar.
+  12-estandar-base-datos.md        Estándar de nombres y scripts de la base de datos.
+  base-datos/                      Diccionario de datos, modelo ER y scripts SQL.
+  estandares/                      Manuales de estándares de referencia (PDF).
+  assets/                          Logo y recursos de marca.
+
+QUÉ NO VA
+  Requisitos del negocio (01) ni código de la aplicación (04-Desarrollo).
+
+QUIÉN / CUÁNDO
+  Jonathan con la IA, antes de implementar cada fase. Cambios de diseño se anotan en 00-Gestion/11-decisiones-cambios.md.

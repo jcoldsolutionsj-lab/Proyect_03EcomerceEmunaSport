@@ -1,0 +1,25 @@
+01-Relevamiento/diagramas
+=========================
+NIVEL DE INFORMACIÓN: NEGOCIO VISUAL (cómo funciona el negocio, en diagramas)
+
+PROPÓSITO
+  Que cualquier persona entienda el negocio de un vistazo, sin leer todos los documentos.
+
+QUÉ VA
+  Un archivo .md por diagrama, con el código Mermaid dentro. GitHub y Antigravity lo muestran dibujado.
+  00-mapa-actores-casos-uso.md        Quién hace qué.
+  01-actividad-pedido-extremo-a-extremo.md
+  02-actividad-cotizar-envio.md
+  03-actividad-confirmar-pago.md      Descuento atómico de stock.
+  04-actividad-despacho-envio.md
+  05-actividad-cancelar-rechazar.md
+  06-actividad-gestion-catalogo.md
+  07-estados-pedido.md                Diagrama de estados.
+
+CÓMO LEERLOS
+  Los diagramas de actividades usan calles (subgraph) por actor: Cliente, Sistema, Richard.
+  Mermaid no tiene un diagrama de actividades UML oficial; se usa flowchart con la misma notación.
+
+CÓMO ACTUALIZAR
+  Si cambia el flujo en 03-flujo-pedidos-estados.md, se corrige el diagrama en la misma sesión.
+  Para exportar a PNG: usar mermaid-cli (mmdc) sobre el bloque de código.

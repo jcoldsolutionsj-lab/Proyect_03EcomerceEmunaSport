@@ -1,0 +1,21 @@
+04-Desarrollo
+=============
+NIVEL DE INFORMACIÓN: CÓDIGO (lo que se ejecuta)
+
+PROPÓSITO
+  Aquí vive la aplicación Django. Es la única carpeta con código.
+
+QUÉ VA
+  El proyecto Django completo (config/, apps/, templates/, static/, tests/, manage.py, requirements/, .env.example).
+  Estructura interna: 03-Diseno-Tecnico/05-arquitectura-stack.md
+
+QUÉ NO VA
+  Documentos del proyecto, secretos (.env), datos reales, QR de Yape, boletas ni DNI.
+
+REGLAS
+  - Se trabaja solo la fase actual de 02-Planificacion/10-plan-fases.md.
+  - Reglas de código: .agents/rules/00-emuna-proyecto.md
+  - Nombres de base de datos: 03-Diseno-Tecnico/12-estandar-base-datos.md
+
+ESTADO
+  Vacío. Aún no empieza la Fase 0.

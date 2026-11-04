@@ -1,0 +1,19 @@
+00-Gestion
+==========
+NIVEL DE INFORMACIÓN: ESTADO Y MEMORIA DEL PROYECTO (lo más cambiante)
+
+PROPÓSITO
+  Responder: ¿dónde estamos, qué se decidió y qué sigue? Es la memoria de continuidad entre sesiones.
+
+QUÉ VA
+  ESTADO-ACTUAL.md           Dónde quedamos y siguiente paso (corto, una pantalla).
+  BITACORA-sesiones.md       Una entrada por sesión de trabajo (la más reciente arriba).
+  11-decisiones-cambios.md   Decisiones tomadas, pendientes con Richard y registro de cambios.
+  00-LEEME-indice.md         Índice de documentos y orden de lectura para la IA.
+  ESTANDAR-ESTRUCTURA.md     Estándar de carpetas, reutilizable en otros proyectos.
+
+QUÉ NO VA
+  Requisitos del negocio (van en 01), diseño (03) ni código (04).
+
+QUIÉN / CUÁNDO
+  La IA y Jonathan, al terminar CADA sesión de trabajo.

@@ -1,0 +1,16 @@
+03-Diseno-Tecnico/assets
+========================
+NIVEL DE INFORMACIÓN: RECURSOS DE MARCA
+
+PROPÓSITO
+  Guardar el logo y los recursos visuales de Emuná Sport que usa el diseño.
+
+QUÉ VA
+  logo-emuna-sport.png (fondo negro, letras plateadas, rayo "E" verde neón, lema "Estilo deportivo").
+  Más adelante: íconos, favicon, versiones del logo.
+
+QUÉ NO VA
+  Fotos de productos reales (las sube Richard desde el panel al almacenamiento), QR de Yape ni boletas.
+
+NOTA
+  El logo original sin modificar está en 01-Relevamiento/fuentes/.

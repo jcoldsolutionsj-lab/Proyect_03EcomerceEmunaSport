@@ -1,0 +1,14 @@
+03-Diseno-Tecnico/base-datos/scripts-bd
+=======================================
+NIVEL DE INFORMACIÓN: FOTO COMPLETA DE LA BASE EN CADA ENTREGA
+
+PROPÓSITO
+  Guardar el script completo del esquema de la base cada vez que se pasa a una entrega (demo o producción).
+
+NOMBRE DEL ARCHIVO (estándar)
+  sbd_ddmmaaaa.sql      Ejemplo: sbd_03112026.sql
+
+REGLAS
+  - Un archivo por entrega, en orden cronológico; no se borran los anteriores.
+  - Solo estructura (tablas, índices, restricciones). Sin datos reales.
+  - Anotar en 00-Gestion/11-decisiones-cambios.md la versión (vX.Y.Z) a la que corresponde.

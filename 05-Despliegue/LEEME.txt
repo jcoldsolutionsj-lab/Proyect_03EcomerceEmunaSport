@@ -1,0 +1,16 @@
+05-Despliegue
+=============
+NIVEL DE INFORMACIÓN: OPERACIÓN (cómo se publica y se mantiene)
+
+PROPÓSITO
+  Que cualquiera pueda publicar una versión y saber dónde corre cada entorno.
+
+QUÉ VA
+  08-despliegue-entornos.md   Local, demo en Render y producción.
+  Después: guías paso a paso, checklist de salida a producción, respaldos y recuperación.
+
+QUÉ NO VA
+  Contraseñas, claves ni tokens. Los secretos van en variables de entorno del proveedor, nunca aquí.
+
+QUIÉN / CUÁNDO
+  Jonathan con la IA, desde la Fase 5 (demo) y la Fase 6 (producción).

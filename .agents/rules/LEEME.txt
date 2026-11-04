@@ -1,0 +1,16 @@
+.agents/rules
+=============
+NIVEL DE INFORMACIÓN: REGLAS CORTAS Y OBLIGATORIAS
+
+PROPÓSITO
+  Reglas que la IA cumple en cada conversación, sin que nadie se las pida.
+
+QUÉ VA
+  Archivos .md cortos (límite de 12,000 caracteres cada uno). Las reglas apuntan a los documentos; no los repiten.
+  Hoy: 00-emuna-proyecto.md
+
+QUÉ NO VA
+  Explicaciones largas, tablas de datos o decisiones de negocio. Eso va en los documentos.
+
+QUIÉN / CUÁNDO
+  Jonathan. Se edita cuando cambia una regla de trabajo o de código; anotar el cambio en 00-Gestion/11-decisiones-cambios.md.

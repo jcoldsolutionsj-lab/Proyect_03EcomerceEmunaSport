@@ -1,0 +1,19 @@
+01-Relevamiento
+===============
+NIVEL DE INFORMACIÓN: NEGOCIO (qué necesita el cliente, sin tecnología)
+
+PROPÓSITO
+  Entender el negocio de Emuná Sport antes de diseñar. Es la fuente de verdad de las reglas del negocio.
+
+QUÉ VA
+  01-vision-alcance.md             Qué se construye y qué no.
+  02-reglas-negocio.md             Catálogo, precios, stock, envío, pagos, roles.
+  03-flujo-pedidos-estados.md      Paso a paso del pedido y transiciones permitidas.
+  diagramas/                       Diagramas UML de actividades y estados (Mermaid).
+  fuentes/                         Material original sin tocar: chats, capturas, logo original.
+
+QUÉ NO VA
+  Decisiones técnicas (van en 03) ni planes de trabajo (van en 02).
+
+QUIÉN / CUÁNDO
+  Jonathan con la IA, después de hablar con Richard. Si cambia una regla: editar el documento y anotarlo en 00-Gestion/11-decisiones-cambios.md.

@@ -1,0 +1,17 @@
+03-Diseno-Tecnico/base-datos/scripts
+====================================
+NIVEL DE INFORMACIÓN: SCRIPTS SQL PUNTUALES
+
+PROPÓSITO
+  Guardar los scripts SQL sueltos: ajustes, correcciones, datos de apoyo, consultas de reporte.
+
+NOMBRE DEL ARCHIVO (estándar)
+  s_emuna_<tema>_ddmmaaaa.sql      Ejemplo: s_emuna_ajustes_03112026.sql
+
+REGLAS
+  - Cabecera con autor, fecha, propósito y modificaciones (ver 12-estandar-base-datos.md).
+  - Palabras SQL en minúsculas, alias en MAYÚSCULAS, sin cursores.
+  - Sin datos reales de clientes.
+
+NOTA
+  El esquema de la base lo crean las migraciones de Django. Aquí van solo los scripts adicionales.
