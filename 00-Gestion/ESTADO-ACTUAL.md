@@ -11,6 +11,7 @@
 - Flujo de **cita en punto de encuentro en Lima con pago Yape al momento** y **venta presencial directa** incorporados en reglas (doc 02), estados (doc 03), modelo (doc 04), diagramas (`00` al `08`) y API.
 - Diccionario de datos validado (13 tablas, 132 columnas) generado en Markdown y Excel (`03-Diseno-Tecnico/base-datos/diccionario-datos.xlsx`).
 - Contrato OpenAPI 3.0.3 / Swagger validado (19 rutas) en `03-Diseno-Tecnico/api/openapi.yaml` y explicado en el doc 13.
+- Manual de flujo Git y DevOps con GitHub creado en Markdown (`05-Despliegue/14-flujo-git-devops-github.md`) y en Word (`05-Despliegue/Guia-DevOps-GitHub-Emuna-Sport.docx`); ramas `main` y `develop` creadas y sincronizadas en local.
 - Aún **no hay código de la aplicación**. `04-Desarrollo/` solo tiene su `LEEME.txt`.
 
 ## En curso

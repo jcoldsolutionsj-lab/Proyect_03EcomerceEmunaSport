@@ -9,6 +9,7 @@ Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entr
   - Se creó `03-Diseno-Tecnico/base-datos/generar_diccionario.py` (fuente única con validaciones) y se generaron `diccionario-datos.md`, `diccionario-datos.xlsx` (Excel con 5 hojas y filtros) y `modelo-er.md` (13 tablas, 132 columnas).
   - Se incorporó la modalidad `PUNTO_ENCUENTRO` en Lima (entrega en mano y cobro por Yape/efectivo en el momento) y la venta `PRESENCIAL` directa en los docs 02, 03, 04 y en el nuevo diagrama `08-actividad-entrega-lima-y-venta-presencial.md`.
   - Se creó la especificación de la API y Swagger: `03-Diseno-Tecnico/13-especificacion-api-swagger.md` y `03-Diseno-Tecnico/api/openapi.yaml` (19 rutas validadas con OpenAPI 3.0.3).
+  - Se creó el manual de flujo Git, ramas y DevOps con GitHub en Markdown (`05-Despliegue/14-flujo-git-devops-github.md`) y en Word (`05-Despliegue/Guia-DevOps-GitHub-Emuna-Sport.docx`), y se dejó creada la rama `develop` sincronizada con `main`.
 - **Decidido:** código y BD en español; tablas/columnas en MAYÚSCULAS; docstring obligatorio de 5 preguntas en cada función.
 - **Queda:** subir al remoto privado y aprobar el plan de la Fase 0 y la Fase 1.
 

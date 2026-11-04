@@ -37,6 +37,7 @@ Estos documentos describen la tienda web de Emuná Sport. Se actualizan a medida
 | – | Diccionario de datos (`.md` y `.xlsx`) | `03-Diseno-Tecnico/base-datos/` | Las 13 tablas y 132 columnas validadas (`generar_diccionario.py`) |
 | – | Modelo Entidad-Relación | `03-Diseno-Tecnico/base-datos/modelo-er.md` | Diagrama de la base en Mermaid |
 | 13 | Especificación de la API y Swagger | `03-Diseno-Tecnico/` | Cómo opera cada endpoint y contrato `api/openapi.yaml` |
+| 14 | Flujo Git, Ramas y DevOps con GitHub (`.md` y `.docx`) | `05-Despliegue/` | Ramas (`main`, `develop`, `feature/*`, `bugfix/*`, `release/*`, `hotfix/*`), versionado y CI/CD |
 
 ## Orden de lectura para la IA
 1. Reglas en `.agents/rules/00-emuna-proyecto.md` (siempre activas).

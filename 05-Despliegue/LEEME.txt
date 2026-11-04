@@ -6,8 +6,11 @@ PROPÓSITO
   Que cualquiera pueda publicar una versión y saber dónde corre cada entorno.
 
 QUÉ VA
-  08-despliegue-entornos.md   Local, demo en Render y producción.
-  Después: guías paso a paso, checklist de salida a producción, respaldos y recuperación.
+  08-despliegue-entornos.md                Local, demo en Render y producción.
+  14-flujo-git-devops-github.md            Modelo de ramas (main, develop, feature, bugfix, release, hotfix), versionado X.Y.Z y CI/CD.
+  Guia-DevOps-GitHub-Emuna-Sport.docx      El mismo manual de DevOps y GitHub en formato Word.
+  generar_guia_devops.py                   Script que genera el documento Word.
+  Después: checklist de salida a producción, respaldos y recuperación.
 
 QUÉ NO VA
   Contraseñas, claves ni tokens. Los secretos van en variables de entorno del proveedor, nunca aquí.

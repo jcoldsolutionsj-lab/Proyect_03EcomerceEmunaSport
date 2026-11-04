@@ -24,6 +24,7 @@ Bitácora viva. Cuando una regla cambie, se edita el documento correspondiente (
 - **Docstring obligatorio de 5 líneas en cada función/método propio:** *Qué hace*, *Va hacia*, *Depende de*, *Cuándo usarla* y *Si no opera*.
 - **Base de datos en MAYÚSCULAS y en español** siguiendo el estándar `TBL_` del manual (doc 12). Fuente única: `03-Diseno-Tecnico/base-datos/generar_diccionario.py`, que valida y genera `diccionario-datos.md`, `diccionario-datos.xlsx` y `modelo-er.md`.
 - **API documentada con OpenAPI 3.0.3 / Swagger:** contrato en `03-Diseno-Tecnico/api/openapi.yaml` y guía operativa en `03-Diseno-Tecnico/13-especificacion-api-swagger.md` (servida en Django con `drf-spectacular`).
+- **Flujo DevOps y ramas en GitHub (GitFlow adaptado, doc 14 y Word):** `main` para Producción, `develop` para integración y Demo/Piloto en Render, `feature/*` para nuevas fases/cambios, `bugfix/*` para correcciones en desarrollo/piloto, `release/*` para preparar versiones `X.Y.Z` y `hotfix/*` para arreglos urgentes en producción.
 - Un solo repositorio git en la raíz del proyecto; el remoto será privado.
 - La lógica de negocio vive solo en `servicios.py` y `selectores.py` (no en procedimientos almacenados).
 
@@ -44,3 +45,4 @@ Bitácora viva. Cuando una regla cambie, se edita el documento correspondiente (
 | 2026-11-03 | Git iniciado en la raíz; LEEME.txt en cada carpeta; diagramas UML en 01-Relevamiento/diagramas | Estándar de estructura, índice 00, reglas de la IA |
 | 2026-11-03 | Estándar de base de datos (doc 12), diccionario de datos y modelo ER; se agrega precio base a Producto | Doc 04, doc 05, doc 12, base-datos/ |
 | 2026-11-03 | Restauración íntegra del doc 05 desde `docs/`; código y BD en español; docstring obligatorio de 5 líneas; diccionario en Excel (`diccionario-datos.xlsx`); flujo de cita en punto de encuentro en Lima y venta presencial (diagrama 08); especificación OpenAPI/Swagger (doc 13 y `api/openapi.yaml`) | Reglas IA, docs 02, 03, 04, 05, 10, 11, 12, 13, diagramas 00-08, base-datos/, api/ |
+| 2026-11-03 | Manual de flujo Git, ramas y despliegue DevOps con GitHub en Markdown (`14-flujo-git-devops-github.md`) y en Word (`Guia-DevOps-GitHub-Emuna-Sport.docx`); creación de rama `develop` | `05-Despliegue/`, índice 00, doc 11 |
