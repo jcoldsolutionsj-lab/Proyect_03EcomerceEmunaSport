@@ -1,0 +1,5 @@
+-r base.txt
+gunicorn>=23.0.0
+psycopg[binary]>=3.2.0
+django-storages[s3]>=1.14.4
+django-otp>=1.5.4

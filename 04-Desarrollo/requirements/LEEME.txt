@@ -1,0 +1,2 @@
+CARPETA: 04-Desarrollo/requirements
+NIVEL DE INFORMACION: Dependencias de Python por entorno (base.txt, local.txt, production.txt).

@@ -1,0 +1,2 @@
+CARPETA: 04-Desarrollo/tests
+NIVEL DE INFORMACION: Suite de pruebas automatizadas con pytest, auditoria del estandar de BD TBL_ y pruebas E2E.
