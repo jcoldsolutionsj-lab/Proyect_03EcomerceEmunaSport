@@ -172,8 +172,8 @@ def construir_documento() -> None:
 
     meta = doc.add_paragraph()
     r_meta = meta.add_run(
-        "Responsable Técnico: Jonathan Vera  |  Dueño del Negocio: Richard  |  "
-        "Ubicación en proyecto: 05-Despliegue/14-flujo-git-devops-github.md"
+        "Desarrollador: Jonathan Vera Segura (GitHub: jhon2018)  |  "
+        "Repositorio Central: jcoldsolutionsj-lab  |  Dueño del Negocio: Richard"
     )
     r_meta.italic = True
     r_meta.font.size = Pt(9.5)
@@ -272,12 +272,13 @@ def construir_documento() -> None:
 
     agregar_apartado(doc, "Caso 1: Subir el proyecto por primera vez al repositorio remoto en GitHub")
     doc.add_paragraph(
-        "Repositorio oficial en GitHub: https://github.com/jcoldsolutionsj-lab/Proyect_03EcomerceEmunaSport.git"
+        "Repositorio central (propietario): jcoldsolutionsj-lab  |  Desarrollador (colaborador): Jonathan Vera Segura (jhon2018)"
     )
     agregar_bloque_codigo(
         doc,
         [
-            "git remote add origin https://github.com/jcoldsolutionsj-lab/Proyect_03EcomerceEmunaSport.git",
+            'git config user.name "jhon2018"',
+            "git remote add origin https://jhon2018@github.com/jcoldsolutionsj-lab/Proyect_03EcomerceEmunaSport.git",
             "git push -u origin main",
             "git push -u origin develop",
         ],
