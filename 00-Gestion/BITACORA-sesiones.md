@@ -2,6 +2,14 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-10 – Conexión del repositorio remoto oficial en GitHub y regla permanente de DevOps
+- **Hecho:**
+  - Se registró `05-Despliegue/14-flujo-git-devops-github.md` (`Guia-DevOps-GitHub-Emuna-Sport.docx`) como regla obligatoria en `.agents/rules/00-emuna-proyecto.md` para todo el proyecto.
+  - Se actualizó la URL oficial del repositorio (`https://github.com/jcoldsolutionsj-lab/Proyect_03EcomerceEmunaSport.git`) en el manual Markdown y en el Word.
+  - Se configuró `origin` y se subieron las ramas `main` y `develop` a GitHub.
+- **Decidido:** toda fase o cambio nuevo saldrá de `develop` en una rama `feature/*` siguiendo el manual DevOps.
+- **Queda:** proponer y aprobar el plan de implementación de la Fase 0 y la Fase 1.
+
 ## 2026-11-03 (cierre) – Restauración del doc 05, español total, Excel de BD, cita en Lima y Swagger
 - **Hecho:**
   - Se restauró el doc `05-arquitectura-stack.md` desde la carpeta `docs/` que dejó Jonathan y se archivaron los originales en `01-Relevamiento/fuentes/documentos-originales/`.

@@ -111,9 +111,9 @@ Formato: `<tipo>(<alcance>): <descripción breve en español>`
 ## 5. Guía práctica de comandos Git (paso a paso)
 
 ### Caso 1: Conectar el repositorio remoto por primera vez
-Cuando crees el repositorio **privado** vacío en GitHub (sin README ni `.gitignore`, porque ya los tenemos):
+Repositorio oficial en GitHub: `https://github.com/jcoldsolutionsj-lab/Proyect_03EcomerceEmunaSport.git`
 ```bash
-git remote add origin https://github.com/<tu-usuario>/<tu-repo>.git
+git remote add origin https://github.com/jcoldsolutionsj-lab/Proyect_03EcomerceEmunaSport.git
 git push -u origin main
 git push -u origin develop
 ```

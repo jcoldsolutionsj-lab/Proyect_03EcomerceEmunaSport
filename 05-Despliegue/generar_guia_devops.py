@@ -272,12 +272,12 @@ def construir_documento() -> None:
 
     agregar_apartado(doc, "Caso 1: Subir el proyecto por primera vez al repositorio remoto en GitHub")
     doc.add_paragraph(
-        "Crea un repositorio PRIVADO y vacío en GitHub (sin README ni .gitignore) y ejecuta:"
+        "Repositorio oficial en GitHub: https://github.com/jcoldsolutionsj-lab/Proyect_03EcomerceEmunaSport.git"
     )
     agregar_bloque_codigo(
         doc,
         [
-            "git remote add origin https://github.com/<tu-usuario>/<tu-repositorio>.git",
+            "git remote add origin https://github.com/jcoldsolutionsj-lab/Proyect_03EcomerceEmunaSport.git",
             "git push -u origin main",
             "git push -u origin develop",
         ],
