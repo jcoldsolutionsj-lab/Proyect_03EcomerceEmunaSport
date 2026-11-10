@@ -3,7 +3,7 @@
 > La IA lee este archivo al empezar cada sesión y lo actualiza al terminar. Mantenerlo corto.
 
 **Última actualización:** 2026-11-10
-**Fase actual:** **Fase 0 – Base del proyecto** en rama `feature/fase-0-base` (creada desde `develop`). Plan propuesto, esperando confirmación para escribir el código en `04-Desarrollo/`.
+**Fase actual:** **Fase 0 completada y probada** en `feature/fase-0-base` (5/5 tests en `pytest`, 0 errores en `ruff`). Listo para integrar a `develop` y pasar a la **Fase 1 (`feature/fase-1-catalogo-frontend`)**.
 
 ## Dónde quedamos
 - Documentos **01 al 15** completos y alineados; copia intacta de los originales en `01-Relevamiento/fuentes/documentos-originales/`.
@@ -18,13 +18,17 @@
   - `productos-demo/argentina-messi/`: 5 fotos reales de «Argentina x Messi #10» (`S/ 55.00` / antes `S/ 69.90`, tallas `S, M, L, XL`) corregidas en `originales/*.jpg` y convertidas a `webp/*.webp` (400 px y 900 px).
   - `referencias-marca/plantilla-base-figma/`: 5 capturas de referencia del layout UI aprobadas con los 6 ajustes deportivos de Emuná Sport.
 - Manual de flujo Git y DevOps con GitHub en Markdown (`05-Despliegue/14-flujo-git-devops-github.md`) y Word (`05-Despliegue/Guia-DevOps-GitHub-Emuna-Sport.docx`); remoto oficial configurado y ramas `main`, `develop` y `feature/fase-0-base` sincronizadas.
-- Aún **no hay código de la aplicación**. `04-Desarrollo/` solo tiene su `LEEME.txt`.
+- **Fase 0 implementada en `04-Desarrollo/` (`feature/fase-0-base`):**
+  - Configuración por entorno (`base.py`, `local.py`, `demo.py`, `production.py`) con *Fail-Fast*, CORS estricto, HTTPS/HSTS y Throttling.
+  - App `nucleo` completa: `ConfiguracionTienda` (`TBL_RCONFIGURACION_TIENDA`), `MetodoPago` (`TBL_RMETODO_PAGO`), grupo `Dueño` para Richard, sanitización anti-XSS y validadores de DNI/celular peruano.
+  - Esqueleto de las 5 apps restantes (`catalogo`, `inventario`, `pedidos`, `envios`, `tablero`).
+  - Suite de pruebas de Fase 0 pasando al 100% (`5 passed`, `ruff` sin advertencias).
 
 ## En curso
-- **Fase 0 (`feature/fase-0-base`):** Plan de implementación paso a paso propuesto; esperando aprobación de Jonathan para empezar a escribir el código en `04-Desarrollo/`.
+- Cierre de `feature/fase-0-base` y arranque de **`feature/fase-1-catalogo-frontend`** (modelos de catálogo, conversión WebP, `cargar_demo` con fotos reales de `Argentina x Messi` y Frontend público con los 3 videos del Hero Banner).
 
 ## Siguiente paso
-1. Aprobar el plan de la **Fase 0** para construir la base en `feature/fase-0-base`, cerrarla hacia `develop` y abrir enseguida `feature/fase-1-catalogo-frontend`.
+1. Confirmar el cierre/merge de `feature/fase-0-base` a `develop` y arrancar la implementación de la **Fase 1 (`feature/fase-1-catalogo-frontend`)**.
 
 ## Bloqueos y pendientes con Richard
 Ver los 7 puntos de negocio en `00-Gestion/11-decisiones-cambios.md` (no bloquean la Fase 0 ni la Fase 1).

@@ -1,0 +1,2 @@
+CARPETA: 04-Desarrollo/apps/catalogo
+NIVEL DE INFORMACION: Aplicacion de categorias, productos, imagenes WebP, variantes por talla y reglas de precio por mayor.

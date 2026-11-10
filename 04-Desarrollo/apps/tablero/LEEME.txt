@@ -1,0 +1,2 @@
+CARPETA: 04-Desarrollo/apps/tablero
+NIVEL DE INFORMACION: Aplicacion de metricas, alertas operativas y exportacion CSV para Richard.

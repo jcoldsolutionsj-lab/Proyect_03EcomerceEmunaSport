@@ -1,0 +1,2 @@
+CARPETA: 04-Desarrollo/templates
+NIVEL DE INFORMACION: Plantillas HTML de Django con Tailwind CSS, HTMX y Alpine.js.

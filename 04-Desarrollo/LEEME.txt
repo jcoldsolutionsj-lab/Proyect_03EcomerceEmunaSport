@@ -4,6 +4,7 @@ NIVEL DE INFORMACIÓN: CÓDIGO (lo que se ejecuta)
 
 PROPÓSITO
   Aquí vive la aplicación Django. Es la única carpeta con código.
+  Para instrucciones de cómo ejecutar el servidor y las pruebas, lee README.md (en la raíz o en esta carpeta).
 
 QUÉ VA
   El proyecto Django completo (config/, apps/, templates/, static/, tests/, manage.py, requirements/, .env.example).
@@ -18,4 +19,4 @@ REGLAS
   - Nombres de base de datos: 03-Diseno-Tecnico/12-estandar-base-datos.md
 
 ESTADO
-  Vacío. Aún no empieza la Fase 0.
+  Fase 0 completada y probada (nucleo, ConfiguracionTienda, MetodoPago, grupo Dueño y comando preparar_local).

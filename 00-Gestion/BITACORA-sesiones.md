@@ -2,6 +2,15 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-10 – Implementación y pruebas de la Fase 0 (`feature/fase-0-base`)
+- **Hecho:**
+  - Se creó el entorno virtual `.venv` con Django 5.2 LTS, DRF, `drf-spectacular`, `django-cors-headers`, `django-ratelimit`, `pytest`, `ruff` y `Pillow`.
+  - Se implementó la estructura base en `04-Desarrollo/`: `manage.py`, `pyproject.toml`, `.env.example`, `requirements/` y `config/settings/` (`base`, `local`, `demo`, `production` con validación *Fail-Fast* de variables críticas).
+  - Se implementó la app `nucleo` con `ConfiguracionTienda` (`TBL_RCONFIGURACION_TIENDA`), `MetodoPago` (`TBL_RMETODO_PAGO`), sanitización anti-XSS (`limpiar_texto_seguro`), validadores peruanos (DNI y celular), grupo `Dueño` y docstrings obligatorios de 5 líneas en cada función.
+  - Se ejecutaron migraciones, `ruff check` (`All checks passed!`) y `pytest` (`5 passed in 2.79s`, incluyendo la auditoría automática `test_estandar_bd.py` de nombres físicos `TBL_` en MAYÚSCULAS).
+- **Decidido:** realizar los commits estructurados en `feature/fase-0-base` tras confirmar las pruebas.
+- **Queda:** fusionar `feature/fase-0-base` en `develop`, abrir `feature/fase-1-catalogo-frontend` y construir el Catálogo + Frontend público.
+
 ## 2026-11-10 – Pruebas de carga (Grafana k6), Skills de Diseño UI y Checklist de 20 puntos «Antes de lanzar la web»
 - **Hecho:**
   - Se creó `03-Diseno-Tecnico/pruebas-carga-k6/` con `LEEME.txt`, `plan-pruebas-k6.md` y el script `escenarios-base.js` definiendo cuándo usar **Grafana k6** (Fase 2 rendimiento de pedido, Fase 3 concurrencia de stock `select_for_update()` y Fase 6 pico de campaña de WhatsApp).

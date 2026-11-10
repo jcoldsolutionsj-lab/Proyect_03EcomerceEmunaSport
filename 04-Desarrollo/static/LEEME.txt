@@ -1,0 +1,2 @@
+CARPETA: 04-Desarrollo/static
+NIVEL DE INFORMACION: Archivos estaticos (CSS, JS, iconos y recursos publicos de interfaz).
