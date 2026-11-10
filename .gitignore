@@ -33,6 +33,12 @@ htmlcov/
 # ===== Node (si se usa para estilos o diagramas) =====
 node_modules/
 
+# ===== Videos pesados de referencia y banners (se leen en local y luego van a Cloudflare R2) =====
+03-Diseno-Tecnico/assets/**/*.mp4
+03-Diseno-Tecnico/assets/**/*.mov
+03-Diseno-Tecnico/assets/**/*.avi
+03-Diseno-Tecnico/assets/**/*.mkv
+
 # ===== Editor y sistema =====
 .vscode/
 .idea/

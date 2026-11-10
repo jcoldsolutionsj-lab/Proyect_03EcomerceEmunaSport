@@ -1,0 +1,11 @@
+CARPETA: 03-Diseno-Tecnico/pruebas-carga-k6
+NIVEL DE INFORMACION: Pruebas de carga, concurrencia y rendimiento con Grafana k6.
+
+Que guardar aqui:
+- Plan de pruebas de carga y umbrales de rendimiento (plan-pruebas-k6.md).
+- Scripts de Grafana k6 en JavaScript (escenarios-base.js) para probar catalogo, creacion de pedidos y bloqueo atomico de stock (select_for_update).
+- Reportes resumidos de ejecuciones antes de salir a produccion.
+
+Que NO guardar aqui:
+- Datos reales de clientes (DNI o telefonos reales).
+- Credenciales o tokens de produccion (se pasan por variables de entorno al ejecutar k6).

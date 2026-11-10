@@ -1,0 +1,10 @@
+CARPETA: 03-Diseno-Tecnico/assets/referencias-marca
+NIVEL DE INFORMACION: Fotos y videos de referencia de la marca Emuna Sport.
+
+Que guardar aqui:
+- Fotos de referencia de las camisetas, telas, etiquetas, empaques o entregas de Emuna Sport.
+- Videos cortos de muestra de la marca o de como Richard presenta las prendas.
+
+Para que los usa la IA:
+- Analizar el estilo visual real de Emuna Sport (colores de prendas, iluminacion, cortes, detalles deportivos) para plasmarlo en el diseno del Frontend (doc 06) y en los productos de ejemplo (cargar_demo).
+- Nota: Los videos pesados (.mp4, .mov) se leen en local por la IA y estan excluidos en .gitignore para no saturar el repositorio de GitHub.

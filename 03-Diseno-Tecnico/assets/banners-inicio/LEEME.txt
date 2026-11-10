@@ -1,0 +1,12 @@
+CARPETA: 03-Diseno-Tecnico/assets/banners-inicio
+NIVEL DE INFORMACION: Videos de portada (Hero Banner) de la pagina de inicio.
+
+Archivos actuales:
+- banner_1.mp4 : Modelos luciendo camisetas en vestuario, calle y cancha nocturna con sello EMUNA.
+- banner_2.mp4 : Animacion 3D metalica del logo EMUNA SPORT - ESTILO DEPORTIVO.
+- banner_3.mp4 : Animacion 3D de camisetas Emuna con rayos verdes/azules y fuego.
+
+Nota tecnica:
+- En local se sirven desde esta carpeta o static/media de desarrollo.
+- Para produccion se optimizan (sin pista de audio ya que el banner web va muted, comprimidos a ~1.5 MB en MP4/WebM con imagen poster.webp) y se suben al bucket publico S3 de Cloudflare R2.
+- Excluidos en .gitignore (*.mp4) para no saturar el repositorio de GitHub.

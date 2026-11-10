@@ -24,7 +24,7 @@ Las fotos van a un bucket compatible con S3 (Cloudflare R2) desde el principio, 
 - Acordar por escrito qué pertenece a Richard (dominio, cuentas, datos, fotos) y qué a Jonathan (código y licencia de uso).
 
 ## Variables de entorno (ejemplo en `.env.example`, sin valores reales)
-`DJANGO_SETTINGS_MODULE`, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `CSRF_TRUSTED_ORIGINS`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_PUBLIC`, `R2_BUCKET_PRIVATE`, `R2_PUBLIC_URL`, `SITE_URL`.
+`DJANGO_SETTINGS_MODULE`, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `CSRF_TRUSTED_ORIGINS`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_PUBLIC`, `R2_BUCKET_PRIVATE`, `R2_PUBLIC_URL`, `SITE_URL`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `GA4_MEASUREMENT_ID`.
 
 ## Despliegue en Render (resumen)
 - Build: instalar dependencias, `collectstatic`, `migrate`.
@@ -32,5 +32,5 @@ Las fotos van a un bucket compatible con S3 (Cloudflare R2) desde el principio, 
 - Archivo `render.yaml` versionado, sin secretos.
 - Verificar tras cada despliegue: página de inicio, un pedido de prueba, el PDF y el admin.
 
-## Antes de salir a producción
-Dominio y HTTPS activos; PostgreSQL persistente con respaldo; bucket R2 configurado; QR y titular de Yape cargados por el admin y confirmados con Richard; usuarios y grupos creados; pruebas pasando; `DEBUG=False`.
+## Antes de salir a producción (Checklist completo en doc 15)
+Dominio y HTTPS activos; PostgreSQL persistente con respaldo; bucket R2 configurado; QR y titular de Yape cargados por el admin y confirmados con Richard; usuarios y grupos creados; pruebas unitarias, E2E (Playwright), carga (Grafana k6 en `03-Diseno-Tecnico/pruebas-carga-k6/`) y los **20 puntos de `05-Despliegue/15-checklist-antes-de-lanzar-web.md`** verificados al 100%; `DEBUG=False`.

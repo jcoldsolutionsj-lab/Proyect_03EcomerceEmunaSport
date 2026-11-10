@@ -9,8 +9,8 @@ Convenciones: claves primarias `id` (en base `PPP_NID`); `fecha_creacion` y `fec
 
 ### `catalogo` (`TBL_RCATEGORIA`, `TBL_RPRODUCTO`, `TBL_RIMAGEN_PRODUCTO`, `TBL_RVARIANTE`, `TBL_RREGLA_PRECIO`)
 - **Categoria**: `nombre`, `slug`, `orden`, `activa`.
-- **Producto**: `nombre`, `slug`, `sku` único, `descripcion`, `categoria`, `marca` (texto, opcional), `precio_unidad` (precio base), `activo`, `destacado`.
-- **ImagenProducto**: `producto`, `ruta_original` (privado), versiones generadas (`ruta_miniatura` ~400 px y `ruta_detalle` ~900 px en WebP), `orden`, `es_principal`.
+- **Producto**: `nombre`, `slug`, `sku` único, `descripcion`, `categoria`, `marca` (texto, opcional), `precio_unidad` (precio actual de venta, ej. `S/ 55.00`), `precio_anterior` (opcional, precio regular tachado antes de oferta, ej. `S/ 69.90`), `activo`, `destacado`.
+- **ImagenProducto**: `producto`, `ruta_original` (privado), versiones generadas (`ruta_miniatura` ~400 px y `ruta_detalle` ~900 px en WebP), `texto_alternativo` (opcional; si es vacío se genera automáticamente con el nombre del producto para SEO y accesibilidad), `orden`, `es_principal`.
 - **Variante**: `producto`, `talla` (obligatoria), `color` (opcional), `modelo` (opcional), `sku` único, `cantidad_stock` (entero ≥ 0), `umbral_stock_bajo` (opcional), `activa`. Única por (`producto`, `talla`, `color`, `modelo`).
 - **ReglaPrecio**: `producto`, `cantidad_minima`, `precio_unidad`. El precio base está en `Producto.precio_unidad`.
 

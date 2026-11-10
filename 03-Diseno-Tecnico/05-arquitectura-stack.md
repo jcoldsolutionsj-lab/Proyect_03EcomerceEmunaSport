@@ -9,7 +9,7 @@
 - PDF: **ReportLab** (Python puro) para evitar dependencias de sistema en Render. Alternativa solo si el despliegue lo permite: WeasyPrint.
 - Imágenes: Pillow para generar miniatura y detalle en WebP al subir; originales en un bucket privado; archivos servidos desde Cloudflare R2 (compatible con S3) mediante `django-storages`.
 - Estáticos: WhiteNoise. Servidor: gunicorn.
-- Calidad: `pytest-django`, `ruff`, `django-simple-history`, `django-environ`, `django-ratelimit`.
+- Calidad y seguridad: `pytest-django`, `ruff`, `django-simple-history`, `django-environ`, `django-ratelimit`, `django-cors-headers`, `playwright`.
 
 ## Capas (regla central)
 ```
@@ -65,3 +65,20 @@ Se generan con enlaces `https://wa.me/<numero>?text=...` con el texto codificado
 
 ## API y documentación Swagger
 Endpoints públicos de lectura del catálogo, carrito y creación/consulta de pedidos; endpoints privados (JWT) para gestión de pedidos, ventas presenciales, stock, envíos y tablero. El contrato completo está en `03-Diseno-Tecnico/api/openapi.yaml` y la guía en `03-Diseno-Tecnico/13-especificacion-api-swagger.md`. En el servidor se publica con `drf-spectacular` en `/api/schema/`, `/api/docs/` (Swagger UI) y `/api/redoc/`.
+
+## Metodología de desarrollo (`Feature Dev`) y auditoría (`CodeReview`)
+
+### 1. Flujo `Feature Dev` (6 pasos por cada funcionalidad en rama `feature/*`)
+1. **Contrato documental:** verificar reglas en docs `02` y `03`, modelo en `04`/`12` y ruta en `13` (`openapi.yaml`).
+2. **Datos y diccionario:** definir modelo en español con `db_table` y `db_column` en MAYÚSCULAS (`TBL_`), crear migración y ejecutar `generar_diccionario.py`.
+3. **Dominio (`servicios.py` y `selectores.py`):** programar la lógica con sanitización de entradas, transacciones atómicas y el **docstring obligatorio de 5 líneas** en cada función.
+4. **Interfaz / API delgada:** conectar vista, template mobile-first (un solo CTA `#39FF14`) o serializer sin lógica de negocio duplicada.
+5. **Pruebas:** escribir tests unitarios (`pytest`), test de permisos/aislamiento de filas y prueba visual/E2E (`Playwright`).
+6. **Cierre:** ejecutar el checklist de `CodeReview` antes de hacer commit y merge a `develop`.
+
+### 2. Checklist obligatorio de `CodeReview` (antes de cada commit / Pull Request)
+- [ ] **Idioma y docstrings:** ¿Todo el código propio está en español y cada función/método tiene su docstring de 5 líneas (*Qué hace*, *Va hacia*, *Depende de*, *Cuándo usarla*, *Si no opera*)?
+- [ ] **Capas limpias:** ¿Las vistas, templates y serializers están libres de reglas de negocio? ¿Las lecturas usan `select_related`/`prefetch_related` (cero consultas N+1)?
+- [ ] **Integridad de stock y precios:** ¿El stock solo cambia por `MovimientoStock` con `select_for_update()`? ¿Los precios se calculan en el servidor ignorando cualquier monto enviado desde el navegador?
+- [ ] **Blindaje anti-hacking (doc 07):** ¿Entradas sanitizadas (`strip_tags`, regex de DNI/teléfono)? ¿Rate limiting activo? ¿Aislamiento de filas (sin exponer DNI, teléfono ni `clave_recojo` en rutas públicas)? ¿Cero secretos en el código?
+- [ ] **Calidad y base de datos:** ¿Pasan `ruff`, `pytest` y el test de nombres físicos `TBL_` en MAYÚSCULAS?
