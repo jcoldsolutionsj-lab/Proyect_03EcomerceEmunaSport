@@ -136,6 +136,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internacionalización y zona horaria oficial de Perú
 LANGUAGE_CODE = "es-pe"
+FORMAT_MODULE_PATH = ["config.formats"]
 TIME_ZONE = "America/Lima"
 USE_I18N = True
 USE_TZ = True

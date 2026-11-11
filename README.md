@@ -14,22 +14,26 @@ Abre una terminal **PowerShell** en la raíz del proyecto (`D:\JONATHAN\Proyecto
 ```
 *(Si prefieres no activarlo, puedes llamar directamente a `.\.venv\Scripts\python.exe` como se muestra abajo).*
 
-### 2. Aplicar migraciones y preparar datos/usuarios locales
+### 2. Aplicar migraciones, preparar usuarios y cargar el catálogo demo
 ```powershell
 .\.venv\Scripts\python.exe 04-Desarrollo/manage.py migrate
 .\.venv\Scripts\python.exe 04-Desarrollo/manage.py preparar_local
+.\.venv\Scripts\python.exe 04-Desarrollo/manage.py cargar_demo
 ```
 Esto deja listos automáticamente:
 - **Superusuario técnico (acceso total):** usuario `jonathan` / contraseña `Emuna2026!`
 - **Usuario operativo (grupo `Dueño`):** usuario `richard` / contraseña `Emuna2026!`
 - **Configuración de la tienda (`TBL_RCONFIGURACION_TIENDA`)** y **Métodos de pago (`TBL_RMETODO_PAGO`: Yape y Efectivo)**.
+- **Catálogo demo completo (`cargar_demo`):** 4 categorías y 8 camisetas encabezadas por **«ARGENTINA X MESSI #10»** (`S/ 55.00` / ~~`S/ 69.90`~~, tallas `S, M, L, XL`, precios por mayor desde 3 y 6 unidades, y sus 5 fotos reales en `.webp`).
 
 ### 3. Levantar el servidor para verlo en tu navegador
 ```powershell
 .\.venv\Scripts\python.exe 04-Desarrollo/manage.py runserver
 ```
 Luego abre en tu navegador:
-- **Inicio / Estado del proyecto:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+- **Inicio / Catálogo + Hero Video Banner (`banner_1..3.mp4`):** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+- **Ficha de producto «Argentina x Messi #10» (5 fotos + tallas + ahorro por mayor):** [http://127.0.0.1:8000/productos/argentina-x-messi-10/](http://127.0.0.1:8000/productos/argentina-x-messi-10/)
+- **Páginas legales y SEO:** [Aviso legal](http://127.0.0.1:8000/aviso-legal/), [Privacidad](http://127.0.0.1:8000/privacidad/), [Cookies](http://127.0.0.1:8000/cookies/), [robots.txt](http://127.0.0.1:8000/robots.txt) y [sitemap.xml](http://127.0.0.1:8000/sitemap.xml)
 - **Panel de Gestión (Admin de Django):** [http://127.0.0.1:8000/gestion/](http://127.0.0.1:8000/gestion/) *(ingresa con `jonathan` o `richard` y clave `Emuna2026!`)*
 - **Endpoint de Salud JSON:** [http://127.0.0.1:8000/salud/](http://127.0.0.1:8000/salud/)
 

@@ -1,0 +1,605 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block contenido %}
+<!-- SECCIÓN 0: CARRUSEL DE BIENVENIDA CON LOS 3 VIDEOS REALES (Velocidad suave 0.72x + Efecto Teclado Lento) -->
+<section aria-label="Carrusel de bienvenida Emuná Sport"
+         class="bg-ink text-white border-b-2 border-ink relative overflow-hidden"
+         x-data="{
+           indiceActual: 0,
+           textoTeclado: '',
+           temporizadorTeclado: null,
+           slides: [
+             {
+               video: '{% static 'banners-inicio/banner_1.mp4' %}',
+               etiqueta: '⚡ TEMPORADA 2026 · ESTILO DEPORTIVO',
+               titulo: 'NUEVA COLECCIÓN EDICIÓN JUGADOR',
+               fraseTeclado: 'Punto de encuentro en Lima (envío S/ 0.00 y pago con Yape al recibir) o despacho por Shalom y Olva.',
+               botonTexto: 'Ver Catálogo Completo',
+               botonUrl: '#catalogo-completo'
+             },
+             {
+               video: '{% static 'banners-inicio/banner_3.mp4' %}',
+               etiqueta: '🔥 OFERTA ESTRELLA · AHORRAS S/ 14.90',
+               titulo: 'ARGENTINA X MESSI #10 CAMPEÓN',
+               fraseTeclado: 'Llévala hoy a S/ 55.00 (Antes S/ 69.90) o combina tallas S, M, L y XL desde S/ 45.00 c/u por mayor.',
+               botonTexto: 'Ver Camiseta Argentina #10',
+               botonUrl: '/productos/argentina-x-messi-10/'
+             },
+             {
+               video: '{% static 'banners-inicio/banner_2.mp4' %}',
+               etiqueta: '🇵🇪 COMPRA SEGURA Y DIRECTA EN PERÚ',
+               titulo: 'VENTA POR UNIDAD Y POR MAYOR',
+               fraseTeclado: 'Precios automáticos desde 3 y 6 prendas. Recibe tu comprobante PDF y coordina directo con Richard.',
+               botonTexto: 'Explorar Colección',
+               botonUrl: '#catalogo-completo'
+             }
+           ],
+           iniciarCarrusel() {
+             this.aplicarVelocidadSuave();
+             this.escribirSuave(this.slides[this.indiceActual].fraseTeclado);
+           },
+           aplicarVelocidadSuave() {
+             const reproductor = this.$refs.videoCarrusel;
+             if (reproductor) {
+               reproductor.defaultPlaybackRate = 0.72;
+               reproductor.playbackRate = 0.72;
+             }
+           },
+           escribirSuave(fraseCompleta) {
+             if (this.temporizadorTeclado) {
+               clearInterval(this.temporizadorTeclado);
+             }
+             this.textoTeclado = '';
+             let posicion = 0;
+             this.temporizadorTeclado = setInterval(() => {
+               if (posicion < fraseCompleta.length) {
+                 this.textoTeclado += fraseCompleta.charAt(posicion);
+                 posicion++;
+               } else {
+                 clearInterval(this.temporizadorTeclado);
+               }
+             }, 42);
+           },
+           irASlide(nuevoIndice) {
+             this.indiceActual = (nuevoIndice + this.slides.length) % this.slides.length;
+             this.escribirSuave(this.slides[this.indiceActual].fraseTeclado);
+             this.$nextTick(() => {
+               const reproductor = this.$refs.videoCarrusel;
+               if (reproductor) {
+                 reproductor.load();
+                 this.aplicarVelocidadSuave();
+                 reproductor.play().catch(() => {});
+               }
+             });
+           },
+           siguienteSlide() {
+             this.irASlide(this.indiceActual + 1);
+           },
+           anteriorSlide() {
+             this.irASlide(this.indiceActual - 1);
+           }
+         }"
+         x-init="iniciarCarrusel()">
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+
+      <!-- Texto Dinámico con Efecto Teclado Lento y Suave (Izquierda en Desktop) -->
+      <div class="lg:col-span-5 space-y-3 sm:space-y-4 z-10">
+        <div class="inline-flex items-center gap-2 bg-neon text-ink text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1">
+          <span x-text="slides[indiceActual].etiqueta">⚡ TEMPORADA 2026 · ESTILO DEPORTIVO</span>
+        </div>
+
+        <h1 class="font-display italic font-extrabold text-3xl sm:text-5xl lg:text-6xl uppercase leading-[0.94] tracking-tight text-white"
+            x-text="slides[indiceActual].titulo">
+          NUEVA COLECCIÓN EDICIÓN JUGADOR
+        </h1>
+
+        <!-- Frase con efecto de teclado lento y suave + texto base accesible para buscadores -->
+        <p class="text-xs sm:text-sm text-silver leading-relaxed max-w-md min-h-[2.5rem] sm:min-h-[3.2rem]">
+          <span x-text="textoTeclado">Punto de encuentro en Lima (envío S/ 0.00 y pago con Yape al recibir) o despacho por Shalom y Olva.</span><span class="cursor-teclado" aria-hidden="true"></span>
+        </p>
+
+        <!-- Único CTA Principal en Verde Neón (#39FF14 con texto #0A0A0A - Requisito #20) -->
+        <div class="pt-1 flex flex-wrap items-center gap-3 sm:gap-4">
+          <a :href="slides[indiceActual].botonUrl"
+             href="#catalogo-completo"
+             class="inline-flex items-center justify-between gap-3 sm:gap-4 bg-neon text-ink font-extrabold text-xs sm:text-sm uppercase tracking-wider px-5 py-3.5 sm:px-6 sm:py-4 border-2 border-neon hover:brightness-95 transicion-tactil">
+            <span x-text="slides[indiceActual].botonTexto">Ver Catálogo Completo</span>
+            <span class="text-base sm:text-lg leading-none">→</span>
+          </a>
+
+          <!-- Sello de confianza Yape + WhatsApp -->
+          <div class="inline-flex items-center gap-2 text-xs text-silver">
+            <img src="{% static 'yape.svg' %}" alt="Pago con Yape" class="h-4 sm:h-5 w-auto object-contain">
+            <img src="{% static 'whatsapp.png' %}" alt="Atención por WhatsApp" class="h-4 sm:h-5 w-4 sm:w-5 object-contain">
+          </div>
+        </div>
+      </div>
+
+      <!-- Visor Panorámico 16:9 de los 3 Videos con Indicadores Minimalistas (sin textos técnicos) -->
+      <div class="lg:col-span-7 relative">
+        <div class="relative aspect-video bg-black border border-silver/30 overflow-hidden shadow-2xl group">
+          <video x-ref="videoCarrusel"
+                 autoplay muted playsinline preload="metadata"
+                 @loadedmetadata="$el.playbackRate = 0.72"
+                 @play="$el.playbackRate = 0.72"
+                 @ended="siguienteSlide()"
+                 poster="{% static 'productos-demo/argentina-messi/webp/argentina_1_detalle.webp' %}"
+                 class="w-full h-full object-contain sm:object-cover bg-black">
+            <source :src="slides[indiceActual].video" src="{% static 'banners-inicio/banner_1.mp4' %}" type="video/mp4">
+            <!-- Referencias estáticas para precarga de los 3 videos del carrusel -->
+            <track kind="captions" data-video-2="{% static 'banners-inicio/banner_2.mp4' %}" data-video-3="{% static 'banners-inicio/banner_3.mp4' %}">
+          </video>
+
+          <!-- Flechas Anterior / Siguiente discretas -->
+          <button type="button"
+                  @click="anteriorSlide()"
+                  aria-label="Video anterior"
+                  class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-ink/60 hover:bg-neon text-white hover:text-ink border border-white/25 flex items-center justify-center font-extrabold text-lg opacity-0 group-hover:opacity-100 transicion-tactil">
+            ‹
+          </button>
+          <button type="button"
+                  @click="siguienteSlide()"
+                  aria-label="Siguiente video"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-ink/60 hover:bg-neon text-white hover:text-ink border border-white/25 flex items-center justify-center font-extrabold text-lg opacity-0 group-hover:opacity-100 transicion-tactil">
+            ›
+          </button>
+
+          <!-- Indicadores minimalistas tipo barra (estándar e-commerce deportivo, sin textos) -->
+          <div class="absolute bottom-3.5 inset-x-0 flex items-center justify-center gap-2">
+            <template x-for="(slide, idx) in slides" :key="idx">
+              <button type="button"
+                      @click="irASlide(idx)"
+                      :aria-label="'Ir al video ' + (idx + 1)"
+                      :class="indiceActual === idx ? 'w-10 bg-neon' : 'w-4 bg-white/40 hover:bg-white/75'"
+                      class="h-1.5 transition-all duration-300"></button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- SECCIÓN 1: VITRINA EDITORIAL DESKTOP (Estructura Captura 1 - en móvil se oculta para evitar scroll repetitivo) -->
+<section class="hidden lg:block max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-14 border-b border-silver">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+
+    <!-- Columna Izquierda: Categorías rápidas, Buscador y Resumen de Oferta Estrella -->
+    <div class="lg:col-span-5 flex flex-col justify-between">
+      <div>
+        <p class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-silverDark mb-2">
+          Explora por Categoría
+        </p>
+        <ul class="space-y-1.5 text-xs font-bold uppercase tracking-[0.16em] text-ink mb-6">
+          {% for cat in categorias %}
+          <li>
+            <a href="?categoria={{ cat.slug }}#catalogo-completo"
+               class="hover:text-neonDark inline-flex items-center gap-2 {% if categoria_activa == cat.slug %}text-neonDark underline{% endif %}">
+              <span>→ {{ cat.nombre }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+
+        <!-- Buscador rápido gris suave (como Captura 1) -->
+        <form action="#catalogo-completo" method="get" class="mb-8">
+          <div class="flex items-center bg-neutral-200/80 border border-silver px-3.5 py-2.5">
+            <input type="search"
+                   name="q"
+                   value="{{ busqueda }}"
+                   placeholder="Buscar camiseta (ej. Argentina, Messi, Verde)..."
+                   aria-label="Buscar camisetas en el catálogo"
+                   class="w-full bg-transparent text-xs font-medium text-ink placeholder-silverDark focus:outline-none">
+            <button type="submit" class="text-[11px] font-bold uppercase tracking-wider text-ink hover:text-neonDark ml-2">
+              Buscar
+            </button>
+          </div>
+        </form>
+
+        <h2 class="font-display italic font-extrabold text-4xl sm:text-5xl uppercase leading-[0.94] tracking-tight text-ink mb-3">
+          NUEVA<br>COLECCIÓN 2026
+        </h2>
+        <p class="text-sm font-medium text-silverDark mb-6">
+          Edición Jugador con escudo bordado, parches oficiales y tela microperforada transpirable.
+        </p>
+      </div>
+
+      {% with estrella=destacados.0 %}
+      {% if estrella %}
+      <div class="border border-silver bg-white p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-extrabold uppercase tracking-wider text-neonDark">
+            🇦🇷 Camiseta Más Pedida
+          </span>
+          {% if estrella.monto_ahorro %}
+          <span class="bg-neon text-ink text-[11px] font-extrabold px-2 py-0.5 border border-ink tabular-nums">
+            Ahorras S/ {{ estrella.monto_ahorro }} (-{{ estrella.porcentaje_descuento }}%)
+          </span>
+          {% endif %}
+        </div>
+        <p class="font-display italic font-extrabold text-xl uppercase text-ink">
+          {{ estrella.nombre }}
+        </p>
+        <div class="flex items-baseline justify-between tabular-nums">
+          <div>
+            <span class="text-2xl font-extrabold text-ink">S/ {{ estrella.precio_unidad }}</span>
+            {% if estrella.precio_anterior %}
+            <span class="text-xs text-silverDark line-through ml-1.5">S/ {{ estrella.precio_anterior }}</span>
+            {% endif %}
+          </div>
+          <a href="{{ estrella.get_absolute_url }}"
+             class="text-xs font-extrabold uppercase tracking-wider text-ink underline hover:text-neonDark">
+            Ver detalle →
+          </a>
+        </div>
+      </div>
+      {% endif %}
+      {% endwith %}
+    </div>
+
+    <!-- Columna Derecha: 2 Cuadros Grandes 4:5 lado a lado (Vista Frontal + Vista Dorsal #10 de Argentina x Messi) -->
+    {% with estrella=destacados.0 %}
+    <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {% if estrella %}
+      <!-- Cuadro 1: Vista Frontal Argentina x Messi #10 -->
+      <a href="{{ estrella.get_absolute_url }}"
+         class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
+        <img src="{% static 'productos-demo/argentina-messi/webp/argentina_1_detalle.webp' %}"
+             alt="Camiseta Argentina x Messi #10 Vista Frontal con parche campeón"
+             fetchpriority="high"
+             class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+        <div class="absolute top-3 left-3 flex flex-col gap-1.5">
+          {% if estrella.monto_ahorro %}
+          <span class="bg-neon text-ink text-xs font-extrabold uppercase px-2.5 py-1 border border-ink tabular-nums">
+            Ahorras S/ {{ estrella.monto_ahorro }}
+          </span>
+          {% endif %}
+          <span class="bg-ink text-white text-[10px] font-bold uppercase px-2.5 py-1">
+            Vista Frontal · Escudo 3 Estrellas
+          </span>
+        </div>
+        <div class="absolute inset-x-0 bottom-0 bg-ink/90 text-white p-4 flex items-center justify-between gap-2">
+          <div>
+            <p class="text-[10px] text-neon font-bold uppercase tracking-wider">Tallas: S · M · L · XL</p>
+            <p class="font-display italic font-bold text-lg uppercase leading-tight truncate max-w-[180px]">
+              {{ estrella.nombre }}
+            </p>
+          </div>
+          <div class="text-right tabular-nums shrink-0">
+            <span class="block text-neon font-extrabold text-lg leading-none">S/ {{ estrella.precio_unidad }}</span>
+            {% if estrella.precio_anterior %}
+            <span class="text-[11px] text-silver line-through">S/ {{ estrella.precio_anterior }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </a>
+
+      <!-- Cuadro 2: Vista Dorsal Oficial MESSI #10 -->
+      <a href="{{ estrella.get_absolute_url }}"
+         class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
+        <img src="{% static 'productos-demo/argentina-messi/webp/argentina_5_detalle.webp' %}"
+             alt="Camiseta Argentina x Messi #10 Dorsal Oficial Messi 10 en espalda"
+             class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+        <div class="absolute top-3 left-3 flex flex-col gap-1.5">
+          <span class="bg-ink text-neon text-xs font-extrabold uppercase px-2.5 py-1 border border-ink">
+            Dorsal Oficial #10
+          </span>
+          <span class="bg-white/95 text-ink text-[10px] font-bold uppercase px-2.5 py-1 border border-silver">
+            Desde 3 u. → S/ 50.00 c/u
+          </span>
+        </div>
+        <div class="absolute inset-x-0 bottom-0 bg-ink/90 text-white p-4 flex items-center justify-between gap-2">
+          <div>
+            <p class="text-[10px] text-neon font-bold uppercase tracking-wider">Estampado Microperforado</p>
+            <p class="font-display italic font-bold text-lg uppercase leading-tight">
+              ESPALDA MESSI #10
+            </p>
+          </div>
+          <span class="text-xs font-extrabold uppercase tracking-wider text-neon underline">
+            Elegir talla →
+          </span>
+        </div>
+      </a>
+      {% endif %}
+    </div>
+    {% endwith %}
+
+  </div>
+</section>
+
+<!-- SECCIÓN 2: DESTACADOS DE LA SEMANA (Estructura 'NEW THIS WEEK' de Captura 1) -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 border-b border-silver">
+  <div class="flex items-end justify-between mb-8">
+    <div>
+      <h2 class="font-display italic font-extrabold text-4xl sm:text-5xl uppercase tracking-tight leading-none">
+        DESTACADOS DE LA SEMANA
+        <sup class="text-neonDark font-sans font-extrabold text-base ml-1">({{ destacados|length }})</sup>
+      </h2>
+    </div>
+    <a href="#catalogo-completo" class="text-xs font-bold uppercase tracking-wider text-ink hover:text-neonDark underline">
+      Ver Todos
+    </a>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
+    {% for prod in destacados %}
+    <article class="group flex flex-col">
+      <a href="{{ prod.get_absolute_url }}"
+         class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden mb-3 block">
+        {% with img=prod.imagenes.all.0 %}
+        {% if img %}
+        <img src="{% static img.ruta_miniatura %}"
+             alt="{{ img.alt_seo }}"
+             loading="lazy"
+             decoding="async"
+             class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+        {% endif %}
+        {% endwith %}
+
+        <!-- Badges superiores verticales en top-left (nunca colisionan en celular) -->
+        <div class="absolute top-2 left-2 flex flex-col items-start gap-1 z-10 pointer-events-none">
+          {% if prod.monto_ahorro %}
+          <span class="bg-neon text-ink text-[10px] sm:text-[11px] font-extrabold px-1.5 py-0.5 border border-ink tabular-nums shadow-xs">
+            Ahorras S/ {{ prod.monto_ahorro }}
+          </span>
+          {% endif %}
+          {% if prod.stock_total == 0 %}
+          <span class="bg-danger text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 shadow-xs">
+            Agotado
+          </span>
+          {% elif prod.stock_total <= 6 %}
+          <span class="bg-ink text-neon text-[9px] font-bold uppercase px-1.5 py-0.5 border border-neon/40 shadow-xs">
+            ¡Últimas unidades!
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Botón '+' central inferior igual a Captura 1 -->
+        <span class="absolute bottom-2.5 left-1/2 -translate-x-1/2 w-8 h-8 sm:w-9 sm:h-9 bg-white/95 group-hover:bg-neon text-ink border border-silver flex items-center justify-center font-bold text-base sm:text-lg transicion-tactil">
+          +
+        </span>
+      </a>
+
+      <!-- Categoría y Tallas disponibles (sin solapamiento en móvil) -->
+      <div class="mb-1 text-[10px] sm:text-[11px] leading-tight">
+        <div class="flex items-center justify-between gap-1 text-silverDark">
+          <span class="uppercase tracking-wider font-semibold truncate max-w-[50%]">{{ prod.categoria.nombre }}</span>
+          <span class="text-ink font-bold truncate max-w-[50%] text-right">
+            Tallas: {% for v in prod.variantes.all %}{% if v.cantidad_stock > 0 %}{{ v.talla }}{% if not forloop.last %},{% endif %}{% endif %}{% endfor %}
+          </span>
+        </div>
+      </div>
+
+      <!-- Nombre de camiseta y Precio claramente legibles -->
+      <div class="flex flex-col flex-grow justify-between mt-auto">
+        <h3 class="text-xs sm:text-sm font-bold text-ink group-hover:text-neonDark leading-snug line-clamp-2 mb-1 min-h-[2rem]">
+          <a href="{{ prod.get_absolute_url }}">{{ prod.nombre }}</a>
+        </h3>
+        <div class="flex items-baseline gap-2 tabular-nums">
+          <span class="text-xs sm:text-sm font-extrabold text-ink">S/ {{ prod.precio_unidad }}</span>
+          {% if prod.precio_anterior %}
+          <span class="text-[10px] text-silverDark line-through">S/ {{ prod.precio_anterior }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- SECCIÓN 3: CATÁLOGO COMPLETO CON FILTROS DE TALLA Y CHIPS (Estructura Captura 2) -->
+<section id="catalogo-completo" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+  <div class="mb-6">
+    <p class="text-xs text-silverDark mb-1">Inicio / <strong class="text-ink">Catálogo de Camisetas</strong></p>
+    <h2 class="font-display italic font-extrabold text-4xl uppercase tracking-tight">
+      CATÁLOGO EMUNÁ SPORT ({{ total_resultados }})
+    </h2>
+  </div>
+
+  <!-- Barra superior de Búsqueda + Chips Rectangulares de Categorías (como Captura 2) -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center mb-10">
+    <form action="#catalogo-completo" method="get" class="lg:col-span-4">
+      {% if categoria_activa %}<input type="hidden" name="categoria" value="{{ categoria_activa }}">{% endif %}
+      {% if talla_activa %}<input type="hidden" name="talla" value="{{ talla_activa }}">{% endif %}
+      <div class="flex items-center bg-neutral-200/80 border border-silver px-4 py-3">
+        <input type="search"
+               name="q"
+               value="{{ busqueda }}"
+               placeholder="Buscar por selección, club o código..."
+               aria-label="Filtrar catálogo por texto"
+               class="w-full bg-transparent text-xs font-medium text-ink placeholder-silverDark focus:outline-none">
+        {% if busqueda %}
+        <a href="{% url 'catalogo:inicio' %}#catalogo-completo" class="text-xs text-silverDark hover:text-ink ml-2">✕</a>
+        {% endif %}
+      </div>
+    </form>
+
+    <!-- Chips rectangulares de categorías (deslizables horizontalmente en móvil) -->
+    <div class="lg:col-span-8 flex overflow-x-auto gap-2 pb-2 scroll-smooth">
+      <a href="{% url 'catalogo:inicio' %}#catalogo-completo"
+         class="shrink-0 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border transicion-tactil {% if not categoria_activa %}bg-ink text-neon border-ink{% else %}bg-white text-ink border-silver hover:border-ink{% endif %}">
+        TODAS
+      </a>
+      {% for cat in categorias %}
+      <a href="?categoria={{ cat.slug }}{% if talla_activa %}&talla={{ talla_activa }}{% endif %}#catalogo-completo"
+         class="shrink-0 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border transicion-tactil {% if categoria_activa == cat.slug %}bg-ink text-neon border-ink{% else %}bg-white text-ink border-silver hover:border-ink{% endif %}">
+        {{ cat.nombre }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- Barra lateral izquierda de Filtros (Tallas en cuadrados S, M, L, XL como Captura 2) -->
+    <aside class="lg:col-span-3 space-y-6">
+      <div class="border-b border-silver pb-6">
+        <h3 class="text-xs font-extrabold uppercase tracking-wider mb-3">Filtrar por Talla</h3>
+        <div class="grid grid-cols-4 gap-2">
+          {% for t in tallas_filtro %}
+          <a href="?talla={% if talla_activa == t %}{% else %}{{ t }}{% endif %}{% if categoria_activa %}&categoria={{ categoria_activa }}{% endif %}#catalogo-completo"
+             class="h-11 border flex items-center justify-center text-xs font-bold transicion-tactil {% if talla_activa == t %}bg-ink text-neon border-ink{% else %}bg-white text-ink border-silver hover:border-ink{% endif %}">
+            {{ t }}
+          </a>
+          {% endfor %}
+        </div>
+        {% if talla_activa %}
+        <a href="?{% if categoria_activa %}categoria={{ categoria_activa }}{% endif %}#catalogo-completo"
+           class="inline-block mt-2 text-[11px] text-silverDark underline hover:text-ink">
+          Quitar filtro de talla ({{ talla_activa }})
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="border-b border-silver pb-6">
+        <h3 class="text-xs font-extrabold uppercase tracking-wider mb-3">Disponibilidad</h3>
+        <a href="?disponible={% if solo_con_stock %}0{% else %}1{% endif %}{% if categoria_activa %}&categoria={{ categoria_activa }}{% endif %}{% if talla_activa %}&talla={{ talla_activa }}{% endif %}#catalogo-completo"
+           class="flex items-center gap-2.5 text-xs font-medium text-ink hover:text-neonDark">
+          <span class="w-4 h-4 border border-silver flex items-center justify-center {% if solo_con_stock %}bg-ink text-neon{% endif %}">
+            {% if solo_con_stock %}✓{% endif %}
+          </span>
+          <span>Solo camisetas con stock inmediato</span>
+        </a>
+      </div>
+
+      <!-- Tarjeta informativa de venta por mayor y entregas de Richard con iconos de Yape y WhatsApp -->
+      <div class="border border-silver p-4 bg-neutral-50 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-extrabold uppercase tracking-wider text-ink">⚡ Beneficios Emuná Sport</p>
+          <img src="{% static 'yape.svg' %}" alt="Pago con Yape" class="h-5 w-auto object-contain">
+        </div>
+        <ul class="text-xs text-silverDark space-y-1.5">
+          <li>• <strong>Precio por mayor:</strong> descuento automático desde 3 y 6 unidades.</li>
+          <li>• <strong>Lima:</strong> entrega en punto de encuentro acordado (envío S/ 0.00) y pago con <strong>Yape</strong> al recibir.</li>
+          <li>• <strong>Provincias:</strong> despacho rápido por <strong>Shalom</strong> y <strong>Olva Courier</strong>.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Cuadrícula de Productos (Limpia, sin lupa ni textos de zoom en el catálogo) -->
+    <div class="lg:col-span-9">
+      {% if productos %}
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-5">
+        {% for prod in productos %}
+        <article class="group flex flex-col border border-transparent hover:border-silver p-1.5 transicion-tactil">
+          <a href="{{ prod.get_absolute_url }}"
+             class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden mb-3 block">
+            {% with img=prod.imagenes.all.0 %}
+            {% if img %}
+            <img src="{% static img.ruta_miniatura %}"
+                 alt="{{ img.alt_seo }}"
+                 loading="lazy"
+                 decoding="async"
+                 class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+            {% endif %}
+            {% endwith %}
+
+            <!-- Badges superiores verticales en top-left (cero colisiones en celular) -->
+            <div class="absolute top-2 left-2 flex flex-col items-start gap-1 z-10 pointer-events-none">
+              {% if prod.monto_ahorro %}
+              <span class="bg-neon text-ink text-[10px] sm:text-[11px] font-extrabold px-1.5 py-0.5 border border-ink tabular-nums shadow-xs">
+                Ahorras S/ {{ prod.monto_ahorro }}
+              </span>
+              {% endif %}
+              {% if prod.stock_total == 0 %}
+              <span class="bg-danger text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 shadow-xs">
+                Agotado
+              </span>
+              {% elif prod.stock_total <= 6 %}
+              <span class="bg-ink text-neon text-[9px] font-bold uppercase px-1.5 py-0.5 border border-neon/40 shadow-xs">
+                Stock limitado
+              </span>
+              {% endif %}
+            </div>
+          </a>
+
+          <!-- Categoría y Tallas disponibles (sin solapamiento en móvil) -->
+          <div class="mb-1 text-[10px] sm:text-[11px] leading-tight">
+            <div class="flex items-center justify-between gap-1 text-silverDark">
+              <span class="uppercase tracking-wider font-semibold truncate max-w-[50%]">{{ prod.categoria.nombre }}</span>
+              <span class="text-ink font-bold truncate max-w-[50%] text-right">
+                Tallas: {% for v in prod.variantes.all %}{% if v.cantidad_stock > 0 %}{{ v.talla }}{% if not forloop.last %},{% endif %}{% endif %}{% endfor %}
+              </span>
+            </div>
+          </div>
+
+          <!-- Nombre de camiseta y Precio claramente legibles -->
+          <div class="flex flex-col flex-grow justify-between mt-auto">
+            <h3 class="text-xs sm:text-sm font-bold text-ink group-hover:text-neonDark leading-snug line-clamp-2 mb-1 min-h-[2rem]">
+              <a href="{{ prod.get_absolute_url }}">{{ prod.nombre }}</a>
+            </h3>
+            <div class="flex items-baseline gap-2 tabular-nums">
+              <span class="text-sm font-extrabold text-ink">S/ {{ prod.precio_unidad }}</span>
+              {% if prod.precio_anterior %}
+              <span class="text-[10px] text-silverDark line-through">S/ {{ prod.precio_anterior }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
+      <!-- Estado vacío con salida clara -->
+      <div class="border border-silver p-12 text-center">
+        <h3 class="font-display italic font-extrabold text-2xl uppercase mb-2">
+          No encontramos camisetas con ese filtro
+        </h3>
+        <p class="text-sm text-silverDark mb-6">
+          Prueba viendo todas las tallas o escríbele directo a Richard por WhatsApp para consultar stock recién llegado.
+        </p>
+        <div class="flex flex-wrap justify-center gap-3">
+          <a href="{% url 'catalogo:inicio' %}#catalogo-completo"
+             class="bg-neon text-ink font-extrabold text-xs uppercase tracking-wider px-6 py-3.5 border-2 border-ink">
+            Ver todo el catálogo →
+          </a>
+          <a href="{{ url_whatsapp_contextual }}"
+             target="_blank" rel="noopener"
+             class="inline-flex items-center gap-2 bg-white text-ink font-bold text-xs uppercase tracking-wider px-6 py-3.5 border border-silver hover:border-ink">
+            <img src="{% static 'whatsapp.png' %}" alt="WhatsApp" class="w-4 h-4 object-contain">
+            <span>Consultar por WhatsApp</span>
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- SECCIÓN 4: ENFOQUE DE CALIDAD EMUNÁ SPORT (4 fotos escalonadas como al final de Captura 1) -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 border-t border-silver">
+  <div class="max-w-2xl mx-auto text-center mb-12">
+    <h2 class="font-display italic font-extrabold text-3xl sm:text-4xl uppercase tracking-wide mb-3">
+      CALIDAD VERSIÓN JUGADOR EN CADA DETALLE
+    </h2>
+    <p class="text-xs sm:text-sm text-silverDark leading-relaxed">
+      En <strong>Emuná Sport</strong> seleccionamos prendas con tejido microperforado transpirable, escudos y parches de alta definición y dorsales oficiales. Compra por unidad o arma tu pedido por mayor con envíos seguros a todo el Perú.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-5 items-start">
+    <div class="aspect-[4/5] border border-silver overflow-hidden group">
+      <img src="{% static 'productos-demo/argentina-messi/webp/argentina_2_detalle.webp' %}"
+            alt="Detalle de manga y parche dorado en camiseta Emuná Sport"
+            loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+    </div>
+    <div class="aspect-[4/5] border border-silver overflow-hidden md:mt-8 group">
+      <img src="{% static 'productos-demo/argentina-messi/webp/argentina_3_detalle.webp' %}"
+            alt="Corte atlético versión jugador y escudo 3 estrellas"
+            loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+    </div>
+    <div class="aspect-[4/5] border border-silver overflow-hidden group">
+      <img src="{% static 'productos-demo/argentina-messi/webp/argentina_4_detalle.webp' %}"
+            alt="Zoom de tela técnica microperforada y escudo bordado"
+            loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+    </div>
+    <div class="aspect-[4/5] border border-silver overflow-hidden md:mt-8 group">
+      <img src="{% static 'productos-demo/argentina-messi/webp/argentina_5_detalle.webp' %}"
+            alt="Estampado oficial MESSI 10 microperforado en espalda"
+            loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+    </div>
+  </div>
+</section>
+{% endblock %}
