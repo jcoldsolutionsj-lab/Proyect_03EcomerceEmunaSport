@@ -138,7 +138,7 @@ def test_vistas_publicas_seo_legales_y_enlaces_sin_roturas(client) -> None:
     assert "boton-whatsapp-pinpon" in html_inicio
     assert "radar-anillo-1" in html_inicio
     assert "badge-notificacion-uno" in html_inicio
-    assert "logo-emuna-animado" in html_inicio
+    assert "Logo_animado.mp4" in html_inicio
     assert "logo_emuna_transparente.png" in html_inicio
     assert "estuve%20revisando%20tu%20p%C3%A1gina%20web" in html_inicio
     assert "EMUNÁ SPORT · RICHARD" in html_inicio

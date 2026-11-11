@@ -1,4 +1,4 @@
-"""Rutas principales de Emuná Sport (Catálogo público, SEO, Admin en ruta no obvia y salud)."""
+"""Rutas principales de Emuná Sport (Catálogo público, Carrito, Pedidos, SEO, Admin y Salud)."""
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -41,6 +41,7 @@ urlpatterns = [
         {"sitemaps": sitemaps_emuna},
         name="django.contrib.sitemaps.views.sitemap",
     ),
+    path("", include("apps.pedidos.urls", namespace="pedidos")),
     path("", include("apps.catalogo.urls", namespace="catalogo")),
 ]
 

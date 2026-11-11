@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block meta_titulo %}Pedido {{ codigo }} – {{ etiqueta_estado }} | {{ tienda_config.nombre|default:"Emuná Sport" }}{% endblock %}
+{% block meta_descripcion %}Detalle y estado en vivo del pedido {{ codigo }} en Emuná Sport. Descarga tu comprobante en PDF y coordina con Richard por WhatsApp.{% endblock %}
+
+{% block contenido %}
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10"
+         x-data="{
+           copiadoYape: false,
+           copiarNumeroYape(numero) {
+             if (navigator.clipboard && navigator.clipboard.writeText) {
+               navigator.clipboard.writeText(numero);
+             } else {
+               const inputTemp = document.createElement('input');
+               inputTemp.value = numero;
+               document.body.appendChild(inputTemp);
+               inputTemp.select();
+               document.execCommand('copy');
+               document.body.removeChild(inputTemp);
+             }
+             this.copiadoYape = true;
+             setTimeout(() => { this.copiadoYape = false; }, 2200);
+           }
+         }">
+
+  <!-- Cabecera del Pedido con Código Único No Adivinable -->
+  <div class="bg-ink text-white border-2 border-ink p-6 sm:p-8 mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-5">
+      <div>
+        <span class="inline-block bg-neon text-ink text-xs font-extrabold uppercase px-2.5 py-0.5 mb-2">
+          ✓ Pedido Registrado con Éxito
+        </span>
+        <h1 class="font-display italic font-extrabold text-3xl sm:text-5xl uppercase tracking-tight text-white tabular-nums">
+          PEDIDO {{ codigo }}
+        </h1>
+        <p class="text-xs text-silver mt-1">
+          Registrado el {{ fecha_creacion|date:"d/m/Y H:i" }} (Hora Perú) · Cliente: <strong class="text-white">{{ cliente_nombre }}</strong>
+          {% if dni_enmascarado %} · DNI: <strong class="text-white">{{ dni_enmascarado }}</strong>{% endif %}
+        </p>
+      </div>
+
+      <div class="sm:text-right">
+        <span class="block text-[10px] uppercase tracking-[0.2em] text-silver">Estado Actual</span>
+        <span class="inline-flex items-center gap-2 mt-1 px-4 py-1.5 bg-white/10 border border-neon text-neon font-extrabold text-xs uppercase tracking-wider">
+          <span class="w-2 h-2 rounded-full bg-neon"></span>
+          <span>{{ etiqueta_estado }}</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Barra de progreso de estados del pedido -->
+    <div class="pt-5 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+      <div class="p-2.5 border {% if estado == 'NUEVO' %}border-neon bg-neon/15 text-neon font-extrabold{% else %}border-neutral-800 text-silver{% endif %}">
+        1. Recibido
+      </div>
+      <div class="p-2.5 border {% if estado == 'COTIZADO' %}border-neon bg-neon/15 text-neon font-extrabold{% else %}border-neutral-800 text-silver{% endif %}">
+        2. Cotizado / Listo
+      </div>
+      <div class="p-2.5 border {% if estado == 'PAGADO' %}border-neon bg-neon/15 text-neon font-extrabold{% else %}border-neutral-800 text-silver{% endif %}">
+        3. Pago Confirmado
+      </div>
+      <div class="p-2.5 border {% if estado == 'ENVIADO' %}border-neon bg-neon/15 text-neon font-extrabold{% else %}border-neutral-800 text-silver{% endif %}">
+        4. En Camino
+      </div>
+      <div class="p-2.5 border {% if estado == 'ENTREGADO' %}border-neon bg-neon/15 text-neon font-extrabold{% else %}border-neutral-800 text-silver{% endif %}">
+        5. Entregado
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+    <!-- Columna Izquierda: Prendas del Pedido y Modalidad de Entrega -->
+    <div class="lg:col-span-7 space-y-6">
+
+      <!-- Tabla de Camisetas Solicitadas -->
+      <div class="border border-silver bg-white p-6">
+        <h2 class="font-display italic font-extrabold text-2xl uppercase tracking-wide text-ink border-b border-silver pb-3 mb-4">
+          Camisetas del Pedido ({{ total_prendas }} unid.)
+        </h2>
+
+        <div class="divide-y divide-silver tabular-nums">
+          {% for item in items %}
+          <div class="py-3.5 flex items-center justify-between gap-4">
+            <div>
+              <p class="font-bold text-sm text-ink">{{ item.nombre_producto }}</p>
+              <p class="text-xs text-silverDark mt-0.5">
+                SKU: {{ item.sku }} · <strong class="text-ink">Talla {{ item.talla }}</strong> · {{ item.cantidad }} x S/ {{ item.precio_unidad }}
+              </p>
+            </div>
+            <strong class="text-base font-extrabold text-ink shrink-0">S/ {{ item.subtotal }}</strong>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-silver space-y-2 text-sm tabular-nums">
+          <div class="flex items-center justify-between text-silverDark">
+            <span>Subtotal camisetas:</span>
+            <strong class="text-ink">S/ {{ subtotal }}</strong>
+          </div>
+          <div class="flex items-center justify-between text-silverDark">
+            <span>Costo de envío / entrega:</span>
+            {% if costo_envio is None %}
+            <span class="font-bold text-ink">Por cotizar por Richard</span>
+            {% elif costo_envio == 0 %}
+            <span class="font-extrabold text-neonDark">S/ 0.00 (Punto de encuentro / Recojo)</span>
+            {% else %}
+            <strong class="text-ink">S/ {{ costo_envio }}</strong>
+            {% endif %}
+          </div>
+          <div class="pt-3 border-t border-silver flex items-center justify-between text-xl font-extrabold text-ink">
+            <span>Total Final:</span>
+            <span>S/ {{ total }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detalle de la Modalidad de Entrega -->
+      <div class="border border-silver bg-neutral-50 p-6 space-y-2 text-xs sm:text-sm">
+        <h3 class="font-display italic font-extrabold text-xl uppercase tracking-wide text-ink">
+          Modalidad de Entrega Seleccionada
+        </h3>
+        <p class="font-bold text-ink">{{ etiqueta_tipo_entrega }}</p>
+        {% if tipo_entrega == 'AGENCIA' %}
+        <p class="text-silverDark">
+          <strong>Agencia:</strong> {{ etiqueta_agencia }} · <strong>Ciudad:</strong> {{ agencia_ciudad }} · <strong>Sede:</strong> {{ agencia_referencia }}
+        </p>
+        {% else %}
+        <p class="text-silverDark">
+          <strong>Lugar / Dirección:</strong> {{ punto_encuentro|default:"Coordinado por WhatsApp con Richard" }}
+        </p>
+        {% endif %}
+        {% if entrega_programada %}
+        <p class="text-silverDark">
+          <strong>Fecha y hora propuesta:</strong> {{ entrega_programada|date:"d/m/Y H:i" }}
+        </p>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- Columna Derecha: ÚNICO CTA PRIMARIO #39FF14 (Enviar a WhatsApp) + Descarga PDF + Datos de Yape -->
+    <div class="lg:col-span-5 space-y-6">
+
+      <!-- Tarjeta Principal de Acción -->
+      <div class="border-2 border-ink bg-white p-6 sm:p-7 space-y-4 shadow-sm">
+        <span class="text-xs font-extrabold uppercase tracking-wider text-neonDark">
+          ⚡ Siguiente Paso Recomendado
+        </span>
+        <h2 class="font-display italic font-extrabold text-2xl sm:text-3xl uppercase tracking-tight text-ink leading-tight">
+          Envía tu Pedido a Richard por WhatsApp
+        </h2>
+        <p class="text-xs sm:text-sm text-silverDark leading-relaxed">
+          Haz clic en el botón verde neón para enviarle a Richard el resumen automático de tu pedido <strong>{{ codigo }}</strong> y coordinar al instante tu entrega o envío.
+        </p>
+
+        <!-- ÚNICO CTA PRIMARIO EN VERDE NEÓN (#39FF14 CON TEXTO #0A0A0A - Requisito #20) -->
+        <a href="{{ url_whatsapp_pedido }}"
+           target="_blank" rel="noopener"
+           class="w-full py-4 px-6 bg-neon text-ink font-extrabold text-sm uppercase tracking-wider border-2 border-ink hover:brightness-95 flex items-center justify-center gap-2.5 transicion-tactil">
+          <img src="{% static 'whatsapp.png' %}" alt="WhatsApp" class="w-5 h-5 object-contain">
+          <span>ENVIAR A RICHARD POR WHATSAPP →</span>
+        </a>
+
+        <!-- Acción Secundaria con Borde Plata (#C9CED3): Descargar Comprobante PDF -->
+        <a href="{% url 'pedidos:descargar_pdf_pedido' codigo=codigo %}"
+           target="_blank"
+           class="w-full py-3.5 px-6 bg-white text-ink hover:border-ink border border-silver font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transicion-tactil">
+          <span>📄 Descargar Comprobante en PDF ({{ codigo }})</span>
+        </a>
+      </div>
+
+      <!-- Bloque de Pago con Yape (Visible cuando el pedido está en COTIZADO, ej. Punto de Encuentro o ya cotizado) -->
+      {% if mostrar_datos_pago_yape %}
+      <div class="border border-silver bg-neutral-50 p-6 space-y-4 tabular-nums">
+        <div class="flex items-center justify-between border-b border-silver pb-3">
+          <div class="flex items-center gap-2.5">
+            <img src="{% static 'yape.svg' %}" alt="Yape" class="h-7 w-auto object-contain">
+            <h3 class="font-display italic font-extrabold text-2xl uppercase tracking-wide text-ink">
+              Pago con Yape
+            </h3>
+          </div>
+          <span class="bg-neon text-ink text-xs font-extrabold px-2.5 py-0.5 border border-ink">
+            Total: S/ {{ total }}
+          </span>
+        </div>
+
+        {% if tipo_entrega == 'PUNTO_ENCUENTRO' %}
+        <p class="text-xs text-ink leading-relaxed">
+          📍 En <strong>Punto de Encuentro en Lima</strong> puedes yapearle a Richard <strong>en el mismo momento en que recibes tu camiseta en mano</strong>, o por adelantado si deseas dejarla separada:
+        </p>
+        {% else %}
+        <p class="text-xs text-ink leading-relaxed">
+          Realiza el Yape por <strong>S/ {{ total }}</strong> y envíale la captura del voucher a Richard por WhatsApp indicando tu código <strong>{{ codigo }}</strong>:
+        </p>
+        {% endif %}
+
+        <!-- QR oficial de Richard -->
+        <div class="bg-white border border-silver p-4 flex flex-col items-center justify-center text-center space-y-2">
+          <span class="text-[11px] font-extrabold uppercase tracking-wider text-ink">
+            QR Oficial Yape · Richard Ramos
+          </span>
+          <img src="{% static metodo_yape.imagen_qr|default:'QR_yape_richardRamos.jpeg' %}"
+               alt="Código QR Yape oficial de Richard Ramos"
+               class="w-48 h-auto max-h-56 object-contain border-2 border-ink shadow-sm">
+          <span class="text-[10px] text-silverDark">
+            Escanea desde tu app Yape o copia el número celular abajo
+          </span>
+        </div>
+
+        <div class="bg-white border border-silver p-4 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-silverDark">Titular Yape:</span>
+            <strong class="text-ink uppercase">{{ metodo_yape.titular|default:"Richard Ramos - Emuná Sport" }}</strong>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-silverDark">Número Yape:</span>
+            <div class="flex items-center gap-2">
+              <strong class="text-base font-extrabold text-ink">
+                {{ metodo_yape.numero_cuenta|default:tienda_config.numero_whatsapp|default:"999888777" }}
+              </strong>
+              <button type="button"
+                      @click="copiarNumeroYape('{{ metodo_yape.numero_cuenta|default:tienda_config.numero_whatsapp|default:'999888777' }}')"
+                      class="px-2.5 py-1 border border-silver hover:border-ink bg-neutral-50 font-bold text-[11px] uppercase transicion-tactil">
+                <span x-show="!copiadoYape">Copiar</span>
+                <span x-show="copiadoYape" style="display: none;" class="text-neonDark">✓ Copiado</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+  </div>
+</section>
+{% endblock %}

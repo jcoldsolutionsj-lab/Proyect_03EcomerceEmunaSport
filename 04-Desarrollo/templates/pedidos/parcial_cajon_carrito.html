@@ -1,0 +1,177 @@
+{% load static %}
+{% if incluir_oob_contador %}
+<!-- Actualización automática del contador del header por HTMX Out-of-Band Swap -->
+<span id="contador-carrito-header"
+      hx-swap-oob="true"
+      class="ml-2.5 inline-flex items-center justify-center w-7 h-7 rounded-full bg-ink text-neon font-bold tabular-nums text-xs">
+  {{ carrito.total_unidades|default:0 }}
+</span>
+{% endif %}
+
+{% if mensaje_error_carrito %}
+<div class="mx-6 mt-4 p-3 bg-red-50 border border-danger text-danger text-xs font-bold flex items-center justify-between gap-2">
+  <span>⚠️ {{ mensaje_error_carrito }}</span>
+</div>
+{% endif %}
+
+{% if carrito.esta_vacio %}
+<!-- Estado vacío con salida clara (UI UX Pro Max) -->
+<div class="p-8 flex-grow flex flex-col items-center justify-center text-center">
+  <div class="w-16 h-16 border border-silver bg-neutral-50 flex items-center justify-center mb-4">
+    <img src="{% static 'carro-de-la-carretilla.png' %}" alt="Carrito vacío" class="w-8 h-8 object-contain opacity-80">
+  </div>
+  <h3 class="font-display italic font-bold text-xl uppercase mb-2">Tu carrito está listo para estrenarse</h3>
+  <p class="text-sm text-silverDark mb-6 max-w-xs">
+    Elige tu talla (S, M, L o XL) en el catálogo o aprovecha los precios por mayor desde 3 unidades.
+  </p>
+  <a href="{% url 'catalogo:inicio' %}#catalogo-completo"
+     @click="cajonCarritoAbierto = false"
+     class="w-full py-3.5 px-6 bg-neon text-ink font-extrabold text-sm uppercase tracking-wider border-2 border-ink text-center transicion-tactil">
+    Ver camisetas disponibles →
+  </a>
+</div>
+{% else %}
+<!-- Lista de camisetas en el cajón lateral -->
+<div class="p-5 flex-grow overflow-y-auto space-y-4">
+  {% if carrito.tiene_descuento_mayorista %}
+  <div class="bg-neon/20 border border-ink px-3.5 py-2.5 text-xs font-bold text-ink flex items-center justify-between tabular-nums">
+    <span>🔥 ¡Precio por mayor activado!</span>
+    <span class="bg-ink text-neon px-2 py-0.5 font-extrabold">Ahorras S/ {{ carrito.ahorro_mayorista }}</span>
+  </div>
+  {% else %}
+  <div class="bg-neutral-50 border border-silver px-3.5 py-2 text-[11px] text-silverDark">
+    💡 <strong>Tip mayorista:</strong> Combina <strong>3 o más unidades</strong> del mismo modelo (incluso en distintas tallas S, M, L, XL) y el precio baja automáticamente.
+  </div>
+  {% endif %}
+
+  {% for item in carrito.items %}
+  <div class="border border-silver p-3 bg-white flex gap-3.5 items-start">
+    <a href="{% url 'catalogo:detalle_producto' slug=item.slug_producto %}"
+       @click="cajonCarritoAbierto = false"
+       class="w-16 aspect-[4/5] bg-neutral-100 border border-silver shrink-0 overflow-hidden">
+      <img src="{% static item.ruta_miniatura %}"
+           alt="{{ item.nombre_producto }}"
+           class="w-full h-full object-cover">
+    </a>
+
+    <div class="flex-1 min-w-0">
+      <div class="flex items-start justify-between gap-2">
+        <a href="{% url 'catalogo:detalle_producto' slug=item.slug_producto %}"
+           @click="cajonCarritoAbierto = false"
+           class="font-display italic font-extrabold text-base uppercase text-ink hover:text-neonDark leading-tight truncate">
+          {{ item.nombre_producto }}
+        </a>
+        <form hx-post="{% url 'pedidos:eliminar_del_carrito' variante_id=item.variante_id %}"
+              hx-target="#cuerpo-cajon-carrito"
+              hx-swap="innerHTML">
+          {% csrf_token %}
+          <input type="hidden" name="origen" value="cajon">
+          <button type="button"
+                  onclick="this.closest('form').requestSubmit()"
+                  class="text-silverDark hover:text-danger text-xs font-bold px-1"
+                  aria-label="Eliminar {{ item.nombre_producto }} talla {{ item.talla }}">
+            ✕
+          </button>
+        </form>
+      </div>
+
+      <div class="text-[11px] text-silverDark mt-0.5 flex flex-wrap items-center gap-2">
+        <span class="bg-neutral-100 border border-silver px-1.5 py-0.5 font-bold text-ink">
+          Talla {{ item.talla }}
+        </span>
+        {% if item.es_precio_mayorista %}
+        <span class="text-neonDark font-extrabold">Mayorista S/ {{ item.precio_unidad }} c/u</span>
+        {% else %}
+        <span>S/ {{ item.precio_unidad }} c/u</span>
+        {% endif %}
+      </div>
+
+      <div class="mt-2.5 flex items-center justify-between gap-2 tabular-nums">
+        <!-- Controles HTMX - / + -->
+        <div class="inline-flex items-center border border-silver">
+          <form hx-post="{% url 'pedidos:agregar_al_carrito' %}"
+                hx-target="#cuerpo-cajon-carrito"
+                hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="variante_id" value="{{ item.variante_id }}">
+            <input type="hidden" name="cantidad" value="{{ item.cantidad|add:'-1' }}">
+            <input type="hidden" name="reemplazar" value="1">
+            <input type="hidden" name="origen" value="cajon">
+            <button type="submit"
+                    class="w-7 h-7 flex items-center justify-center font-bold text-xs hover:bg-neutral-100">
+              −
+            </button>
+          </form>
+          <span class="px-2.5 text-xs font-extrabold">{{ item.cantidad }}</span>
+          <form hx-post="{% url 'pedidos:agregar_al_carrito' %}"
+                hx-target="#cuerpo-cajon-carrito"
+                hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="variante_id" value="{{ item.variante_id }}">
+            <input type="hidden" name="cantidad" value="{{ item.cantidad|add:'1' }}">
+            <input type="hidden" name="reemplazar" value="1">
+            <input type="hidden" name="origen" value="cajon">
+            <button type="submit"
+                    {% if item.cantidad >= item.stock_disponible %}disabled{% endif %}
+                    class="w-7 h-7 flex items-center justify-center font-bold text-xs hover:bg-neutral-100 disabled:opacity-40">
+              +
+            </button>
+          </form>
+        </div>
+
+        <div class="text-right">
+          {% if item.es_precio_mayorista %}
+          <span class="block text-[10px] text-silverDark line-through">S/ {{ item.precio_base }} c/u</span>
+          {% endif %}
+          <span class="text-sm font-extrabold text-ink">S/ {{ item.subtotal }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pie del cajón con subtotal y ÚNICO CTA primario en verde neón (#39FF14) -->
+<div class="p-5 border-t border-silver bg-neutral-50 space-y-3 tabular-nums">
+  <div class="space-y-1 text-xs">
+    <div class="flex items-center justify-between text-silverDark">
+      <span>Prendas seleccionadas:</span>
+      <strong class="text-ink">{{ carrito.total_unidades }} unid.</strong>
+    </div>
+    {% if carrito.tiene_descuento_mayorista %}
+    <div class="flex items-center justify-between text-neonDark font-bold">
+      <span>Descuento por mayor aplicado:</span>
+      <span>− S/ {{ carrito.ahorro_mayorista }}</span>
+    </div>
+    {% endif %}
+    <div class="flex items-center justify-between text-base font-extrabold text-ink pt-1 border-t border-silver">
+      <span>Subtotal camisetas:</span>
+      <span>S/ {{ carrito.subtotal }}</span>
+    </div>
+    <p class="text-[11px] text-silverDark">
+      📍 En <strong>Punto de Encuentro en Lima</strong> el envío es <strong>S/ 0.00</strong>.
+    </p>
+  </div>
+
+  <a href="{% url 'pedidos:checkout' %}"
+     class="w-full py-3.5 px-6 bg-neon text-ink font-extrabold text-sm uppercase tracking-wider border-2 border-ink flex items-center justify-center gap-2 transicion-tactil">
+    <span>CONTINUAR AL PEDIDO →</span>
+  </a>
+
+  <a href="{% url 'pedidos:ver_carrito' %}"
+     class="w-full py-2.5 px-4 bg-white text-ink hover:border-ink border border-silver font-bold text-xs uppercase tracking-wider flex items-center justify-center transicion-tactil">
+    Ver carrito completo
+  </a>
+</div>
+{% endif %}
+
+<!-- Pie de atención directa por WhatsApp (con las prendas del carrito precargadas) -->
+<div class="p-4 border-t border-silver bg-neutral-50 flex items-center justify-between text-xs text-silverDark shrink-0">
+  <span>¿Prefieres pedir directo con Richard?</span>
+  <a href="{{ carrito.url_whatsapp_consulta }}"
+     target="_blank" rel="noopener"
+     class="inline-flex items-center gap-1.5 font-bold text-ink hover:text-neonDark underline">
+    <img src="{% static 'whatsapp.png' %}" alt="WhatsApp" class="w-4 h-4 object-contain">
+    <span>Escribir por WhatsApp</span>
+  </a>
+</div>

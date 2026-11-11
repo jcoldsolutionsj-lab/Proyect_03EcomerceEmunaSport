@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block meta_titulo %}Finalizar Pedido (Checkout) | {{ tienda_config.nombre|default:"Emuná Sport" }}{% endblock %}
+{% block meta_descripcion %}Completa tus datos de entrega en Lima o provincia (Shalom/Olva) para generar tu pedido en Emuná Sport sin necesidad de registrarte.{% endblock %}
+
+{% block scripts_cabecera_extra %}
+{% if TURNSTILE_SITE_KEY %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
+{% endblock %}
+
+{% block contenido %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10"
+         x-data="{
+           tipoEntrega: '{{ valores.tipo_entrega|default:'PUNTO_ENCUENTRO' }}',
+           agenciaSeleccionada: '{{ valores.agencia|default:'SHALOM' }}'
+         }">
+
+  <div class="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-silver pb-5">
+    <div>
+      <span class="text-xs font-extrabold uppercase tracking-[0.2em] text-neonDark">Paso 2 de 2 · Datos de Entrega</span>
+      <h1 class="font-display italic font-extrabold text-3xl sm:text-4xl uppercase tracking-tight text-ink mt-1">
+        Finalizar tu Pedido (Sin Registro)
+      </h1>
+    </div>
+    <a href="{% url 'pedidos:ver_carrito' %}"
+       class="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-ink hover:text-neonDark underline">
+      ← Volver al carrito ({{ carrito.total_unidades }} unid.)
+    </a>
+  </div>
+
+  {% if mensaje_error %}
+  <div class="mb-6 p-4 bg-red-50 border-2 border-danger text-danger text-xs sm:text-sm font-bold flex items-center gap-3">
+    <span>⚠️ {{ mensaje_error }}</span>
+  </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'pedidos:checkout' %}" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    {% csrf_token %}
+
+    <!-- Campo Trampa Invisible Antispam (Honeypot - Pilar 4 Anti-Hacking) -->
+    <div class="hidden" aria-hidden="true">
+      <label for="id_sitio_web">No llenar este campo</label>
+      <input type="text" id="id_sitio_web" name="sitio_web" value="" tabindex="-1" autocomplete="off">
+    </div>
+
+    <!-- Columna Izquierda: Datos del Cliente + Selector de las 4 Modalidades de Richard -->
+    <div class="lg:col-span-7 space-y-6">
+
+      <!-- BLOQUE 1: Datos de Contacto -->
+      <div class="border border-silver bg-white p-6 sm:p-7 space-y-4">
+        <div class="flex items-center gap-2.5 border-b border-silver pb-3">
+          <span class="w-6 h-6 bg-ink text-neon font-extrabold text-xs flex items-center justify-center">1</span>
+          <h2 class="font-display italic font-extrabold text-2xl uppercase tracking-wide text-ink">
+            Tus Datos de Contacto
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label for="id_cliente_nombre" class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-1.5">
+              Nombres y Apellidos Completos *
+            </label>
+            <input type="text"
+                   id="id_cliente_nombre"
+                   name="cliente_nombre"
+                   required
+                   maxlength="150"
+                   value="{{ valores.cliente_nombre }}"
+                   placeholder="Ej. Carlos Alberto Mendoza"
+                   class="w-full border border-silver focus:border-ink px-3.5 py-2.5 text-sm text-ink focus:outline-none">
+          </div>
+
+          <div>
+            <label for="id_cliente_telefono" class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-1.5">
+              Celular con WhatsApp (9 dígitos) *
+            </label>
+            <input type="tel"
+                   id="id_cliente_telefono"
+                   name="cliente_telefono"
+                   required
+                   pattern="9[0-9]{8}"
+                   maxlength="9"
+                   value="{{ valores.cliente_telefono }}"
+                   placeholder="999888777"
+                   class="w-full border border-silver focus:border-ink px-3.5 py-2.5 text-sm text-ink tabular-nums focus:outline-none">
+            <p class="text-[11px] text-silverDark mt-1">Richard te escribirá a este número para coordinar.</p>
+          </div>
+
+          <div>
+            <label for="id_cliente_dni" class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-1.5">
+              DNI (8 dígitos) <span x-show="tipoEntrega === 'AGENCIA'" class="text-danger">* Obligatorio agencia</span><span x-show="tipoEntrega !== 'AGENCIA'" class="text-silverDark font-normal">(Opcional en Lima)</span>
+            </label>
+            <input type="text"
+                   id="id_cliente_dni"
+                   name="cliente_dni"
+                   :required="tipoEntrega === 'AGENCIA'"
+                   pattern="[0-9]{8}"
+                   maxlength="8"
+                   value="{{ valores.cliente_dni }}"
+                   placeholder="8 dígitos numéricos"
+                   class="w-full border border-silver focus:border-ink px-3.5 py-2.5 text-sm text-ink tabular-nums focus:outline-none">
+            <p class="text-[11px] text-silverDark mt-1">Exigido por Shalom y Olva para el recojo en agencia.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOQUE 2: Modalidades de Entrega de Richard -->
+      <div class="border border-silver bg-white p-6 sm:p-7 space-y-5">
+        <div class="flex items-center gap-2.5 border-b border-silver pb-3">
+          <span class="w-6 h-6 bg-ink text-neon font-extrabold text-xs flex items-center justify-center">2</span>
+          <h2 class="font-display italic font-extrabold text-2xl uppercase tracking-wide text-ink">
+            Elige tu Modalidad de Entrega
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Opción 1: Punto de Encuentro en Lima (Caso más frecuente) -->
+          <label class="cursor-pointer border p-4 flex flex-col justify-between gap-2 transicion-tactil"
+                 :class="tipoEntrega === 'PUNTO_ENCUENTRO' ? 'border-2 border-ink bg-neon/10 ring-1 ring-neon' : 'border-silver hover:border-ink bg-white'">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="tipo_entrega" value="PUNTO_ENCUENTRO" x-model="tipoEntrega" class="accent-ink">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-ink">📍 Punto de Encuentro (Lima)</span>
+              </div>
+              <span class="bg-neon text-ink text-[10px] font-extrabold px-2 py-0.5 border border-ink tabular-nums">S/ 0.00</span>
+            </div>
+            <p class="text-[11px] text-silverDark leading-relaxed">
+              Nos encontramos en una estación o centro comercial acordado en Lima. Recibes tu camiseta en mano y pagas ahí mismo con <strong>Yape</strong> o efectivo.
+            </p>
+          </label>
+
+          <!-- Opción 2: Envío a Provincia por Agencia (Shalom / Olva) -->
+          <label class="cursor-pointer border p-4 flex flex-col justify-between gap-2 transicion-tactil"
+                 :class="tipoEntrega === 'AGENCIA' ? 'border-2 border-ink bg-neon/10 ring-1 ring-neon' : 'border-silver hover:border-ink bg-white'">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="tipo_entrega" value="AGENCIA" x-model="tipoEntrega" class="accent-ink">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-ink">🚚 Agencia (Shalom / Olva)</span>
+              </div>
+              <span class="bg-ink text-white text-[10px] font-bold px-2 py-0.5">Por cotizar</span>
+            </div>
+            <p class="text-[11px] text-silverDark leading-relaxed">
+              Envíos a todo el Perú por <strong>Shalom</strong> u <strong>Olva Courier</strong>. Richard cotiza el flete exacto y te envía tu orden y clave de recojo.
+            </p>
+          </label>
+
+          <!-- Opción 3: Delivery en Lima -->
+          <label class="cursor-pointer border p-4 flex flex-col justify-between gap-2 transicion-tactil"
+                 :class="tipoEntrega === 'DELIVERY_LIMA' ? 'border-2 border-ink bg-neon/10 ring-1 ring-neon' : 'border-silver hover:border-ink bg-white'">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="tipo_entrega" value="DELIVERY_LIMA" x-model="tipoEntrega" class="accent-ink">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-ink">🛵 Delivery en Lima</span>
+              </div>
+              <span class="bg-ink text-white text-[10px] font-bold px-2 py-0.5">Por cotizar</span>
+            </div>
+            <p class="text-[11px] text-silverDark leading-relaxed">
+              Despacho a domicilio o trabajo dentro de Lima Metropolitana. Richard cotiza la tarifa según tu distrito.
+            </p>
+          </label>
+
+          <!-- Opción 4: Recojo Acordado -->
+          <label class="cursor-pointer border p-4 flex flex-col justify-between gap-2 transicion-tactil"
+                 :class="tipoEntrega === 'RECOJO' ? 'border-2 border-ink bg-neon/10 ring-1 ring-neon' : 'border-silver hover:border-ink bg-white'">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="tipo_entrega" value="RECOJO" x-model="tipoEntrega" class="accent-ink">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-ink">🏪 Recojo Acordado</span>
+              </div>
+              <span class="bg-neon text-ink text-[10px] font-extrabold px-2 py-0.5 border border-ink tabular-nums">S/ 0.00</span>
+            </div>
+            <p class="text-[11px] text-silverDark leading-relaxed">
+              Recoges tu pedido previa coordinación directa por WhatsApp con Richard sin costo de envío.
+            </p>
+          </label>
+        </div>
+
+        <!-- Campos dinámicos para PUNTO_ENCUENTRO, DELIVERY_LIMA o RECOJO -->
+        <div x-show="tipoEntrega !== 'AGENCIA'" class="pt-3 border-t border-silver space-y-4">
+          <div>
+            <label for="id_punto_encuentro" class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-1.5">
+              <span x-show="tipoEntrega === 'PUNTO_ENCUENTRO'">Lugar de Encuentro Propuesto en Lima *</span>
+              <span x-show="tipoEntrega === 'DELIVERY_LIMA'">Dirección Completa y Distrito en Lima *</span>
+              <span x-show="tipoEntrega === 'RECOJO'">Comentario o Referencia de Recojo (Opcional)</span>
+            </label>
+            <input type="text"
+                   id="id_punto_encuentro"
+                   name="punto_encuentro"
+                   :required="tipoEntrega === 'PUNTO_ENCUENTRO' || tipoEntrega === 'DELIVERY_LIMA'"
+                   maxlength="200"
+                   value="{{ valores.punto_encuentro }}"
+                   :placeholder="tipoEntrega === 'PUNTO_ENCUENTRO' ? 'Ej. Estación La Cultura del Tren, Mall del Sur, Real Plaza Centro Cívico' : 'Ej. Av. Arequipa 1234, Lince (frente al parque)'"
+                   class="w-full border border-silver focus:border-ink px-3.5 py-2.5 text-sm text-ink focus:outline-none">
+          </div>
+
+          <div x-show="tipoEntrega === 'PUNTO_ENCUENTRO'">
+            <label for="id_entrega_programada" class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-1.5">
+              Fecha y Hora Propuesta para el Encuentro (Opcional)
+            </label>
+            <input type="datetime-local"
+                   id="id_entrega_programada"
+                   name="entrega_programada"
+                   value="{{ valores.entrega_programada }}"
+                   class="w-full sm:w-auto border border-silver focus:border-ink px-3.5 py-2 text-sm text-ink focus:outline-none">
+            <p class="text-[11px] text-silverDark mt-1">La hora exacta se confirma con Richard por WhatsApp.</p>
+          </div>
+        </div>
+
+        <!-- Campos dinámicos exclusivos para AGENCIA (Shalom / Olva) -->
+        <div x-show="tipoEntrega === 'AGENCIA'" style="display: none;" class="pt-3 border-t border-silver space-y-4">
+          <div>
+            <span class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-2">
+              Selecciona la Agencia de Transporte *
+            </span>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <!-- Shalom con Logo Oficial -->
+              <label class="cursor-pointer border p-3.5 flex flex-col items-center justify-between gap-2 text-center transicion-tactil relative"
+                     :class="agenciaSeleccionada === 'SHALOM' ? 'border-2 border-ink bg-neon/10 ring-1 ring-neon shadow-sm' : 'border border-silver hover:border-ink bg-white'">
+                <input type="radio" name="agencia" value="SHALOM" x-model="agenciaSeleccionada" class="sr-only">
+                <div class="h-11 w-full flex items-center justify-center p-1 bg-white">
+                  <img src="{% static 'shalom_logo.png' %}" alt="Agencia Shalom" class="max-h-9 max-w-[125px] object-contain">
+                </div>
+                <div class="leading-tight">
+                  <span class="block text-xs font-extrabold uppercase tracking-wide text-ink">Agencia Shalom</span>
+                  <span class="block text-[10px] text-silverDark mt-0.5">Recojo en sede</span>
+                </div>
+                <span x-show="agenciaSeleccionada === 'SHALOM'" class="text-[10px] font-extrabold text-neonDark uppercase tracking-wider">
+                  ✓ Seleccionada
+                </span>
+              </label>
+
+              <!-- Olva Courier con Logo Oficial -->
+              <label class="cursor-pointer border p-3.5 flex flex-col items-center justify-between gap-2 text-center transicion-tactil relative"
+                     :class="agenciaSeleccionada === 'OLVA' ? 'border-2 border-ink bg-neon/10 ring-1 ring-neon shadow-sm' : 'border border-silver hover:border-ink bg-white'">
+                <input type="radio" name="agencia" value="OLVA" x-model="agenciaSeleccionada" class="sr-only">
+                <div class="h-11 w-full flex items-center justify-center p-1 bg-white">
+                  <img src="{% static 'Olva_logo.png' %}" alt="Olva Courier" class="max-h-9 max-w-[125px] object-contain">
+                </div>
+                <div class="leading-tight">
+                  <span class="block text-xs font-extrabold uppercase tracking-wide text-ink">Olva Courier</span>
+                  <span class="block text-[10px] text-silverDark mt-0.5">Sede o domicilio</span>
+                </div>
+                <span x-show="agenciaSeleccionada === 'OLVA'" class="text-[10px] font-extrabold text-neonDark uppercase tracking-wider">
+                  ✓ Seleccionada
+                </span>
+              </label>
+
+              <!-- Otra Agencia (Personalizada) -->
+              <label class="cursor-pointer border p-3.5 flex flex-col items-center justify-between gap-2 text-center transicion-tactil relative"
+                     :class="agenciaSeleccionada === 'OTRA' ? 'border-2 border-ink bg-neon/10 ring-1 ring-neon shadow-sm' : 'border border-silver hover:border-ink bg-white'">
+                <input type="radio" name="agencia" value="OTRA" x-model="agenciaSeleccionada" class="sr-only">
+                <div class="h-11 w-full flex items-center justify-center p-1 bg-white">
+                  <span class="text-3xl">📦</span>
+                </div>
+                <div class="leading-tight">
+                  <span class="block text-xs font-extrabold uppercase tracking-wide text-ink">Otra Agencia</span>
+                  <span class="block text-[10px] text-silverDark mt-0.5">Marvisur, Flores, etc.</span>
+                </div>
+                <span x-show="agenciaSeleccionada === 'OTRA'" class="text-[10px] font-extrabold text-neonDark uppercase tracking-wider">
+                  ✓ Seleccionada
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="id_agencia_ciudad" class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-1.5">
+                Ciudad / Provincia de Destino *
+              </label>
+              <input type="text"
+                     id="id_agencia_ciudad"
+                     name="agencia_ciudad"
+                     :required="tipoEntrega === 'AGENCIA'"
+                     maxlength="80"
+                     value="{{ valores.agencia_ciudad }}"
+                     placeholder="Ej. Arequipa, Trujillo, Piura, Cusco"
+                     class="w-full border border-silver focus:border-ink px-3.5 py-2.5 text-sm text-ink focus:outline-none">
+            </div>
+            <div>
+              <label for="id_agencia_referencia" class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-1.5">
+                Sede o Agencia de Destino *
+              </label>
+              <input type="text"
+                     id="id_agencia_referencia"
+                     name="agencia_referencia"
+                     :required="tipoEntrega === 'AGENCIA'"
+                     maxlength="200"
+                     value="{{ valores.agencia_referencia }}"
+                     placeholder="Ej. Agencia Shalom Av. Parra / Sede Principal"
+                     class="w-full border border-silver focus:border-ink px-3.5 py-2.5 text-sm text-ink focus:outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- Notas opcionales -->
+        <div>
+          <label for="id_notas" class="block text-xs font-extrabold uppercase tracking-wider text-ink mb-1.5">
+            Notas Adicionales para Richard (Opcional)
+          </label>
+          <textarea id="id_notas"
+                    name="notas"
+                    rows="2"
+                    maxlength="500"
+                    placeholder="Ej. Puedo acercarme a la estación a partir de las 5:00 pm."
+                    class="w-full border border-silver focus:border-ink px-3.5 py-2 text-sm text-ink focus:outline-none">{{ valores.notas }}</textarea>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Columna Derecha: Resumen de Prendas, Privacidad Ley 29733, Turnstile y ÚNICO CTA #39FF14 -->
+    <div class="lg:col-span-5 border border-silver bg-neutral-50 p-6 sm:p-7 space-y-5 tabular-nums">
+      <h2 class="font-display italic font-extrabold text-2xl uppercase tracking-wide text-ink border-b border-silver pb-3">
+        Resumen de tu Pedido ({{ carrito.total_unidades }} u.)
+      </h2>
+
+      <!-- Lista compacta de ítems -->
+      <div class="space-y-3 max-h-64 overflow-y-auto pr-1">
+        {% for item in carrito.items %}
+        <div class="flex items-center justify-between gap-3 text-xs border-b border-silver/60 pb-2.5">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <img src="{% static item.ruta_miniatura %}" alt="{{ item.nombre_producto }}" class="w-10 h-12 object-cover border border-silver shrink-0">
+            <div class="min-w-0">
+              <p class="font-bold text-ink truncate">{{ item.nombre_producto }}</p>
+              <p class="text-silverDark">
+                {{ item.cantidad }}x Talla <strong>{{ item.talla }}</strong> · S/ {{ item.precio_unidad }} c/u
+              </p>
+            </div>
+          </div>
+          <strong class="text-ink shrink-0">S/ {{ item.subtotal }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Totales claros -->
+      <div class="space-y-2 text-sm pt-2">
+        <div class="flex items-center justify-between text-silverDark">
+          <span>Subtotal camisetas:</span>
+          <strong class="text-ink">S/ {{ carrito.subtotal }}</strong>
+        </div>
+        {% if carrito.tiene_descuento_mayorista %}
+        <div class="flex items-center justify-between text-neonDark font-extrabold text-xs">
+          <span>🔥 Ahorro por mayor incluido:</span>
+          <span>− S/ {{ carrito.ahorro_mayorista }}</span>
+        </div>
+        {% endif %}
+        <div class="flex items-center justify-between text-silverDark">
+          <span>Costo de envío / entrega:</span>
+          <span x-show="tipoEntrega === 'PUNTO_ENCUENTRO' || tipoEntrega === 'RECOJO'" class="font-extrabold text-neonDark">
+            S/ 0.00 (Gratis)
+          </span>
+          <span x-show="tipoEntrega === 'AGENCIA' || tipoEntrega === 'DELIVERY_LIMA'" style="display: none;" class="font-bold text-ink text-xs">
+            Por cotizar por Richard
+          </span>
+        </div>
+        <div class="pt-3 border-t border-silver flex items-center justify-between text-xl font-extrabold text-ink">
+          <span>Total a Pagar:</span>
+          <span>S/ {{ carrito.subtotal }}</span>
+        </div>
+      </div>
+
+      <!-- Casilla obligatoria de Privacidad (Ley N.º 29733 Perú) -->
+      <label class="flex items-start gap-2.5 text-xs text-ink cursor-pointer pt-2">
+        <input type="checkbox" name="acepta_privacidad" value="1" required class="mt-0.5 accent-ink">
+        <span class="leading-relaxed">
+          Acepto el uso de mis datos únicamente para gestionar y despachar este pedido conforme a la
+          <a href="{% url 'catalogo:privacidad' %}" target="_blank" class="underline font-bold hover:text-neonDark">Política de Privacidad (Ley N.º 29733)</a>. *
+        </span>
+      </label>
+
+      <!-- Widget Cloudflare Turnstile Antispam (Requisito #17) -->
+      {% if TURNSTILE_SITE_KEY %}
+      <div class="pt-1">
+        <div class="cf-turnstile" data-sitekey="{{ TURNSTILE_SITE_KEY }}" data-theme="light"></div>
+      </div>
+      {% endif %}
+
+      <!-- ÚNICO CTA PRIMARIO EN VERDE NEÓN (#39FF14 CON TEXTO #0A0A0A - Requisito #20) -->
+      <button type="submit"
+              class="w-full py-4 px-6 bg-neon text-ink font-extrabold text-sm uppercase tracking-wider border-2 border-ink hover:brightness-95 flex items-center justify-center gap-2 transicion-tactil">
+        <span>CONFIRMAR Y GENERAR PEDIDO →</span>
+      </button>
+
+      <p class="text-[11px] text-silverDark text-center">
+        Al confirmar obtendrás tu <strong>código único de pedido</strong>, tu <strong>comprobante en PDF</strong> y el botón directo para enviárselo a Richard por WhatsApp.
+      </p>
+
+      <div class="pt-3 border-t border-silver flex items-center justify-between text-xs text-silverDark">
+        <span>¿Dudas antes de confirmar?</span>
+        <a href="{{ carrito.url_whatsapp_consulta }}"
+           target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1.5 font-bold text-ink hover:text-neonDark underline">
+          <img src="{% static 'whatsapp.png' %}" alt="WhatsApp" class="w-4 h-4 object-contain">
+          <span>Consultar por WhatsApp</span>
+        </a>
+      </div>
+    </div>
+
+  </form>
+</section>
+{% endblock %}
