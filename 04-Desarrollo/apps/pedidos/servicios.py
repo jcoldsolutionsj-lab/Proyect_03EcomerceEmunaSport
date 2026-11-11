@@ -18,12 +18,15 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
-from apps.catalogo.models import Variante
+from apps.catalogo.models import MovimientoStock, TipoMovimientoStock, Variante
+from apps.catalogo.selectores import calcular_precio_unitario_aplicado
 from apps.nucleo.excepciones import (
     DatosEnvioIncompletosError,
     EntradaInvalidaError,
     StockInsuficienteError,
+    TransicionInvalidaError,
 )
+from apps.nucleo.models import MetodoPago, TipoMetodoPago
 from apps.nucleo.selectores import obtener_configuracion_tienda
 from apps.nucleo.validadores import (
     limpiar_texto_seguro,
@@ -33,6 +36,7 @@ from apps.nucleo.validadores import (
 
 from .models import (
     AgenciaEnvio,
+    Envio,
     EstadoPedido,
     ItemPedido,
     OrigenPedido,
@@ -47,6 +51,34 @@ from .selectores import (
 )
 
 ALFABETO_CODIGO_PEDIDO = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+
+# Matriz estricta de transiciones permitidas según doc 03 (Flujo de pedidos y estados)
+TRANSICIONES_PERMITIDAS: dict[str, set[str]] = {
+    EstadoPedido.NUEVO: {
+        EstadoPedido.COTIZADO,
+        EstadoPedido.CANCELADO,
+        EstadoPedido.RECHAZADO,
+    },
+    EstadoPedido.COTIZADO: {
+        EstadoPedido.PAGADO,
+        EstadoPedido.NUEVO,
+        EstadoPedido.CANCELADO,
+        EstadoPedido.RECHAZADO,
+    },
+    EstadoPedido.PAGADO: {
+        EstadoPedido.ENVIADO,
+        EstadoPedido.ENTREGADO,
+        EstadoPedido.CANCELADO,
+        EstadoPedido.RECHAZADO,
+    },
+    EstadoPedido.ENVIADO: {
+        EstadoPedido.ENTREGADO,
+        EstadoPedido.CANCELADO,
+    },
+    EstadoPedido.ENTREGADO: set(),
+    EstadoPedido.CANCELADO: set(),
+    EstadoPedido.RECHAZADO: set(),
+}
 
 
 def agregar_al_carrito(
@@ -672,3 +704,589 @@ def generar_pdf_pedido(*, codigo: str) -> bytes:
     c.showPage()
     c.save()
     return buffer.getvalue()
+
+
+
+# =============================================================================
+# SERVICIOS DE GESTIÓN DEL PEDIDO Y CONTROL DE STOCK (FASE 3 - CORAZÓN DEL NEGOCIO)
+# =============================================================================
+
+def descontar_stock_pedido(*, pedido: Pedido, usuario: Any | None = None) -> None:
+    """Descuenta atómicamente el stock de las variantes del pedido bloqueando filas por ID.
+
+    Qué hace:      Aplica select_for_update() ordenado por ID, descuenta stock y crea TBL_TMOVIMIENTO_STOCK.
+    Va hacia:      Actualiza cantidad_stock en TBL_RVARIANTE e inserta filas en TBL_TMOVIMIENTO_STOCK (VENTA).
+    Depende de:    Variante, MovimientoStock, TipoMovimientoStock y StockInsuficienteError.
+    Cuándo usarla: Al transicionar el pedido de COTIZADO a PAGADO en confirmar_pago.
+    Si no opera:   Lanza StockInsuficienteError y revierte la transacción completa (todo o nada).
+    """
+    items = list(pedido.items.select_related("variante", "variante__producto").order_by("variante__id"))
+    if not items:
+        return
+
+    variantes_ids = [item.variante_id for item in items]
+    variantes_bloqueadas = list(
+        Variante.objects.select_for_update().filter(id__in=variantes_ids).order_by("id")
+    )
+    mapa_variantes = {v.id: v for v in variantes_bloqueadas}
+
+    for item in items:
+        var = mapa_variantes.get(item.variante_id)
+        if not var:
+            raise StockInsuficienteError(f"La prenda {item.nombre_producto} ya no existe en el catálogo.")
+        if item.cantidad > var.cantidad_stock:
+            raise StockInsuficienteError(
+                f"Stock insuficiente para {item.nombre_producto} en talla {item.talla}. "
+                f"Disponible: {var.cantidad_stock}, solicitado: {item.cantidad}."
+            )
+
+    for item in items:
+        var = mapa_variantes[item.variante_id]
+        var.cantidad_stock -= item.cantidad
+        var.save(update_fields=["cantidad_stock", "fecha_actualizacion"])
+        MovimientoStock.objects.create(
+            variante=var,
+            tipo=TipoMovimientoStock.VENTA,
+            cantidad=-item.cantidad,
+            motivo=f"Venta confirmada pedido {pedido.codigo}",
+            pedido=pedido,
+            creado_por=usuario,
+        )
+
+
+def reponer_stock_pedido(*, pedido: Pedido, motivo: str, usuario: Any | None = None) -> None:
+    """Repone atómicamente el stock de las prendas por cancelación o rechazo de un pedido pagado.
+
+    Qué hace:      Aplica select_for_update() ordenado por ID, suma el stock y genera movimientos DEVOLUCION.
+    Va hacia:      Incrementa cantidad_stock en TBL_RVARIANTE e inserta filas en TBL_TMOVIMIENTO_STOCK.
+    Depende de:    Variante, MovimientoStock y TipoMovimientoStock.
+    Cuándo usarla: Al cancelar o rechazar un pedido que ya estuvo en PAGADO o ENVIADO.
+    Si no opera:   Revierte la transacción si ocurre cualquier inconsistencia de base de datos.
+    """
+    items = list(pedido.items.select_related("variante").order_by("variante__id"))
+    if not items:
+        return
+
+    variantes_ids = [item.variante_id for item in items]
+    variantes_bloqueadas = list(
+        Variante.objects.select_for_update().filter(id__in=variantes_ids).order_by("id")
+    )
+    mapa_variantes = {v.id: v for v in variantes_bloqueadas}
+
+    motivo_limpio = limpiar_texto_seguro(motivo, longitud_maxima=200)
+
+    for item in items:
+        var = mapa_variantes.get(item.variante_id)
+        if var:
+            var.cantidad_stock += item.cantidad
+            var.save(update_fields=["cantidad_stock", "fecha_actualizacion"])
+            MovimientoStock.objects.create(
+                variante=var,
+                tipo=TipoMovimientoStock.DEVOLUCION,
+                cantidad=item.cantidad,
+                motivo=motivo_limpio,
+                pedido=pedido,
+                creado_por=usuario,
+            )
+
+
+def cambiar_estado(
+    *,
+    pedido: Pedido,
+    nuevo_estado: str,
+    usuario: Any | None = None,
+    nota: str = "",
+    devolucion_confirmada: bool = False,
+) -> Pedido:
+    """Ejecuta una transición de estado del pedido validando la matriz oficial de flujo (doc 03).
+
+    Qué hace:      Verifica si el paso es válido, actualiza timestamps, bitácora y stock.
+    Va hacia:      Actualiza Pedido, inserta RegistroEstadoPedido y ajusta stock si corresponde.
+    Depende de:    TRANSICIONES_PERMITIDAS, RegistroEstadoPedido, descontar_stock_pedido.
+    Cuándo usarla: En todas las acciones del admin y servicios de pedidos para cambiar de estado.
+    Si no opera:   Lanza TransicionInvalidaError si la transición no está autorizada.
+    """
+    estado_actual = pedido.estado
+    permitidas = TRANSICIONES_PERMITIDAS.get(estado_actual, set())
+    if nuevo_estado not in permitidas:
+        raise TransicionInvalidaError(
+            f"No está permitido cambiar el pedido {pedido.codigo} de {estado_actual} a {nuevo_estado}."
+        )
+
+    ahora = timezone.now()
+    nota_limpia = limpiar_texto_seguro(nota, longitud_maxima=255) if nota else ""
+
+    with transaction.atomic():
+        if estado_actual == EstadoPedido.COTIZADO and nuevo_estado == EstadoPedido.PAGADO:
+            descontar_stock_pedido(pedido=pedido, usuario=usuario)
+            pedido.fecha_pagado = ahora
+
+        elif estado_actual == EstadoPedido.PAGADO and nuevo_estado in (
+            EstadoPedido.CANCELADO,
+            EstadoPedido.RECHAZADO,
+        ):
+            reponer_stock_pedido(
+                pedido=pedido,
+                motivo=f"Reposición por {nuevo_estado}: {nota_limpia or pedido.codigo}",
+                usuario=usuario,
+            )
+            pedido.fecha_cierre = ahora
+
+        elif estado_actual == EstadoPedido.ENVIADO and nuevo_estado == EstadoPedido.CANCELADO:
+            if not devolucion_confirmada:
+                raise EntradaInvalidaError(
+                    "Para cancelar un pedido ya ENVIADO se requiere confirmación expresa de devolución física de la mercadería."
+                )
+            reponer_stock_pedido(
+                pedido=pedido,
+                motivo=f"Devolución física confirmada: {nota_limpia or pedido.codigo}",
+                usuario=usuario,
+            )
+            pedido.fecha_cierre = ahora
+
+        elif nuevo_estado == EstadoPedido.COTIZADO and not pedido.fecha_cotizado:
+            pedido.fecha_cotizado = ahora
+
+        elif nuevo_estado == EstadoPedido.ENVIADO:
+            pedido.fecha_enviado = ahora
+
+        elif nuevo_estado == EstadoPedido.ENTREGADO:
+            pedido.fecha_entregado = ahora
+            pedido.fecha_cierre = ahora
+
+        elif nuevo_estado in (EstadoPedido.CANCELADO, EstadoPedido.RECHAZADO):
+            pedido.fecha_cierre = ahora
+
+        pedido.estado = nuevo_estado
+        pedido.save()
+
+        RegistroEstadoPedido.objects.create(
+            pedido=pedido,
+            estado_anterior=estado_actual,
+            estado_nuevo=nuevo_estado,
+            cambiado_por=usuario,
+            nota=nota_limpia,
+        )
+
+    return pedido
+
+
+def cotizar_envio(
+    *,
+    pedido: Pedido,
+    costo_envio: Decimal,
+    usuario: Any | None = None,
+    nota: str = "",
+) -> Pedido:
+    """Ingresa el costo del flete o delivery y transiciona el pedido de NUEVO a COTIZADO.
+
+    Qué hace:      Guarda el costo_envio, recalcula el total y ejecuta cambiar_estado.
+    Va hacia:      Actualiza Pedido con estado COTIZADO y fecha_cotizado.
+    Depende de:    cambiar_estado y EstadoPedido.
+    Cuándo usarla: Cuando Richard averigua la cotización de Shalom/Olva o motorizado en Lima.
+    Si no opera:   Lanza EntradaInvalidaError si el costo de envío es negativo.
+    """
+    if costo_envio is None or costo_envio < Decimal("0.00"):
+        raise EntradaInvalidaError("El costo de envío no puede ser negativo.")
+
+    with transaction.atomic():
+        pedido.costo_envio = costo_envio
+        pedido.total = pedido.subtotal + costo_envio
+        pedido.fecha_cotizado = timezone.now()
+        pedido.save(update_fields=["costo_envio", "total", "fecha_cotizado", "fecha_actualizacion"])
+        nota_final = nota or f"Envío cotizado en S/ {costo_envio:.2f}."
+        cambiar_estado(
+            pedido=pedido,
+            nuevo_estado=EstadoPedido.COTIZADO,
+            usuario=usuario,
+            nota=nota_final,
+        )
+    return pedido
+
+
+def confirmar_pago(
+    *,
+    pedido: Pedido,
+    metodo_pago: Any | None = None,
+    usuario: Any | None = None,
+    nota: str = "",
+) -> Pedido:
+    """Verifica el comprobante Yape o transferencia y pasa el pedido de COTIZADO a PAGADO.
+
+    Qué hace:      Asigna el método de pago, valida y descuenta stock atómicamente y actualiza estado.
+    Va hacia:      Pedido en estado PAGADO con fecha_pagado y movimientos TBL_TMOVIMIENTO_STOCK.
+    Depende de:    cambiar_estado y descontar_stock_pedido.
+    Cuándo usarla: Cuando Richard valida el dinero en su cuenta de Yape o banco.
+    Si no opera:   Lanza StockInsuficienteError si se agotó el stock antes de pagar.
+    """
+    with transaction.atomic():
+        if metodo_pago:
+            if isinstance(metodo_pago, str):
+                metodo_obj = MetodoPago.objects.filter(tipo=metodo_pago.upper()).first()
+                if not metodo_obj:
+                    metodo_obj = MetodoPago.objects.first()
+                pedido.metodo_pago = metodo_obj
+            elif isinstance(metodo_pago, MetodoPago):
+                pedido.metodo_pago = metodo_pago
+            pedido.save(update_fields=["metodo_pago", "fecha_actualizacion"])
+        cambiar_estado(
+            pedido=pedido,
+            nuevo_estado=EstadoPedido.PAGADO,
+            usuario=usuario,
+            nota=nota or "Pago verificado conforme por Richard.",
+        )
+    return pedido
+
+
+def confirmar_pago_y_entregar(
+    *,
+    pedido: Pedido,
+    metodo_pago: Any | None = None,
+    usuario: Any | None = None,
+    nota: str = "",
+) -> Pedido:
+    """Acción rápida de entrega presencial en Lima: COTIZADO -> PAGADO -> ENTREGADO en un paso.
+
+    Qué hace:      Descuenta stock en PAGADO y marca ENTREGADO en una única transacción atómica.
+    Va hacia:      Genera ambos registros en TBL_LPEDIDO_ESTADO y actualiza fechas de pago y entrega.
+    Depende de:    confirmar_pago y cambiar_estado.
+    Cuándo usarla: En punto de encuentro o recojo cuando el cliente yapea o paga en mano.
+    Si no opera:   Revierte la transacción completa si falla la validación de stock.
+    """
+    with transaction.atomic():
+        confirmar_pago(
+            pedido=pedido,
+            metodo_pago=metodo_pago,
+            usuario=usuario,
+            nota=nota or "Pago recibido contraentrega en punto de encuentro.",
+        )
+        cambiar_estado(
+            pedido=pedido,
+            nuevo_estado=EstadoPedido.ENTREGADO,
+            usuario=usuario,
+            nota=nota or "Prenda entregada en mano al cliente.",
+        )
+    return pedido
+
+
+def registrar_envio_agencia(
+    *,
+    pedido: Pedido,
+    agencia: str,
+    numero_orden_agencia: str,
+    clave_recojo: str,
+    imagen_boleta: Any,
+    costo_flete: Decimal,
+    quien_paga: str,
+    cobrado: bool = False,
+    fecha_despacho: datetime | None = None,
+    notas: str = "",
+    usuario: Any | None = None,
+) -> Envio:
+    """Registra los datos de despacho de Shalom/Olva y pasa el pedido de PAGADO a ENVIADO.
+
+    Qué hace:      Crea TBL_TENVIO con clave privada de 4 dígitos, foto de boleta y transiciona estado.
+    Va hacia:      Crea Envio y actualiza Pedido a ENVIADO.
+    Depende de:    Envio, Pedido, cambiar_estado y DatosEnvioIncompletosError.
+    Cuándo usarla: Tras dejar el paquete en la ventanilla de Shalom u Olva con boleta en mano.
+    Si no opera:   Lanza DatosEnvioIncompletosError si faltan datos o el pedido no está en PAGADO.
+    """
+    if pedido.tipo_entrega != TipoEntrega.AGENCIA:
+        raise EntradaInvalidaError("Solo se pueden registrar datos de despacho en pedidos con entrega AGENCIA.")
+    if pedido.estado != EstadoPedido.PAGADO:
+        raise TransicionInvalidaError("Para registrar el envío por agencia, el pedido debe estar en estado PAGADO.")
+
+    numero_orden_limpio = limpiar_texto_seguro(str(numero_orden_agencia or ""), longitud_maxima=30)
+    clave_limpia = str(clave_recojo or "").strip()
+
+    if not numero_orden_limpio:
+        raise DatosEnvioIncompletosError("El número de orden o guía de la agencia es obligatorio.")
+    if len(clave_limpia) != 4 or not clave_limpia.isdigit():
+        raise DatosEnvioIncompletosError("La clave de recojo de la agencia debe tener exactamente 4 dígitos.")
+    if not imagen_boleta:
+        raise DatosEnvioIncompletosError("La foto o archivo de la boleta de la agencia es obligatoria.")
+
+    f_despacho = fecha_despacho or timezone.now()
+
+    with transaction.atomic():
+        envio, _ = Envio.objects.update_or_create(
+            pedido=pedido,
+            defaults={
+                "agencia": agencia,
+                "numero_orden_agencia": numero_orden_limpio,
+                "clave_recojo": clave_limpia,
+                "imagen_boleta": imagen_boleta,
+                "costo_flete": costo_flete,
+                "quien_paga": quien_paga,
+                "cobrado": cobrado,
+                "fecha_despacho": f_despacho,
+                "notas": notas,
+            },
+        )
+        cambiar_estado(
+            pedido=pedido,
+            nuevo_estado=EstadoPedido.ENVIADO,
+            usuario=usuario,
+            nota=f"Despachado por {agencia}. Orden: {numero_orden_limpio}.",
+        )
+    return envio
+
+
+def registrar_venta_presencial(
+    *,
+    lineas: list[dict[str, Any]],
+    metodo_pago: str | None = None,
+    metodo_pago_tipo: str = TipoMetodoPago.EFECTIVO,
+    cliente_nombre: str = "",
+    cliente_telefono: str = "",
+    notas: str = "",
+    marcar_entregado: bool = True,
+    usuario: Any | None = None,
+) -> Pedido:
+    """Registra una venta directa en persona o por WhatsApp realizada por Richard (Flujo C).
+
+    Qué hace:      Crea Pedido (PRESENCIAL), items, valida stock, descuenta y transiciona a PAGADO/ENTREGADO.
+    Va hacia:      Inserta en TBL_TPEDIDO, TBL_TPEDIDO_ITEM, TBL_TMOVIMIENTO_STOCK y TBL_LPEDIDO_ESTADO.
+    Depende de:    Pedido, ItemPedido, Variante, cambiar_estado y descontar_stock_pedido.
+    Cuándo usarla: En el panel de Richard al vender una camiseta directamente fuera de la web.
+    Si no opera:   Lanza StockInsuficienteError si no hay stock o EntradaInvalidaError si faltan datos.
+    """
+    if not lineas:
+        raise EntradaInvalidaError("Debes agregar al menos una camiseta a la venta presencial.")
+
+    metodo_pago = MetodoPago.objects.filter(tipo=metodo_pago_tipo, activo=True).first()
+    if not metodo_pago:
+        metodo_pago = MetodoPago.objects.filter(tipo=TipoMetodoPago.EFECTIVO).first()
+
+    metodo_pago_final = metodo_pago or metodo_pago_tipo or TipoMetodoPago.EFECTIVO
+    nombre_limpio = limpiar_texto_seguro(cliente_nombre, longitud_maxima=150) if cliente_nombre else "Venta presencial"
+    telefono_limpio = ""
+    if cliente_telefono:
+        try:
+            telefono_limpio = validar_telefono_peruano(cliente_telefono)
+        except Exception:
+            telefono_limpio = ""
+
+    notas_limpias = limpiar_texto_seguro(notas, longitud_maxima=500) if notas else ""
+
+    cantidades_por_producto: dict[int, int] = {}
+    for lin in lineas:
+        var = Variante.objects.select_related("producto").get(id=int(lin["variante_id"]))
+        cant = int(lin["cantidad"])
+        if cant < 1:
+            raise EntradaInvalidaError("La cantidad debe ser mayor a 0.")
+        cantidades_por_producto[var.producto_id] = cantidades_por_producto.get(var.producto_id, 0) + cant
+
+    with transaction.atomic():
+        ahora = timezone.now()
+        pedido = Pedido.objects.create(
+            codigo=generar_codigo_pedido_unico(),
+            estado=EstadoPedido.NUEVO,
+            origen=OrigenPedido.PRESENCIAL,
+            cliente_nombre=nombre_limpio,
+            cliente_telefono=telefono_limpio,
+            tipo_entrega=TipoEntrega.RECOJO,
+            punto_encuentro="Venta directa presencial",
+            subtotal=Decimal("0.00"),
+            costo_envio=Decimal("0.00"),
+            total=Decimal("0.00"),
+            metodo_pago=metodo_pago_final,
+            creado_por=usuario,
+            notas=notas_limpias,
+            fecha_cotizado=ahora,
+        )
+
+        subtotal_acumulado = Decimal("0.00")
+        for lin in lineas:
+            var = Variante.objects.select_related("producto").get(id=int(lin["variante_id"]))
+            cant = int(lin["cantidad"])
+            total_prod = cantidades_por_producto[var.producto_id]
+            precio_unit = calcular_precio_unitario_aplicado(
+                producto=var.producto,
+                cantidad_total_producto=total_prod,
+            )
+            subtotal_linea = (precio_unit * Decimal(cant)).quantize(Decimal("0.01"))
+            subtotal_acumulado += subtotal_linea
+
+            ItemPedido.objects.create(
+                pedido=pedido,
+                variante=var,
+                nombre_producto=var.producto.nombre,
+                sku=var.sku,
+                talla=var.talla,
+                color=var.color,
+                precio_unidad=precio_unit,
+                cantidad=cant,
+                subtotal=subtotal_linea,
+            )
+
+        pedido.subtotal = subtotal_acumulado
+        pedido.total = subtotal_acumulado
+        pedido.save(update_fields=["subtotal", "total", "fecha_actualizacion"])
+
+        RegistroEstadoPedido.objects.create(
+            pedido=pedido,
+            estado_anterior="",
+            estado_nuevo=EstadoPedido.NUEVO,
+            cambiado_por=usuario,
+            nota="Venta presencial directa registrada por Richard.",
+        )
+
+        cambiar_estado(
+            pedido=pedido,
+            nuevo_estado=EstadoPedido.COTIZADO,
+            usuario=usuario,
+            nota="Venta presencial cotizada.",
+        )
+
+        confirmar_pago(
+            pedido=pedido,
+            metodo_pago=metodo_pago,
+            usuario=usuario,
+            nota="Pago recibido en venta presencial.",
+        )
+
+        if marcar_entregado:
+            cambiar_estado(
+                pedido=pedido,
+                nuevo_estado=EstadoPedido.ENTREGADO,
+                usuario=usuario,
+                nota="Prenda entregada en mano al cliente.",
+            )
+
+    return pedido
+
+
+def registrar_entrada_stock(
+    *,
+    variante_id: int,
+    cantidad: int,
+    motivo: str,
+    usuario: Any | None = None,
+) -> MovimientoStock:
+    """Registra una entrada o ajuste de inventario actualizando el stock atómicamente.
+
+    Qué hace:      Aplica select_for_update(), suma/resta stock y genera TBL_TMOVIMIENTO_STOCK.
+    Va hacia:      Actualiza cantidad_stock en TBL_RVARIANTE e inserta fila en TBL_TMOVIMIENTO_STOCK.
+    Depende de:    Variante, MovimientoStock, TipoMovimientoStock y EntradaInvalidaError.
+    Cuándo usarla: Al recibir lote de camisetas o cuadrar stock físico en el panel de Richard.
+    Si no opera:   Lanza EntradaInvalidaError si la cantidad es 0 o el stock resultante es negativo.
+    """
+    if cantidad == 0:
+        raise EntradaInvalidaError("La cantidad del movimiento no puede ser 0.")
+    motivo_limpio = limpiar_texto_seguro(motivo, longitud_maxima=200)
+    if not motivo_limpio:
+        raise EntradaInvalidaError("Debes especificar el motivo de la entrada o ajuste de stock.")
+
+    with transaction.atomic():
+        var = Variante.objects.select_for_update().select_related("producto").get(id=int(variante_id))
+        nuevo_stock = var.cantidad_stock + cantidad
+        if nuevo_stock < 0:
+            raise EntradaInvalidaError(
+                f"El ajuste dejaría el stock en {nuevo_stock}. El stock nunca puede ser negativo."
+            )
+        tipo = TipoMovimientoStock.ENTRADA if cantidad > 0 else TipoMovimientoStock.AJUSTE
+        var.cantidad_stock = nuevo_stock
+        var.save(update_fields=["cantidad_stock", "fecha_actualizacion"])
+
+        mov = MovimientoStock.objects.create(
+            variante=var,
+            tipo=tipo,
+            cantidad=cantidad,
+            motivo=motivo_limpio,
+            creado_por=usuario,
+        )
+    return mov
+
+
+def construir_enlace_whatsapp_notificacion_cliente(
+    *,
+    pedido: Pedido,
+    tipo_notificacion: str,
+    url_publica_pedido: str,
+) -> str:
+    """Genera el enlace de WhatsApp estructurado para que Richard le avise al cliente con un clic.
+
+    Qué hace:      Construye mensajes para cotizado (con total y Yape), enviado (agencia y clave) o punto.
+    Va hacia:      Retorna URL api.whatsapp.com/send?phone=51...&text=... con markdown limpio.
+    Depende de:    Pedido, Envio y urllib.parse.quote.
+    Cuándo usarla: En los botones del panel de Richard tras cotizar, despachar o coordinar encuentro.
+    Si no opera:   Usa el teléfono del cliente; si no existe, omite el parámetro phone.
+    """
+    telefono = pedido.cliente_telefono or ""
+    nombre = pedido.cliente_nombre or "Cliente"
+
+    if tipo_notificacion == "COTIZADO":
+        flete_txt = f"S/ {pedido.costo_envio:.2f}" if pedido.costo_envio else "S/ 0.00"
+        mensaje = (
+            f"Hola {nombre}, tu pedido *{pedido.codigo}* en *Emuná Sport* ya fue cotizado:\n\n"
+            f"• Subtotal camisetas: S/ {pedido.subtotal:.2f}\n"
+            f"• Envío / Entrega: {flete_txt}\n"
+            f"*Total a pagar:* S/ {pedido.total:.2f}\n\n"
+            f"Puedes ver tu pedido, descargar tu PDF y pagar con Yape aquí:\n"
+            f"{url_publica_pedido}\n\n"
+            f"Avísame cuando hagas el pago para separarte las prendas de inmediato."
+        )
+    elif tipo_notificacion == "ENVIADO":
+        envio = getattr(pedido, "envio", None)
+        agencia_txt = envio.get_agencia_display() if envio else pedido.get_agencia_display()
+        orden_txt = envio.numero_orden_agencia if envio else "Ver boleta"
+        clave_txt = envio.clave_recojo if envio else "----"
+        mensaje = (
+            f"Hola {nombre}, ¡tu pedido *{pedido.codigo}* ya fue despachado a provincia! 🚚\n\n"
+            f"• Agencia: *{agencia_txt}*\n"
+            f"• N° de Orden / Guía: *{orden_txt}*\n"
+            f"• Clave de Recojo: *{clave_txt}*\n\n"
+            f"Puedes ver los detalles de tu envío y tu comprobante aquí:\n"
+            f"{url_publica_pedido}\n\n"
+            f"¡Muchas gracias por tu compra en Emuná Sport!"
+        )
+    elif tipo_notificacion == "PUNTO_ENCUENTRO":
+        lugar = pedido.punto_encuentro or "Lugar por coordinar"
+        fecha_txt = ""
+        if pedido.entrega_programada:
+            fecha_txt = f"• Fecha y hora propuesta: *{timezone.localtime(pedido.entrega_programada).strftime('%d/%m/%Y %H:%M')}*\n"
+        mensaje = (
+            f"Hola {nombre}, te escribo de *Emuná Sport* sobre tu pedido *{pedido.codigo}*:\n\n"
+            f"• Punto de encuentro en Lima: *{lugar}*\n"
+            f"{fecha_txt}"
+            f"*Total a pagar:* S/ {pedido.total:.2f} (con Yape o efectivo al recibir)\n\n"
+            f"¿Me confirmas si te queda bien este horario para llevar tus camisetas?"
+        )
+    else:
+        mensaje = (
+            f"Hola {nombre}, te saluda Richard de *Emuná Sport* sobre tu pedido *{pedido.codigo}*. "
+            f"Puedes ver el estado en vivo aquí: {url_publica_pedido}"
+        )
+
+    phone_param = f"phone=51{telefono}&" if telefono else ""
+    return f"https://api.whatsapp.com/send?{phone_param}text={urllib.parse.quote(mensaje)}"
+
+
+def cancelar_o_rechazar(
+    *,
+    pedido: Pedido,
+    nuevo_estado: str,
+    usuario: Any | None = None,
+    nota: str = "",
+    devolucion_fisica: bool = False,
+) -> Pedido:
+    """Cancela o rechaza un pedido ejecutando las validaciones y reposición de inventario.
+
+    Qué hace:      Invoca cambiar_estado pasando el estado CANCELADO o RECHAZADO y reponiendo stock.
+    Va hacia:      Actualiza TBL_TPEDIDO, crea movimientos DEVOLUCION y añade fila a la bitácora.
+    Depende de:    cambiar_estado y EntradaInvalidaError.
+    Cuándo usarla: En las acciones de cancelación del panel de administración o desistimiento del cliente.
+    Si no opera:   Lanza TransicionInvalidaError si el estado actual no permite cancelación.
+    """
+    if nuevo_estado not in (EstadoPedido.CANCELADO, EstadoPedido.RECHAZADO):
+        raise EntradaInvalidaError(
+            f"El estado final debe ser CANCELADO o RECHAZADO (recibido: {nuevo_estado})."
+        )
+    return cambiar_estado(
+        pedido=pedido,
+        nuevo_estado=nuevo_estado,
+        usuario=usuario,
+        nota=nota,
+        devolucion_confirmada=devolucion_fisica,
+    )

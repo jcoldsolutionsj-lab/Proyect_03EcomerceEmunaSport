@@ -1,0 +1,150 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='pedidos' %}">Pedidos</a>
+  &rsaquo; <a href="{% url 'admin:pedidos_pedido_changelist' %}">Pedidos</a>
+  &rsaquo; Registrar Venta Presencial
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" style="max-width: 1000px; margin: 0 auto; padding: 20px 0;">
+  <div style="background: #0F172A; color: #FFFFFF; padding: 20px 24px; border-radius: 8px; margin-bottom: 24px; border-left: 6px solid #10B981;">
+    <h1 style="margin: 0 0 8px 0; color: #10B981; font-size: 24px; font-weight: bold;">
+      ⚡ Registrar Venta Presencial Directa (Flujo C)
+    </h1>
+    <p style="margin: 0; color: #94A3B8; font-size: 14px;">
+      Usa este formulario para registrar ventas directas en taller, ferias o entregas presenciales. Se descontará el inventario en base de datos de forma atómica y quedará registrado con trazabilidad completa.
+    </p>
+  </div>
+
+  {% if form_error %}
+    <div style="background: #FEE2E2; border: 1px solid #EF4444; color: #991B1B; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-weight: 500;">
+      ⚠️ {{ form_error }}
+    </div>
+  {% endif %}
+
+  <form method="post" action="" id="form-venta-presencial">
+    {% csrf_token %}
+    
+    <div class="module" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px; color: #1E293B;">
+        1. Datos del Cliente y Pago
+      </h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label for="cliente_nombre" style="display: block; font-weight: bold; margin-bottom: 4px; color: #334155;">
+            Nombre del Cliente (Opcional):
+          </label>
+          <input type="text" id="cliente_nombre" name="cliente_nombre" value="{{ post_data.cliente_nombre|default:'' }}" placeholder="ej. Cliente mostrador" style="width: 100%; padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 6px;">
+        </div>
+        <div>
+          <label for="cliente_telefono" style="display: block; font-weight: bold; margin-bottom: 4px; color: #334155;">
+            Teléfono / WhatsApp (Opcional):
+          </label>
+          <input type="text" id="cliente_telefono" name="cliente_telefono" value="{{ post_data.cliente_telefono|default:'' }}" placeholder="ej. 987654321" style="width: 100%; padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 6px;">
+        </div>
+        <div>
+          <label for="metodo_pago" style="display: block; font-weight: bold; margin-bottom: 4px; color: #334155;">
+            Método de Pago:
+          </label>
+          <select id="metodo_pago" name="metodo_pago" style="width: 100%; padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 6px; font-weight: 500;">
+            <option value="YAPE" {% if post_data.metodo_pago == 'YAPE' or not post_data %}selected{% endif %}>🟣 Yape</option>
+            <option value="EFECTIVO" {% if post_data.metodo_pago == 'EFECTIVO' %}selected{% endif %}>💵 Efectivo al recibir</option>
+            <option value="PLIN" {% if post_data.metodo_pago == 'PLIN' %}selected{% endif %}>🔵 Plin</option>
+            <option value="TRANSFERENCIA" {% if post_data.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>🏦 Transferencia BCP / Interbank</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <input type="checkbox" id="marcar_entregado" name="marcar_entregado" value="1" {% if post_data.marcar_entregado != '0' %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #10B981;">
+        <label for="marcar_entregado" style="font-weight: 600; color: #0F172A; cursor: pointer;">
+          ✅ Entregar prendas inmediatamente en mano (pasa de inmediato a estado ENTREGADO)
+        </label>
+      </div>
+
+      <div>
+        <label for="notas" style="display: block; font-weight: bold; margin-bottom: 4px; color: #334155;">
+          Notas u Observaciones (Opcional):
+        </label>
+        <input type="text" id="notas" name="notas" value="{{ post_data.notas|default:'' }}" placeholder="ej. Venta en taller central / Pagó monto exacto" style="width: 100%; padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 6px;">
+      </div>
+    </div>
+
+    <div class="module" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px; color: #1E293B;">
+        2. Seleccionar Camisetas y Tallas
+      </h2>
+      
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+          <thead>
+            <tr style="background: #F8FAFC; border-bottom: 2px solid #CBD5E1; color: #475569;">
+              <th style="padding: 10px 12px;">Camiseta</th>
+              <th style="padding: 10px 12px;">Talla</th>
+              <th style="padding: 10px 12px;">SKU</th>
+              <th style="padding: 10px 12px;">Precio Sugerido</th>
+              <th style="padding: 10px 12px; text-align: center;">Stock Disp.</th>
+              <th style="padding: 10px 12px; text-align: center; width: 140px;">Cantidad a Vender</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for var in variantes %}
+              <tr style="border-bottom: 1px solid #F1F5F9;">
+                <td style="padding: 10px 12px; font-weight: 600; color: #0F172A;">
+                  {{ var.producto.nombre }}
+                  {% if var.color %}<span style="color:#64748B; font-weight:normal; font-size:12px;">({{ var.color }})</span>{% endif %}
+                </td>
+                <td style="padding: 10px 12px;">
+                  <span style="display: inline-block; padding: 2px 8px; background: #E2E8F0; border-radius: 4px; font-weight: bold;">
+                    {{ var.talla }}
+                  </span>
+                </td>
+                <td style="padding: 10px 12px; font-family: monospace; color: #64748B;">
+                  {{ var.sku }}
+                </td>
+                <td style="padding: 10px 12px; font-weight: 600; color: #059669;">
+                  S/ {{ var.producto.precio_unidad|floatformat:2 }}
+                </td>
+                <td style="padding: 10px 12px; text-align: center;">
+                  <strong style="color: {% if var.cantidad_stock <= var.umbral_stock_bajo %}#DC2626{% else %}#1E293B{% endif %};">
+                    {{ var.cantidad_stock }}
+                  </strong>
+                </td>
+                <td style="padding: 10px 12px; text-align: center;">
+                  <input type="number" 
+                         name="cant_{{ var.id }}" 
+                         id="cant_{{ var.id }}" 
+                         value="0" 
+                         min="0" 
+                         max="{{ var.cantidad_stock }}" 
+                         style="width: 80px; padding: 6px; text-align: center; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: bold; font-size: 15px;">
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" style="padding: 24px; text-align: center; color: #94A3B8;">
+                  No hay variantes con stock disponible actualmente.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 16px; align-items: center;">
+      <a href="{% url 'admin:pedidos_pedido_changelist' %}" style="color: #64748B; text-decoration: none; font-weight: 500;">
+        Cancelar y volver
+      </a>
+      <button type="submit" style="background: #10B981; color: #FFFFFF; border: none; padding: 12px 24px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);">
+        ✓ Confirmar Venta Presencial y Descontar Stock
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

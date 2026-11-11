@@ -1,13 +1,22 @@
 """Vistas delgadas de la app pedidos: Carrito HTMX, Checkout, Detalle del Pedido y PDF."""
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+import mimetypes
+
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseForbidden,
+    JsonResponse,
+)
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.nucleo.excepciones import ErrorDominioEmuna
 
-from .models import AgenciaEnvio, TipoEntrega
+from .models import AgenciaEnvio, Envio, TipoEntrega
 from .selectores import (
     construir_enlace_whatsapp_pedido,
     obtener_carrito_detallado,
@@ -286,3 +295,35 @@ def vista_api_carrito_resumen(request: HttpRequest) -> JsonResponse:
             ],
         }
     )
+
+
+@require_GET
+def vista_ver_boleta_privada(request: HttpRequest, envio_id: int) -> HttpResponse:
+    """Sirve de forma privada y autenticada la foto de la boleta de agencia.
+
+    Qué hace:      Verifica permisos de staff o grupo Dueño y transmite el archivo binario.
+    Va hacia:      FileResponse con MIME type seguro para visualización en navegador.
+    Depende de:    Envio y permisos de sesión del usuario autenticado.
+    Cuándo usarla: Al pulsar 'Ver boleta privada' desde el panel de administración de Richard.
+    Si no opera:   Retorna HTTP 403 Forbidden para usuarios anónimos o clientes sin privilegios.
+    """
+    if not request.user.is_authenticated or not (
+        request.user.is_staff or request.user.groups.filter(name="Dueño").exists()
+    ):
+        return HttpResponseForbidden("Acceso denegado a comprobantes privados de despacho.")
+
+    envio = get_object_or_404(Envio.objects.select_related("pedido"), id=envio_id)
+    if not envio.imagen_boleta:
+        raise Http404("El envío no cuenta con imagen de boleta registrada.")
+
+    try:
+        archivo = envio.imagen_boleta.open("rb")
+    except (FileNotFoundError, OSError):
+        raise Http404("El archivo de la boleta no se encuentra en el almacenamiento.") from None
+
+    nombre_archivo = envio.imagen_boleta.name.lower()
+    tipo_mime, _ = mimetypes.guess_type(nombre_archivo)
+    if not tipo_mime:
+        tipo_mime = "application/octet-stream"
+
+    return FileResponse(archivo, content_type=tipo_mime)

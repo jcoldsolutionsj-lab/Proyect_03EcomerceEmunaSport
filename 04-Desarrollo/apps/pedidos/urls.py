@@ -17,4 +17,9 @@ urlpatterns = [
     path("pedidos/checkout/", views.vista_checkout, name="checkout"),
     path("pedidos/<str:codigo>/", views.vista_detalle_pedido_publico, name="detalle_pedido"),
     path("pedidos/<str:codigo>/pdf/", views.vista_descargar_pdf_pedido, name="descargar_pdf_pedido"),
+    path(
+        "pedidos/envio/<int:envio_id>/boleta/",
+        views.vista_ver_boleta_privada,
+        name="ver_boleta_privada",
+    ),
 ]
