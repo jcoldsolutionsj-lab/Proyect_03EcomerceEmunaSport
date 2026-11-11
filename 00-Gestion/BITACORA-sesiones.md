@@ -2,6 +2,27 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-10 – Mejoras de comprobante, logos oficiales de agencia y enlace dinámico de WhatsApp en Fase 2
+- **Hecho:**
+  - Se integró el video animado oficial `Logo_animado.mp4` en el navbar de la cabecera (`base.html`), eliminando sombras verdes externas o animaciones CSS superpuestas para que luzca limpio y fiel al video original.
+  - Se incorporaron los logos oficiales de **Agencia Shalom** (`shalom_logo.png`) y **Olva Courier** (`Olva_logo.png`) dentro de la selección de agencia en `http://127.0.0.1:8000/pedidos/checkout/`, dotando de máxima seriedad y presencia de marca al formulario de envío a provincia.
+  - Se actualizó el comprobante PDF (`generar_pdf_pedido`) para incrustar automáticamente el logo oficial de la agencia seleccionada (Shalom u Olva), especificar el nombre exacto de la agencia en la modalidad y plasmar la observación/comentario del cliente (`pedido.notas`) cuando exista.
+  - Se integró la foto oficial del código QR de Yape de Richard (`QR_yape_richardRamos.jpeg`) en la tarjeta de seguimiento del pedido (`detalle_pedido.html`), con su titular ("Richard Ramos - Emuná Sport") y botón de copiado resiliente con fallback portapapeles.
+  - Se creó el selector dinámico `carrito.url_whatsapp_consulta` (`obtener_carrito_detallado`), permitiendo que el link «Escribir por WhatsApp» en el cajón lateral HTMX, la página `/carrito/` y el checkout `/pedidos/checkout/` arme automáticamente el mensaje prellenado hacia Richard con el detalle de camisetas, tallas, cantidades y subtotales calculados.
+  - Se añadieron pruebas unitarias automatizadas (`test_pdf_pedido_agencia_shalom_con_notas` y aserción de `url_whatsapp_consulta`), alcanzando 18 pruebas pasando al 100% en `pytest` y 0 errores en `ruff check`.
+- **Decidido:** dar por concluida la Fase 2 y presentar a Jonathan el resumen final para su visto bueno de commit y merge a `develop`.
+- **Queda:** fusionar `feature/fase-2-carrito-pedido-whatsapp` a `develop` e iniciar la **Fase 3: Panel de control de Richard, transiciones de estado de pedido y descuento atómico de stock**.
+
+## 2026-11-10 – Implementación y pruebas de la Fase 2 (`feature/fase-2-carrito-pedido-whatsapp`)
+- **Hecho:**
+  - Se cerró la Fase 1 con QA UI/UX móvil y desktop aprobado, se hizo commit en `feature/fase-1-catalogo-frontend` (`296604b`), se fusionó (`--no-ff`) en `develop` (`e1492aa`), se subió a `origin` y se creó la rama `feature/fase-2-carrito-pedido-whatsapp`.
+  - Se implementaron en `04-Desarrollo/apps/pedidos/models.py` (y su migración `0001_initial.py`) las 4 tablas físicas del dominio de pedidos cumpliendo el diccionario al 100%: `Pedido` (`TBL_TPEDIDO`), `ItemPedido` (`TBL_TPEDIDO_ITEM` con snapshots de nombre, SKU, talla y precio), `RegistroEstadoPedido` (`TBL_LPEDIDO_ESTADO`, inmutable) e `HistorialPedido` (`TBL_HPEDIDO` de `django-simple-history`).
+  - Se crearon `selectores.py` (`obtener_carrito_detallado` sumando unidades del mismo producto entre distintas tallas `S/M/L/XL` para activar el precio por mayor, `obtener_pedido_publico` con DNI enmascarado `******15` y datos de Yape cuando está en `COTIZADO`, y `construir_enlace_whatsapp_pedido`) y `servicios.py` (`agregar_al_carrito`, `eliminar_del_carrito`, `vaciar_carrito`, `generar_codigo_pedido_unico` `EMU-XXXXXX`, `validar_turnstile_cloudflare`, `crear_pedido_web` con triple protección antispam y `generar_pdf_pedido` con ReportLab).
+  - Se conectó el cajón lateral del carrito con **HTMX** (`templates/pedidos/parcial_cajon_carrito.html`, actualización OOB del contador del header y apertura automática al agregar desde `detalle_producto.html`), se construyeron `/carrito/`, `/pedidos/checkout/` (con las 4 modalidades reales de Richard: `PUNTO_ENCUENTRO`, `AGENCIA` Shalom/Olva exigiendo DNI, `DELIVERY_LIMA` y `RECOJO`), `/pedidos/<codigo>/` (con un único CTA `#39FF14` hacia WhatsApp + tarjeta Yape copiable) y `/pedidos/<codigo>/pdf/`.
+  - Se ejecutó `ruff check 04-Desarrollo` (0 errores), `generar_diccionario.py` (13 tablas, 134 columnas validadas) y la suite completa de `pytest` (`17 passed`: Fase 0 + Fase 1 + Fase 2 + estándar `TBL_` en MAYÚSCULAS).
+- **Decidido:** presentar la Fase 2 lista para que Jonathan la pruebe en su navegador antes de hacer commit y merge a `develop`.
+- **Queda:** confirmar commit de `feature/fase-2-carrito-pedido-whatsapp`, fusionar a `develop` y pasar a la Fase 3 (Gestión del pedido y descuento atómico de stock).
+
 ## 2026-11-10 – Implementación y pruebas de la Fase 1 (`feature/fase-1-catalogo-frontend`)
 - **Hecho:**
   - Se cerró la Fase 0 con commits estructurados en `feature/fase-0-base`, se fusionó (`--no-ff`) en `develop`, se subió a `origin` y se creó la rama `feature/fase-1-catalogo-frontend`.

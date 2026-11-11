@@ -203,3 +203,7 @@ GA4_MEASUREMENT_ID = env("GA4_MEASUREMENT_ID")
 CLOUDFLARE_BEACON_TOKEN = env("CLOUDFLARE_BEACON_TOKEN")
 TURNSTILE_SITE_KEY = env("TURNSTILE_SITE_KEY")
 TURNSTILE_SECRET_KEY = env("TURNSTILE_SECRET_KEY")
+
+
+# Permitir nombres de índices de hasta 63 caracteres según 12-estandar-base-datos.md (PostgreSQL/SQLite)
+SILENCED_SYSTEM_CHECKS = ["models.E034"]

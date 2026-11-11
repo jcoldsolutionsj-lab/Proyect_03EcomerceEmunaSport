@@ -48,6 +48,7 @@
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  {% block scripts_cabecera_extra %}{% endblock %}
 
   <style>
     :root {
@@ -158,31 +159,6 @@
       animation: pulsoNotificacionUno 3.2s ease-in-out infinite;
     }
 
-    /* 4. Animación Moderada para el Logo Central EMUNÁ SPORT en el Header */
-    @keyframes pulsoLogoEmuna {
-      0%, 100% {
-        transform: translateY(0) scale(1);
-        filter: drop-shadow(0 0 4px rgba(57, 255, 20, 0.25));
-      }
-      50% {
-        transform: translateY(-2px) scale(1.04);
-        filter: drop-shadow(0 0 11px rgba(57, 255, 20, 0.65));
-      }
-    }
-    @keyframes brilloTextoSport {
-      0%, 100% {
-        text-shadow: 0 0 0 rgba(57, 255, 20, 0);
-      }
-      50% {
-        text-shadow: 0 0 10px rgba(57, 255, 20, 0.55);
-      }
-    }
-    .logo-emuna-animado {
-      animation: pulsoLogoEmuna 3.6s ease-in-out infinite;
-    }
-    .texto-sport-animado {
-      animation: brilloTextoSport 3.6s ease-in-out infinite;
-    }
   </style>
 
   <!-- Datos estructurados Organization JSON-LD (Requisito #6) -->
@@ -219,6 +195,7 @@
   {% block datos_estructurados_extra %}{% endblock %}
 </head>
 <body class="bg-white text-ink font-sans antialiased selection:bg-neon selection:text-ink flex flex-col min-h-screen"
+      @carrito-actualizado.window="cajonCarritoAbierto = true"
       x-data="{
         cajonCarritoAbierto: false,
         tarjetaWhatsappAbierta: false,
@@ -233,7 +210,8 @@
           if (hora >= 12 && hora < 19) return '¡BUENAS TARDES! 🌤️';
           return '¡BUENAS NOCHES! 🌙';
         }
-      }">
+      }"
+      x-init="document.body.addEventListener('carritoActualizado', () => { cajonCarritoAbierto = true; })">
 
   <!-- Barra superior informativa: el número +51 va DIRECTO al WhatsApp con mensaje prellenado -->
   <div class="bg-ink text-silver text-xs border-b border-neutral-800 py-2 px-4">
@@ -271,14 +249,19 @@
         </a>
       </nav>
 
-      <!-- Logo Central Emuná Sport con Animación Moderada de Resplandor Deportivo -->
+      <!-- Logo Central Emuná Sport con Video Animado Oficial -->
       <a href="{% url 'catalogo:inicio' %}" class="flex items-center gap-2 sm:gap-3 group" aria-label="Ir al inicio de Emuná Sport">
-        <img src="{% static 'logo_emuna_transparente.png' %}"
-             alt="Logo oficial de Emuná Sport – Estilo deportivo"
-             class="logo-emuna-animado h-10 sm:h-12 w-auto object-contain group-hover:scale-110 transicion-tactil">
+        <video autoplay loop muted playsinline
+               class="h-10 sm:h-12 w-auto object-contain rounded-sm pointer-events-none"
+               aria-label="Logo oficial de Emuná Sport – Estilo deportivo">
+          <source src="{% static 'banners-inicio/Logo_animado.mp4' %}" type="video/mp4">
+          <img src="{% static 'logo_emuna_transparente.png' %}"
+               alt="Logo oficial de Emuná Sport – Estilo deportivo"
+               class="h-10 sm:h-12 w-auto object-contain">
+        </video>
         <div class="leading-none">
           <span class="font-display italic font-extrabold text-xl sm:text-2xl tracking-wider text-white group-hover:text-neon transicion-tactil">
-            EMUNÁ <span class="text-neon texto-sport-animado">SPORT</span>
+            EMUNÁ <span class="text-neon">SPORT</span>
           </span>
           <span class="block text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-silver group-hover:text-white transicion-tactil">
             Estilo deportivo
@@ -296,8 +279,9 @@
                alt="Icono carrito de compras"
                class="w-5 h-5 object-contain mr-2">
           <span>Carrito</span>
-          <span class="ml-2.5 inline-flex items-center justify-center w-7 h-7 rounded-full bg-ink text-neon font-bold tabular-nums text-xs">
-            0
+          <span id="contador-carrito-header"
+                class="ml-2.5 inline-flex items-center justify-center w-7 h-7 rounded-full bg-ink text-neon font-bold tabular-nums text-xs">
+            {{ carrito.total_unidades|default:0 }}
           </span>
         </button>
       </div>
@@ -309,7 +293,7 @@
     {% block contenido %}{% endblock %}
   </main>
 
-  <!-- Cajón lateral del Carrito (Drawer fluido - se conecta a sesión en Fase 2) -->
+  <!-- Cajón lateral del Carrito (Drawer fluido conectado en tiempo real con HTMX) -->
   <div x-show="cajonCarritoAbierto"
        style="display: none;"
        class="fixed inset-0 z-50 overflow-hidden"
@@ -345,30 +329,9 @@
           </button>
         </div>
 
-        <!-- Estado vacío con salida clara (UI UX Pro Max) -->
-        <div class="p-8 flex-grow flex flex-col items-center justify-center text-center">
-          <div class="w-16 h-16 border border-silver bg-neutral-50 flex items-center justify-center mb-4">
-            <img src="{% static 'carro-de-la-carretilla.png' %}" alt="Carrito vacío" class="w-8 h-8 object-contain opacity-80">
-          </div>
-          <h3 class="font-display italic font-bold text-xl uppercase mb-2">Tu carrito está listo para estrenarse</h3>
-          <p class="text-sm text-silverDark mb-6 max-w-xs">
-            Elige tu talla (S, M, L o XL) en el catálogo o aprovecha los precios por mayor desde 3 unidades.
-          </p>
-          <a href="{% url 'catalogo:inicio' %}#catalogo-completo"
-             @click="cajonCarritoAbierto = false"
-             class="w-full py-3.5 px-6 bg-neon text-ink font-extrabold text-sm uppercase tracking-wider border-2 border-ink text-center transicion-tactil">
-            Ver camisetas disponibles →
-          </a>
-        </div>
-
-        <div class="p-5 border-t border-silver bg-neutral-50 flex items-center justify-between text-xs text-silverDark">
-          <span>¿Prefieres pedir directo con Richard?</span>
-          <a href="https://wa.me/51{{ tienda_config.numero_whatsapp|default:'999888777' }}?text=Hola%20Richard%2C%20estuve%20revisando%20tu%20p%C3%A1gina%20web%20de%20*Emun%C3%A1%20Sport*%20y%20quiero%20hacer%20un%20pedido."
-             target="_blank" rel="noopener"
-             class="inline-flex items-center gap-1.5 font-bold text-ink hover:text-neonDark underline">
-            <img src="{% static 'whatsapp.png' %}" alt="WhatsApp" class="w-4 h-4 object-contain">
-            <span>Escribir por WhatsApp</span>
-          </a>
+        <!-- Cuerpo dinámico HTMX del cajón lateral -->
+        <div id="cuerpo-cajon-carrito" class="flex-grow flex flex-col justify-between overflow-y-auto">
+          {% include "pedidos/parcial_cajon_carrito.html" %}
         </div>
       </div>
     </div>
@@ -565,6 +528,7 @@
         <ul class="space-y-2 text-xs font-semibold uppercase tracking-wider">
           <li><a href="{% url 'catalogo:inicio' %}" class="hover:text-neonDark">Inicio</a></li>
           <li><a href="{% url 'catalogo:inicio' %}#catalogo-completo" class="hover:text-neonDark">Catálogo de Camisetas</a></li>
+          <li><a href="{% url 'pedidos:ver_carrito' %}" class="hover:text-neonDark">Mi Carrito de Compra</a></li>
           <li>
             <a href="https://wa.me/51{{ tienda_config.numero_whatsapp|default:'999888777' }}?text=Hola%20Richard%2C%20estuve%20revisando%20tu%20p%C3%A1gina%20web%20de%20*Emun%C3%A1%20Sport*%20y%20me%20gustar%C3%ADa%20hacerte%20una%20consulta."
                target="_blank" rel="noopener"

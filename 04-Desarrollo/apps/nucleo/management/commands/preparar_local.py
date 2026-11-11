@@ -29,8 +29,9 @@ class Command(BaseCommand):
         MetodoPago.objects.update_or_create(
             tipo=TipoMetodoPago.YAPE,
             defaults={
-                "titular": "Richard Emuna Sport",
+                "titular": "Richard Ramos - Emuna Sport",
                 "numero_cuenta": "999888777",
+                "imagen_qr": "QR_yape_richardRamos.jpeg",
                 "activo": True,
                 "orden": 1,
             },

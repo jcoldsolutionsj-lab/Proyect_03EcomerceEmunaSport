@@ -6,6 +6,12 @@ from django.apps import apps
 PATRON_TABLA = re.compile(r"^TBL_[RTLH][A-Z0-9_]+$")
 PATRON_COLUMNA = re.compile(r"^[A-Z]{3}_[NCDBO][A-Z0-9_]+$")
 APPS_PROPIAS = {"nucleo", "catalogo", "inventario", "pedidos", "envios", "tablero"}
+COLUMNAS_LIBRERIA_HISTORIAL = {
+    "history_date",
+    "history_change_reason",
+    "history_type",
+    "history_user_id",
+}
 
 
 def test_todas_las_tablas_y_columnas_propias_cumplen_estandar_tbl_mayusculas() -> None:
@@ -32,6 +38,11 @@ def test_todas_las_tablas_y_columnas_propias_cumplen_estandar_tbl_mayusculas() -
         )
         for campo in modelo._meta.concrete_fields:
             nombre_columna = campo.column
+            if (
+                nombre_tabla.startswith("TBL_H")
+                and nombre_columna in COLUMNAS_LIBRERIA_HISTORIAL
+            ):
+                continue
             assert PATRON_COLUMNA.match(nombre_columna), (
                 f"El campo {modelo.__name__}.{campo.name} tiene columna '{nombre_columna}', "
                 "que no cumple el formato PPP_[N|C|D|B|O]CUERPO en MAYÚSCULAS."

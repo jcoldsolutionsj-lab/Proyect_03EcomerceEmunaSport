@@ -2,9 +2,9 @@
  * Script base de pruebas de carga y concurrencia con Grafana k6 para Emuná Sport.
  *
  * Qué hace:      Simula clientes navegando el catálogo desde el celular, armando
- *                carrito y enviando pedidos para medir tiempos de respuesta y errores.
- * Va hacia:      Rutas públicas de la tienda (/, /productos/<slug>/, /carrito/, /pedidos/crear/).
- * Depende de:    Servidor Django corriendo con PostgreSQL y datos semilla (cargar_demo).
+ *                carrito y consultando checkout para medir tiempos de respuesta y errores.
+ * Va hacia:      Rutas públicas de la tienda (/, /productos/<slug>/, /carrito/, /pedidos/checkout/).
+ * Depende de:    Servidor Django corriendo con PostgreSQL/SQLite y datos semilla (cargar_demo).
  * Cuándo usarla: En Fase 2 (checkout), Fase 3 (concurrencia de stock) y Fase 6 (pre-lanzamiento).
  * Si no opera:   Devuelve código de salida distinto de 0 si el p95 supera 500 ms o hay errores 500.
  */
@@ -57,15 +57,29 @@ export default function () {
     });
   });
 
-  sleep(1);
+  sleep(0.5);
 
-  group('2. Cliente consulta detalle de camiseta', () => {
-    const slugProducto = __ENV.PRODUCTO_SLUG || 'camiseta-entrenamiento-emuna-negra';
+  group('2. Cliente consulta detalle de camiseta Argentina x Messi', () => {
+    const slugProducto = __ENV.PRODUCTO_SLUG || 'argentina-x-messi-10';
     const resDetalle = http.get(`${BASE_URL}/productos/${slugProducto}/`);
 
     check(resDetalle, {
       'detalle responde 200 o 404 controlado': (r) =>
         r.status === 200 || r.status === 404,
+    });
+  });
+
+  sleep(0.5);
+
+  group('3. Cliente revisa su carrito de compras y resumen JSON (Fase 2)', () => {
+    const resCarrito = http.get(`${BASE_URL}/carrito/`);
+    check(resCarrito, {
+      'página carrito responde 200': (r) => r.status === 200,
+    });
+
+    const resResumenJson = http.get(`${BASE_URL}/carrito/resumen-json/`);
+    check(resResumenJson, {
+      'resumen JSON carrito responde 200': (r) => r.status === 200,
     });
   });
 
