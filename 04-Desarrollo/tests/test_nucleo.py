@@ -126,7 +126,7 @@ def test_asignacion_grupo_dueno_para_richard(client) -> None:
     assert respuesta.status_code == 200
     assert respuesta.json()["estado"] == "ok"
 
-    inicio = client.get(reverse("inicio_base"))
+    inicio = client.get(reverse("catalogo:inicio"))
     assert inicio.status_code == 200
     assert "Emuná Sport" in inicio.content.decode("utf-8")
 

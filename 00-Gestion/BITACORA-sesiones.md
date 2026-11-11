@@ -2,6 +2,15 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-10 – Implementación y pruebas de la Fase 1 (`feature/fase-1-catalogo-frontend`)
+- **Hecho:**
+  - Se cerró la Fase 0 con commits estructurados en `feature/fase-0-base`, se fusionó (`--no-ff`) en `develop`, se subió a `origin` y se creó la rama `feature/fase-1-catalogo-frontend`.
+  - Se implementó la app `catalogo` con los 5 modelos físicos (`TBL_RCATEGORIA`, `TBL_RPRODUCTO`, `TBL_RIMAGEN_PRODUCTO`, `TBL_RVARIANTE`, `TBL_RREGLA_PRECIO`), `selectores.py` (cero consultas N+1, filtros por talla `S/M/L/XL`, categoría, búsqueda y stock, y cálculo de precio por mayor), `servicios.py` (conversión automática a WebP 400 px y 900 px con bloqueo de `.svg`/`.exe`), `admin.py` con inlines y el comando `cargar_demo` (4 categorías y 8 productos encabezados por «ARGENTINA X MESSI #10» con sus 5 fotos reales).
+  - Se construyó el Frontend público (`base.html`, `catalogo/inicio.html` con Hero Video Banner de `banner_1..3.mp4`, `catalogo/detalle_producto.html` con galería 5 miniaturas + selector de tallas + ahorro por mayor + CTA único `#39FF14`), páginas legales (`aviso-legal`, `privacidad` Ley N.º 29733, `cookies`), `404.html`, `500.html`, `robots.txt`, `sitemap.xml` y JSON-LD (`SportingGoodsStore` y `Product`).
+  - Se ejecutó `ruff check` (0 errores) y `pytest` (`11 passed in 11.64s`, incluyendo detector automático de enlaces rotos y auditoría de las 7 tablas `TBL_` en MAYÚSCULAS).
+- **Decidido:** confirmar las pruebas con Jonathan antes de realizar los commits en `feature/fase-1-catalogo-frontend` y fusionar a `develop`.
+- **Queda:** hacer commit y merge de `feature/fase-1-catalogo-frontend` a `develop` y arrancar la Fase 2 (Carrito en sesión con HTMX + Pedido + PDF + WhatsApp).
+
 ## 2026-11-10 – Implementación y pruebas de la Fase 0 (`feature/fase-0-base`)
 - **Hecho:**
   - Se creó el entorno virtual `.venv` con Django 5.2 LTS, DRF, `drf-spectacular`, `django-cors-headers`, `django-ratelimit`, `pytest`, `ruff` y `Pillow`.

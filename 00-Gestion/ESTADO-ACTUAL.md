@@ -3,7 +3,7 @@
 > La IA lee este archivo al empezar cada sesión y lo actualiza al terminar. Mantenerlo corto.
 
 **Última actualización:** 2026-11-10
-**Fase actual:** **Fase 0 completada y probada** en `feature/fase-0-base` (5/5 tests en `pytest`, 0 errores en `ruff`). Listo para integrar a `develop` y pasar a la **Fase 1 (`feature/fase-1-catalogo-frontend`)**.
+**Fase actual:** **Fase 1 completada y probada** en `feature/fase-1-catalogo-frontend` (`11 passed` en `pytest`, 0 errores en `ruff`). `feature/fase-0-base` ya fusionada en `develop`. Listo para hacer commit de Fase 1, fusionar en `develop` y pasar a la **Fase 2 (Carrito en sesión con HTMX + Pedido + PDF + WhatsApp)**.
 
 ## Dónde quedamos
 - Documentos **01 al 15** completos y alineados; copia intacta de los originales en `01-Relevamiento/fuentes/documentos-originales/`.
@@ -13,22 +13,19 @@
 - Contrato OpenAPI 3.0.3 / Swagger validado (19 rutas) en `03-Diseno-Tecnico/api/openapi.yaml` y explicado en el doc 13.
 - **Pruebas de carga y concurrencia con Grafana k6** definidas por fase en `03-Diseno-Tecnico/pruebas-carga-k6/` (`plan-pruebas-k6.md` y `escenarios-base.js`).
 - **Estándares de Diseño Frontend (Taste Skill + Emil Kowalski/Impeccable + UI UX Pro Max + Playwright)**, **metodologías `Feature Dev` y `CodeReview`** (doc 05), **5 pilares anti-hacking (`RLS`, `CORS`, `Variables de Entorno`, `Rate Limiting`, `Sanitización de Inputs`)** (doc 07 y `01_rls_seguridad_filas.sql`) y **Checklist de 20 puntos «Antes de lanzar la web»** (doc 15) documentados y activos en las reglas.
-- **Recursos visuales reales organizados en `03-Diseno-Tecnico/assets/`:**
-  - `banners-inicio/`: `banner_1.mp4`, `banner_2.mp4` y `banner_3.mp4` listos para el Hero Banner del Home.
-  - `productos-demo/argentina-messi/`: 5 fotos reales de «Argentina x Messi #10» (`S/ 55.00` / antes `S/ 69.90`, tallas `S, M, L, XL`) corregidas en `originales/*.jpg` y convertidas a `webp/*.webp` (400 px y 900 px).
-  - `referencias-marca/plantilla-base-figma/`: 5 capturas de referencia del layout UI aprobadas con los 6 ajustes deportivos de Emuná Sport.
-- Manual de flujo Git y DevOps con GitHub en Markdown (`05-Despliegue/14-flujo-git-devops-github.md`) y Word (`05-Despliegue/Guia-DevOps-GitHub-Emuna-Sport.docx`); remoto oficial configurado y ramas `main`, `develop` y `feature/fase-0-base` sincronizadas.
-- **Fase 0 implementada en `04-Desarrollo/` (`feature/fase-0-base`):**
-  - Configuración por entorno (`base.py`, `local.py`, `demo.py`, `production.py`) con *Fail-Fast*, CORS estricto, HTTPS/HSTS y Throttling.
-  - App `nucleo` completa: `ConfiguracionTienda` (`TBL_RCONFIGURACION_TIENDA`), `MetodoPago` (`TBL_RMETODO_PAGO`), grupo `Dueño` para Richard, sanitización anti-XSS y validadores de DNI/celular peruano.
-  - Esqueleto de las 5 apps restantes (`catalogo`, `inventario`, `pedidos`, `envios`, `tablero`).
-  - Suite de pruebas de Fase 0 pasando al 100% (`5 passed`, `ruff` sin advertencias).
+- **Fase 0 completada y fusionada en `develop` (`origin/develop`):**
+  - App `nucleo` (`TBL_RCONFIGURACION_TIENDA`, `TBL_RMETODO_PAGO`), `preparar_local`, grupo `Dueño`, sanitización anti-XSS y validadores de DNI/celular peruano.
+- **Fase 1 implementada y verificada en `04-Desarrollo/` (`feature/fase-1-catalogo-frontend`):**
+  - App `catalogo`: modelos `Categoria` (`TBL_RCATEGORIA`), `Producto` (`TBL_RPRODUCTO`), `ImagenProducto` (`TBL_RIMAGEN_PRODUCTO`), `Variante` (`TBL_RVARIANTE`) y `ReglaPrecio` (`TBL_RREGLA_PRECIO`).
+  - `selectores.py` (cero consultas N+1, filtros por talla `S/M/L/XL`, categoría, búsqueda y stock, y cálculo de precio por mayor), `servicios.py` (conversión automática a WebP 400 px y 900 px con bloqueo de archivos peligrosos), `admin.py` con inlines y `cargar_demo.py` (4 categorías y 8 camisetas encabezadas por «ARGENTINA X MESSI #10» con sus 5 fotos reales).
+  - Frontend público: `base.html`, `catalogo/inicio.html` (Hero Video Banner con `banner_1..3.mp4`, sección destacada, filtros de talla y grilla 4:5), `catalogo/detalle_producto.html` (layout 2 columnas con 5 miniaturas verticales, selector de tallas con stock en vivo, tabla de ahorro por mayor y un único CTA `#39FF14`), páginas legales (`aviso-legal`, `privacidad` Ley N.º 29733, `cookies`), `404.html`, `500.html`, `robots.txt`, `sitemap.xml` y datos estructurados JSON-LD (`SportingGoodsStore` y `Product`).
+  - Suite de pruebas de Fase 0 + Fase 1 pasando al 100% (`11 passed in 11.64s`, `ruff` sin errores, detector automático de enlaces rotos y auditoría de las 7 tablas `TBL_` creadas hasta ahora).
 
 ## En curso
-- Cierre de `feature/fase-0-base` y arranque de **`feature/fase-1-catalogo-frontend`** (modelos de catálogo, conversión WebP, `cargar_demo` con fotos reales de `Argentina x Messi` y Frontend público con los 3 videos del Hero Banner).
+- Confirmación de commit de **`feature/fase-1-catalogo-frontend`**, merge a `develop` y arranque de la **Fase 2 (`feature/fase-2-carrito-pedido-whatsapp`)**.
 
 ## Siguiente paso
-1. Confirmar el cierre/merge de `feature/fase-0-base` a `develop` y arrancar la implementación de la **Fase 1 (`feature/fase-1-catalogo-frontend`)**.
+1. Confirmar el commit y merge de `feature/fase-1-catalogo-frontend` a `develop` y presentar/ejecutar la **Fase 2 (Carrito en sesión con HTMX + Checkout con las 4 modalidades de Richard + PDF + WhatsApp)**.
 
 ## Bloqueos y pendientes con Richard
 Ver los 7 puntos de negocio en `00-Gestion/11-decisiones-cambios.md` (no bloquean la Fase 0 ni la Fase 1).
