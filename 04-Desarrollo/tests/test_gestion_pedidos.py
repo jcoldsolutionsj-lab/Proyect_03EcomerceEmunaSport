@@ -705,3 +705,86 @@ def test_flujo_ui_admin_contextual_y_entrada_stock_como_richard(datos_base: dict
     assert resp_entrada.status_code == 200
     var_s.refresh_from_db()
     assert var_s.cantidad_stock == stock_inicial - 2 + 5
+@pytest.mark.django_db
+def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> None:
+    """Verifica el seguimiento en vivo (JSON + parcial), mensajes por estado y tooltips admin.
+
+    Qué hace:      Prueba /pedidos/<codigo>/estado-json/, /?parcial=1, cambios de bloque Siguiente Paso
+                   según estado y verifica que las 4 tablas del admin carguen tooltips y colores para richard.
+    Va hacia:      Garantiza privacidad en JSON, actualización dinámica y UX sin errores 500 en admin.
+    Depende de:    vista_estado_pedido_json, obtener_pedido_publico y encabezado_con_tooltip.
+    Cuándo usarla: En la verificación integral de mejoras UX de la Fase 3.
+    Si no opera:   Falla si el JSON expone claves privadas o si alguna vista admin da error.
+    """
+    richard = datos_base["richard"]
+    var_s = datos_base["var_s"]
+
+    sesion: dict = {}
+    agregar_al_carrito(sesion=sesion, variante_id=var_s.id, cantidad=1)
+    pedido = crear_pedido_web(
+        sesion=sesion,
+        datos_cliente={
+            "cliente_nombre": "Ana Seguimiento Vivo",
+            "cliente_telefono": "987654321",
+            "cliente_dni": "74561239",
+            "tipo_entrega": TipoEntrega.AGENCIA,
+            "agencia": AgenciaEnvio.OLVA,
+            "agencia_ciudad": "Cusco",
+            "agencia_referencia": "Av. El Sol",
+            "cf_turnstile_response": "mock-token-local",
+            "acepta_privacidad": True,
+        },
+    )
+
+    http_client = Client()
+    url_json = reverse("pedidos:estado_pedido_json", kwargs={"codigo": pedido.codigo})
+    url_pub = reverse("pedidos:detalle_pedido", kwargs={"codigo": pedido.codigo})
+
+    # 1. Estado NUEVO -> JSON y mensaje inicial
+    resp_json_1 = http_client.get(url_json)
+    assert resp_json_1.status_code == 200
+    data_1 = resp_json_1.json()
+    assert data_1["estado"] == EstadoPedido.NUEVO
+    assert data_1["es_estado_terminal"] is False
+
+    # 2. Cotizar + Confirmar pago -> Estado PAGADO cambia tarjeta y WhatsApp
+    cotizar_envio(pedido=pedido, costo_envio=Decimal("20.00"), usuario=richard)
+    confirmar_pago(pedido=pedido, metodo_pago="YAPE", usuario=richard)
+
+    resp_parcial = http_client.get(f"{url_pub}?parcial=1")
+    assert resp_parcial.status_code == 200
+    html_pagado = resp_parcial.content.decode("utf-8")
+    assert "Richard está preparando tu paquete" in html_pagado
+    assert "ENVÍA TU PEDIDO A RICHARD" not in html_pagado.upper()
+
+    # 3. Registrar envío -> JSON actualiza, muestra orden en público pero jamás clave secreta
+    foto = SimpleUploadedFile("olva_cusco.jpg", b"boleta-olva", content_type="image/jpeg")
+    registrar_envio_agencia(
+        pedido=pedido,
+        agencia=AgenciaEnvio.OLVA,
+        numero_orden_agencia="OLV-998811",
+        clave_recojo="7391",
+        imagen_boleta=foto,
+        costo_flete=Decimal("20.00"),
+        quien_paga=QuienPagaFlete.CLIENTE_ADELANTADO,
+        cobrado=True,
+        usuario=richard,
+    )
+    resp_env_html = http_client.get(url_pub).content.decode("utf-8")
+    assert "OLV-998811" in resp_env_html
+    assert "7391" not in resp_env_html
+
+    # 4. Admin changelist con tooltips ⓘ y colores cargan 200 OK para richard
+    http_client.force_login(richard)
+    for ruta_admin in (
+        "admin:catalogo_movimientostock_changelist",
+        "admin:catalogo_variante_changelist",
+        "admin:pedidos_pedido_changelist",
+        "admin:pedidos_envio_changelist",
+    ):
+        resp_adm = http_client.get(reverse(ruta_admin))
+        assert resp_adm.status_code == 200
+        cuerpo = resp_adm.content.decode("utf-8")
+        assert "ⓘ" in cuerpo
+        if "movimientostock" in ruta_admin:
+            assert "Salida -1" in cuerpo

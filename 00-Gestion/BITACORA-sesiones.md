@@ -2,6 +2,16 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-12 – Seguimiento en vivo, bloque contextual por estado y tooltips admin en Fase 3
+- **Hecho:**
+  - Se añadió actualización automática en vivo en `/pedidos/<codigo>/` mediante endpoint JSON ligero (`/pedidos/<codigo>/estado-json/`) y parcial HTMX/fetch (`parcial_seguimiento_pedido.html`): si Richard cambia el estado o cotiza el flete, la pestaña del cliente se actualiza sola cada 15 s, muestra un aviso visual en pantalla, parpadea el título de la pestaña, vibra en móvil y dispara notificaciones nativas del navegador (con permiso del usuario).
+  - Se volvió dinámico el bloque «Siguiente Paso» y el mensaje prellenado de WhatsApp en `selectores.py` según el estado real (`NUEVO`, `COTIZADO`, `PAGADO`, `ENVIADO` mostrando agencia/orden sin exponer la clave de 4 dígitos, `ENTREGADO` y `CANCELADO`).
+  - Se creó el helper `encabezado_con_tooltip` (`apps/nucleo/admin_helpers.py`) y se incorporaron íconos `ⓘ` explicativos en todas las columnas e insignias de color (`🟢 Entrada +X` / `🔴 Salida -X`, semáforo de stock y badges de estado) en `MovimientoStockAdmin`, `VarianteAdmin`, `PedidoAdmin` y `EnvioAdmin`.
+  - Se registró la opción **Web Push con página cerrada (Opción C)** en `00-Gestion/11-decisiones-cambios.md` como punto pendiente para evaluar con Richard en Fase 5/6.
+  - Suite completa verificada con **29 pruebas pasando al 100% y 0 advertencias/errores**.
+- **Decidido:** validar visualmente con Jonathan el **Segundo Escenario (Punto de Encuentro Lima + Venta Presencial POS + Seguimiento en vivo)** antes del merge a `develop`.
+- **Queda:** completar la revisión visual de los escenarios 2 y 3 con Jonathan y fusionar a `develop`.
+
 ## 2026-11-11 – Implementación integral y pruebas de la Fase 3 (`feature/fase-3-gestion-pedidos-stock`)
 - **Hecho:**
   - Se completó al 100% el esquema relacional con las 2 tablas finales del diccionario de datos: `TBL_TMOVIMIENTO_STOCK` (auditoría inmutable de entradas, ventas, ajustes y devoluciones de stock con bloqueos en `save()` y `delete()`) y `TBL_TENVIO` (seguimiento de despachos por Shalom/Olva con orden, flete, quién paga, clave de 4 dígitos y boleta privada).

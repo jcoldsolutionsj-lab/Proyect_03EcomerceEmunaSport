@@ -41,6 +41,7 @@ Bitácora viva. Cuando una regla cambie, se edita el documento correspondiente (
 5. Cuánto tiempo conservar datos de pedidos antiguos (DNI y teléfono).
 6. Si Richard emite comprobantes electrónicos (queda fuera del piloto).
 7. Número de fotos por producto y orden de carga inicial.
+8. **Notificaciones Web Push con página cerrada (Opción C, evaluar en Fase 5/6):** requiere HTTPS y una tabla adicional para suscripciones fuera de las 13 tablas actuales (definir con Richard si basta con los avisos por WhatsApp en 1 clic + seguimiento en vivo con pestaña abierta).
 
 ## Registro de cambios
 | Fecha | Cambio | Documentos afectados |
@@ -53,3 +54,4 @@ Bitácora viva. Cuando una regla cambie, se edita el documento correspondiente (
 | 2026-11-03 | Manual de flujo Git, ramas y despliegue DevOps con GitHub en Markdown (`14-flujo-git-devops-github.md`) y en Word (`Guia-DevOps-GitHub-Emuna-Sport.docx`); creación de rama `develop` | `05-Despliegue/`, índice 00, doc 11 |
 | 2026-11-10 | Conexión del remoto oficial `Proyect_03EcomerceEmunaSport.git`, subida de `main` y `develop`, e inclusión del flujo DevOps en las reglas siempre activas de la IA | `.agents/rules/00-emuna-proyecto.md`, doc 14, Word DevOps, `ESTADO-ACTUAL.md`, `BITACORA-sesiones.md` |
 | 2026-11-10 | Incorporación de pruebas de carga con Grafana k6 (`pruebas-carga-k6/`), estándares UI Frontend (Taste + Impeccable + Playwright), columna `IMA_CTEXTO_ALT` en BD (133 columnas) y Checklist de 20 puntos «Antes de lanzar la web» (doc 15) | Reglas IA, docs 04, 06, 07, 08, 09, 10, 11, 15, `base-datos/`, `pruebas-carga-k6/` |
+| 2026-11-12 | Seguimiento en vivo en `/pedidos/<codigo>/` (polling + toast + notificaciones del navegador), bloque contextual según estado, tooltips `ⓘ` + cantidades con color en Django Admin, y registro de Web Push (Opción C) como punto pendiente para Fase 5/6 | `11-decisiones-cambios.md`, `BITACORA-sesiones.md`, `ESTADO-ACTUAL.md`, `selectores.py`, `views.py`, `admin.py` |

@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from simple_history.admin import SimpleHistoryAdmin
 
 from apps.catalogo.models import Variante
+from apps.nucleo.admin_helpers import encabezado_con_tooltip
 from apps.nucleo.excepciones import ErrorDominioEmuna
 
 from .models import (
@@ -148,20 +149,163 @@ class EnvioAdmin(admin.ModelAdmin):
     """Administración y seguimiento de despachos por agencias de transporte (Shalom / Olva)."""
 
     list_display = (
-        "pedido",
-        "agencia",
-        "numero_orden_agencia",
-        "clave_recojo",
-        "quien_paga",
-        "cobrado",
-        "costo_flete",
-        "fecha_despacho",
+        "pedido_col",
+        "agencia_col",
+        "orden_col",
+        "clave_col",
+        "quien_paga_col",
+        "cobrado_col",
+        "flete_col",
+        "despacho_col",
         "ver_boleta_link",
     )
     list_filter = ("agencia", "quien_paga", "cobrado", "fecha_despacho")
     search_fields = ("numero_orden_agencia", "pedido__codigo", "pedido__cliente_nombre")
     readonly_fields = ("fecha_creacion", "fecha_actualizacion", "ver_boleta_link")
 
+    @admin.display(
+        description=encabezado_con_tooltip("Pedido", "Código del pedido vinculado a este envío."),
+        ordering="pedido__codigo",
+    )
+    def pedido_col(self, obj: Envio) -> Pedido:
+        """Retorna el pedido vinculado al envío con tooltip explicativo.
+
+        Qué hace:      Devuelve obj.pedido.
+        Va hacia:      Columna Pedido en EnvioAdmin.
+        Depende de:    obj.pedido.
+        Cuándo usarla: En el listado de envíos por agencia.
+        Si no opera:   No aplica.
+        """
+        return obj.pedido
+
+    @admin.display(
+        description=encabezado_con_tooltip("Agencia", "Empresa de transporte (Shalom, Olva u Otra)."),
+        ordering="agencia",
+    )
+    def agencia_col(self, obj: Envio) -> str:
+        """Retorna el nombre legible de la agencia de transporte.
+
+        Qué hace:      Devuelve obj.get_agencia_display().
+        Va hacia:      Columna Agencia en EnvioAdmin.
+        Depende de:    obj.get_agencia_display.
+        Cuándo usarla: En el listado de envíos.
+        Si no opera:   Retorna código plano.
+        """
+        return obj.get_agencia_display()
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "N° Orden / Guía", "Número de seguimiento impreso en el ticket de la agencia."
+        ),
+        ordering="numero_orden_agencia",
+    )
+    def orden_col(self, obj: Envio) -> str:
+        """Retorna el número de orden o guía de agencia.
+
+        Qué hace:      Formatea en negrita obj.numero_orden_agencia.
+        Va hacia:      Columna N° Orden en EnvioAdmin.
+        Depende de:    obj.numero_orden_agencia.
+        Cuándo usarla: En el listado de envíos.
+        Si no opera:   Retorna cadena vacía.
+        """
+        return format_html("<code>{}</code>", obj.numero_orden_agencia)
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Clave (4 díg.)",
+            "Clave privada de recojo en agencia. NUNCA se expone en la web pública.",
+        ),
+        ordering="clave_recojo",
+    )
+    def clave_col(self, obj: Envio) -> str:
+        """Muestra la clave secreta de 4 dígitos solo para Richard en el admin.
+
+        Qué hace:      Formatea obj.clave_recojo en distintivo ámbar privado.
+        Va hacia:      Columna Clave en EnvioAdmin.
+        Depende de:    obj.clave_recojo.
+        Cuándo usarla: Cuando Richard necesita consultar o reenviar la clave al cliente.
+        Si no opera:   Retorna '----'.
+        """
+        return format_html(
+            '<span style="background:#FEF3C7;color:#92400E;padding:2px 6px;border-radius:4px;font-family:monospace;font-weight:800;">🔒 {}</span>',
+            obj.clave_recojo,
+        )
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Quién paga", "Indica si el cliente pagó por adelantado, paga en destino o adelantó Richard."
+        ),
+        ordering="quien_paga",
+    )
+    def quien_paga_col(self, obj: Envio) -> str:
+        """Muestra quién asume el pago del flete de la agencia.
+
+        Qué hace:      Retorna obj.get_quien_paga_display().
+        Va hacia:      Columna Quién paga en EnvioAdmin.
+        Depende de:    obj.get_quien_paga_display.
+        Cuándo usarla: En el listado de envíos.
+        Si no opera:   Retorna valor bruto.
+        """
+        return obj.get_quien_paga_display()
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Cobrado", "Marca verde si el flete ya fue cobrado/liquidado con el cliente."
+        ),
+        ordering="cobrado",
+        boolean=True,
+    )
+    def cobrado_col(self, obj: Envio) -> bool:
+        """Muestra si el flete ya fue cobrado al cliente.
+
+        Qué hace:      Retorna booleano obj.cobrado.
+        Va hacia:      Columna Cobrado en EnvioAdmin.
+        Depende de:    obj.cobrado.
+        Cuándo usarla: En el listado de envíos.
+        Si no opera:   Retorna False.
+        """
+        return obj.cobrado
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Flete real", "Costo real pagado en ventanilla de Shalom u Olva (en soles)."
+        ),
+        ordering="costo_flete",
+    )
+    def flete_col(self, obj: Envio) -> str:
+        """Muestra el costo del flete formateado en soles.
+
+        Qué hace:      Formatea S/ {costo_flete}.
+        Va hacia:      Columna Flete real en EnvioAdmin.
+        Depende de:    obj.costo_flete.
+        Cuándo usarla: En el listado de envíos.
+        Si no opera:   Retorna S/ 0.00.
+        """
+        return f"S/ {obj.costo_flete:.2f}"
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Despacho", "Fecha y hora en que se dejó el paquete en la agencia."
+        ),
+        ordering="fecha_despacho",
+    )
+    def despacho_col(self, obj: Envio) -> Any:
+        """Retorna fecha de despacho con tooltip explicativo.
+
+        Qué hace:      Devuelve obj.fecha_despacho.
+        Va hacia:      Columna Despacho en EnvioAdmin.
+        Depende de:    obj.fecha_despacho.
+        Cuándo usarla: En el listado de envíos.
+        Si no opera:   Retorna None.
+        """
+        return obj.fecha_despacho
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Boleta privada",
+            "Archivo de guía adjunto. Solo accesible con sesión de Richard o staff (403 al público).",
+        ),
+    )
     def ver_boleta_link(self, obj: Envio) -> str:
         """Retorna enlace HTML al archivo privado de la boleta de agencia.
 
@@ -179,8 +323,6 @@ class EnvioAdmin(admin.ModelAdmin):
             )
         return "Sin archivo"
 
-    ver_boleta_link.short_description = "Boleta de Despacho"
-
 
 @admin.register(Pedido)
 class PedidoAdmin(SimpleHistoryAdmin):
@@ -190,16 +332,16 @@ class PedidoAdmin(SimpleHistoryAdmin):
     change_form_template = "admin/pedidos/pedido/change_form.html"
 
     list_display = (
-        "codigo",
-        "estado",
-        "tipo_entrega",
-        "cliente_nombre",
-        "cliente_telefono",
-        "subtotal",
-        "costo_envio",
-        "total",
+        "codigo_col",
+        "estado_col",
+        "entrega_col",
+        "cliente_col",
+        "telefono_col",
+        "subtotal_col",
+        "envio_col",
+        "total_col",
         "notificacion_whatsapp",
-        "fecha_creacion",
+        "fecha_col",
     )
     list_filter = ("estado", "tipo_entrega", "origen", "agencia", "fecha_creacion")
     search_fields = ("codigo", "cliente_nombre", "cliente_telefono", "cliente_dni")
@@ -291,6 +433,177 @@ class PedidoAdmin(SimpleHistoryAdmin):
             )
         return super().change_view(request, object_id, form_url, extra_context=contexto)
 
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Código", "Código público único no adivinable del pedido (ej. EMU-XXXXXX)."
+        ),
+        ordering="codigo",
+    )
+    def codigo_col(self, obj: Pedido) -> str:
+        """Muestra el código del pedido en negrita.
+
+        Qué hace:      Resalta obj.codigo.
+        Va hacia:      Columna Código en PedidoAdmin.
+        Depende de:    obj.codigo.
+        Cuándo usarla: En la tabla principal de pedidos.
+        Si no opera:   Retorna cadena vacía.
+        """
+        return format_html("<strong>{}</strong>", obj.codigo)
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Estado",
+            "Ciclo de vida: Nuevo -> Cotizado -> Pagado (descuenta stock) -> Enviado -> Entregado.",
+        ),
+        ordering="estado",
+    )
+    def estado_col(self, obj: Pedido) -> str:
+        """Muestra el estado actual del pedido con código de color legible.
+
+        Qué hace:      Asigna color distinto a cada estado del flujo para lectura rápida.
+        Va hacia:      Columna Estado en PedidoAdmin.
+        Depende de:    obj.estado y get_estado_display().
+        Cuándo usarla: En la lista de pedidos de Richard.
+        Si no opera:   Retorna texto plano del estado.
+        """
+        estilos = {
+            EstadoPedido.NUEVO: ("#1D4ED8", "#DBEAFE"),
+            EstadoPedido.COTIZADO: ("#B45309", "#FEF3C7"),
+            EstadoPedido.PAGADO: ("#6D28D9", "#EDE9FE"),
+            EstadoPedido.ENVIADO: ("#0369A1", "#E0F2FE"),
+            EstadoPedido.ENTREGADO: ("#047857", "#D1FAE5"),
+            EstadoPedido.CANCELADO: ("#B91C1C", "#FEE2E2"),
+            EstadoPedido.RECHAZADO: ("#991B1B", "#FEE2E2"),
+        }
+        fg, bg = estilos.get(obj.estado, ("#334155", "#F1F5F9"))
+        return format_html(
+            '<span style="color:{};background:{};padding:2px 8px;border-radius:999px;font-weight:800;font-size:11px;white-space:nowrap;">{}</span>',
+            fg,
+            bg,
+            obj.get_estado_display(),
+        )
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Modalidad", "Agencia provincia, Punto de Encuentro Lima, Delivery o Recojo."
+        ),
+        ordering="tipo_entrega",
+    )
+    def entrega_col(self, obj: Pedido) -> str:
+        """Retorna la modalidad de entrega del pedido.
+
+        Qué hace:      Devuelve obj.get_tipo_entrega_display().
+        Va hacia:      Columna Modalidad en PedidoAdmin.
+        Depende de:    obj.get_tipo_entrega_display.
+        Cuándo usarla: En la tabla de pedidos.
+        Si no opera:   Retorna valor bruto.
+        """
+        return obj.get_tipo_entrega_display()
+
+    @admin.display(
+        description=encabezado_con_tooltip("Cliente", "Nombre del cliente registrado."),
+        ordering="cliente_nombre",
+    )
+    def cliente_col(self, obj: Pedido) -> str:
+        """Retorna el nombre del cliente.
+
+        Qué hace:      Devuelve obj.cliente_nombre o 'Cliente presencial'.
+        Va hacia:      Columna Cliente en PedidoAdmin.
+        Depende de:    obj.cliente_nombre.
+        Cuándo usarla: En la tabla de pedidos.
+        Si no opera:   Retorna 'Cliente presencial'.
+        """
+        return obj.cliente_nombre or "Cliente presencial"
+
+    @admin.display(
+        description=encabezado_con_tooltip("Celular", "Número WhatsApp de contacto del cliente."),
+        ordering="cliente_telefono",
+    )
+    def telefono_col(self, obj: Pedido) -> str:
+        """Retorna el teléfono del cliente o guion si no tiene.
+
+        Qué hace:      Devuelve obj.cliente_telefono o '—'.
+        Va hacia:      Columna Celular en PedidoAdmin.
+        Depende de:    obj.cliente_telefono.
+        Cuándo usarla: En la tabla de pedidos.
+        Si no opera:   Retorna '—'.
+        """
+        return obj.cliente_telefono or "—"
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Camisetas", "Subtotal de prendas aplicando descuento mayorista si lleva 3+ iguales."
+        ),
+        ordering="subtotal",
+    )
+    def subtotal_col(self, obj: Pedido) -> str:
+        """Retorna el subtotal de camisetas formateado en soles.
+
+        Qué hace:      Formatea S/ {subtotal}.
+        Va hacia:      Columna Camisetas en PedidoAdmin.
+        Depende de:    obj.subtotal.
+        Cuándo usarla: En la tabla de pedidos.
+        Si no opera:   Retorna S/ 0.00.
+        """
+        return f"S/ {obj.subtotal:.2f}"
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Envío", "Costo del flete o delivery (S/ 0.00 en Punto de Encuentro)."
+        ),
+        ordering="costo_envio",
+    )
+    def envio_col(self, obj: Pedido) -> str:
+        """Retorna el costo de envío formateado o 'Por cotizar'.
+
+        Qué hace:      Muestra 'Por cotizar' si es None, o el monto en soles.
+        Va hacia:      Columna Envío en PedidoAdmin.
+        Depende de:    obj.costo_envio.
+        Cuándo usarla: En la tabla de pedidos.
+        Si no opera:   Retorna 'Por cotizar'.
+        """
+        if obj.costo_envio is None:
+            return format_html('<span style="color:#64748B;font-style:italic;">Por cotizar</span>')
+        return f"S/ {obj.costo_envio:.2f}"
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Total", "Monto total a cobrar al cliente (Camisetas + Envío)."
+        ),
+        ordering="total",
+    )
+    def total_col(self, obj: Pedido) -> str:
+        """Retorna el total final del pedido en negrita.
+
+        Qué hace:      Formatea S/ {total}.
+        Va hacia:      Columna Total en PedidoAdmin.
+        Depende de:    obj.total.
+        Cuándo usarla: En la tabla de pedidos.
+        Si no opera:   Retorna S/ 0.00.
+        """
+        return format_html("<strong>S/ {}</strong>", f"{obj.total:.2f}")
+
+    @admin.display(
+        description=encabezado_con_tooltip("Registrado", "Fecha y hora de creación del pedido."),
+        ordering="fecha_creacion",
+    )
+    def fecha_col(self, obj: Pedido) -> Any:
+        """Retorna la fecha de creación del pedido.
+
+        Qué hace:      Devuelve obj.fecha_creacion.
+        Va hacia:      Columna Registrado en PedidoAdmin.
+        Depende de:    obj.fecha_creacion.
+        Cuándo usarla: En la tabla de pedidos.
+        Si no opera:   Retorna None.
+        """
+        return obj.fecha_creacion
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Avisar por WhatsApp",
+            "Abre WhatsApp con el mensaje prellenado según el estado (cotización, guía+clave o coordinación).",
+        ),
+    )
     def notificacion_whatsapp(self, obj: Pedido) -> str:
         """Construye un botón dinámico con enlace directo a WhatsApp para notificar al cliente.
 
@@ -334,7 +647,7 @@ class PedidoAdmin(SimpleHistoryAdmin):
             texto,
         )
 
-    notificacion_whatsapp.short_description = "Avisar por WhatsApp"
+
 
     @admin.action(description="🟣 Confirmar Pago (Yape/Transferencia) y descontar stock")
     def accion_confirmar_pago(self, request: HttpRequest, queryset: QuerySet[Pedido]) -> None:

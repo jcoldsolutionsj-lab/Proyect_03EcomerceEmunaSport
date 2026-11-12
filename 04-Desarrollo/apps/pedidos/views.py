@@ -219,12 +219,12 @@ def vista_checkout(request: HttpRequest) -> HttpResponse:
 @ratelimit(key="ip", rate="30/m", method="GET", block=True)
 @require_GET
 def vista_detalle_pedido_publico(request: HttpRequest, codigo: str) -> HttpResponse:
-    """Muestra la página pública del pedido con un único CTA hacia WhatsApp y descarga de PDF.
+    """Muestra la página pública del pedido con actualización en vivo y CTA contextual.
 
-    Qué hace:      Obtiene el resumen público seguro (sin DNI completo) y construye el link a WhatsApp.
-    Va hacia:      Renderiza templates/pedidos/detalle_pedido.html.
+    Qué hace:      Obtiene el resumen público seguro (sin DNI ni claves) y arma el link WhatsApp.
+    Va hacia:      Renderiza detalle_pedido.html o parcial_seguimiento_pedido.html si parcial=1.
     Depende de:    obtener_pedido_publico y construir_enlace_whatsapp_pedido.
-    Cuándo usarla: En la ruta /pedidos/<codigo>/ tras completar el checkout o desde el link de WhatsApp.
+    Cuándo usarla: En /pedidos/<codigo>/ tras completar el checkout o durante el seguimiento en vivo.
     Si no opera:   Devuelve 404 si el código no existe.
     """
     datos_publicos = obtener_pedido_publico(codigo=codigo)
@@ -241,8 +241,36 @@ def vista_detalle_pedido_publico(request: HttpRequest, codigo: str) -> HttpRespo
         **datos_publicos,
         "url_publica_pedido": url_absoluta,
         "url_whatsapp_pedido": url_whatsapp_pedido,
+        "url_estado_json": reverse("pedidos:estado_pedido_json", kwargs={"codigo": pedido.codigo}),
     }
+    if request.GET.get("parcial") == "1":
+        return render(request, "pedidos/parcial_seguimiento_pedido.html", contexto)
     return render(request, "pedidos/detalle_pedido.html", contexto)
+
+
+@ratelimit(key="ip", rate="60/m", method="GET", block=True)
+@require_GET
+def vista_estado_pedido_json(request: HttpRequest, codigo: str) -> JsonResponse:
+    """Retorna el estado actual del pedido en JSON ligero para seguimiento en tiempo real.
+
+    Qué hace:      Expone estado, etiqueta legible, envío y total sin datos privados ni claves.
+    Va hacia:      JsonResponse consumido cada 15 segundos desde /pedidos/<codigo>/.
+    Depende de:    obtener_pedido_publico.
+    Cuándo usarla: Para detectar transiciones sin recargar toda la pestaña del cliente.
+    Si no opera:   Devuelve 404 si el código público no existe.
+    """
+    datos = obtener_pedido_publico(codigo=codigo)
+    costo_envio = datos["costo_envio"]
+    return JsonResponse(
+        {
+            "codigo": datos["codigo"],
+            "estado": datos["estado"],
+            "etiqueta_estado": datos["etiqueta_estado"],
+            "costo_envio": f"{costo_envio:.2f}" if costo_envio is not None else None,
+            "total": f"{datos['total']:.2f}",
+            "es_estado_terminal": datos["es_estado_terminal"],
+        }
+    )
 
 
 @ratelimit(key="ip", rate="20/m", method="GET", block=True)
