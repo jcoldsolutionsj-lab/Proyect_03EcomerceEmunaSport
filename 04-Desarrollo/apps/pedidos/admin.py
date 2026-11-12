@@ -1,24 +1,39 @@
 """Configuración del panel administrativo para Pedidos, Envíos, Ítems y Bitácora de Estados."""
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from django.conf import settings
 from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.urls import path, reverse
 from django.utils.html import format_html
+from django.views.decorators.http import require_POST
 from simple_history.admin import SimpleHistoryAdmin
 
 from apps.catalogo.models import Variante
 from apps.nucleo.excepciones import ErrorDominioEmuna
 
-from .models import Envio, EstadoPedido, ItemPedido, Pedido, RegistroEstadoPedido, TipoEntrega
+from .models import (
+    AgenciaEnvio,
+    Envio,
+    EstadoPedido,
+    ItemPedido,
+    Pedido,
+    QuienPagaFlete,
+    RegistroEstadoPedido,
+    TipoEntrega,
+)
 from .servicios import (
     cambiar_estado,
     cancelar_o_rechazar,
     confirmar_pago,
     confirmar_pago_y_entregar,
     construir_enlace_whatsapp_notificacion_cliente,
+    cotizar_envio,
+    registrar_envio_agencia,
     registrar_venta_presencial,
 )
 
@@ -40,9 +55,20 @@ class ItemPedidoInline(admin.TabularInline):
     )
     can_delete = False
 
+    def has_add_permission(self, request: HttpRequest, obj: Pedido | None = None) -> bool:
+        """Impide agregar ítems manuales sueltos sobre un pedido ya creado.
+
+        Qué hace:      Deshabilita filas nuevas manuales en ItemPedidoInline.
+        Va hacia:      Protege la consistencia entre subtotal, stock e ítems del pedido.
+        Depende de:    django.contrib.admin.TabularInline.
+        Cuándo usarla: Al visualizar un Pedido en el panel administrativo.
+        Si no opera:   No aplica.
+        """
+        return False
+
 
 class EnvioInline(admin.StackedInline):
-    """Permite registrar y consultar el despacho en agencia (Shalom/Olva) dentro del pedido."""
+    """Muestra el despacho en agencia (Shalom/Olva) dentro de la ficha del pedido."""
 
     model = Envio
     extra = 0
@@ -59,6 +85,17 @@ class EnvioInline(admin.StackedInline):
         "notas",
     )
     readonly_fields = ("enlace_boleta",)
+
+    def has_add_permission(self, request: HttpRequest, obj: Pedido | None = None) -> bool:
+        """Exige usar el botón 'Registrar Despacho en Agencia' para crear un envío.
+
+        Qué hace:      Desactiva la creación directa en el inline sin pasar por el servicio.
+        Va hacia:      Garantiza que todo envío registrado dispare PAGADO -> ENVIADO y bitácora.
+        Depende de:    django.contrib.admin.StackedInline.
+        Cuándo usarla: Al renderizar la ficha de Pedido en el admin de Django.
+        Si no opera:   No aplica.
+        """
+        return False
 
     def enlace_boleta(self, obj: Envio | None) -> str:
         """Genera un enlace seguro para visualizar la boleta de despacho privada.
@@ -150,6 +187,7 @@ class PedidoAdmin(SimpleHistoryAdmin):
     """Administración de pedidos web y ventas presenciales para Richard y Jonathan."""
 
     change_list_template = "admin/pedidos/pedido/change_list.html"
+    change_form_template = "admin/pedidos/pedido/change_form.html"
 
     list_display = (
         "codigo",
@@ -167,7 +205,9 @@ class PedidoAdmin(SimpleHistoryAdmin):
     search_fields = ("codigo", "cliente_nombre", "cliente_telefono", "cliente_dni")
     readonly_fields = (
         "codigo",
+        "estado",
         "subtotal",
+        "costo_envio",
         "total",
         "fecha_cotizado",
         "fecha_pagado",
@@ -186,6 +226,71 @@ class PedidoAdmin(SimpleHistoryAdmin):
         "accion_cancelar_pedido",
     ]
 
+    def change_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Inyecta contexto del flujo de gestión y enlaces WhatsApp en la ficha del pedido.
+
+        Qué hace:      Calcula URL pública, enlaces WhatsApp y opciones para el panel contextual.
+        Va hacia:      Renderiza templates/admin/pedidos/pedido/change_form.html.
+        Depende de:    construir_enlace_whatsapp_notificacion_cliente y AgenciaEnvio/QuienPagaFlete.
+        Cuándo usarla: Al abrir un pedido individual en el panel administrativo.
+        Si no opera:   Delega normalmente a SimpleHistoryAdmin.change_view().
+        """
+        contexto = dict(extra_context or {})
+        pedido = self.get_object(request, object_id)
+        if pedido is not None:
+            url_publica = request.build_absolute_uri(
+                reverse("pedidos:detalle_pedido", args=[pedido.codigo])
+            )
+            envio_actual = getattr(pedido, "envio", None)
+            url_boleta = (
+                reverse("pedidos:ver_boleta_privada", args=[envio_actual.pk])
+                if envio_actual and envio_actual.imagen_boleta
+                else ""
+            )
+            contexto.update(
+                {
+                    "url_publica_pedido": url_publica,
+                    "url_whatsapp_cotizado": construir_enlace_whatsapp_notificacion_cliente(
+                        pedido=pedido,
+                        tipo_notificacion="COTIZADO",
+                        url_publica_pedido=url_publica,
+                    ),
+                    "url_whatsapp_enviado": construir_enlace_whatsapp_notificacion_cliente(
+                        pedido=pedido,
+                        tipo_notificacion="ENVIADO",
+                        url_publica_pedido=url_publica,
+                    ),
+                    "url_whatsapp_punto": construir_enlace_whatsapp_notificacion_cliente(
+                        pedido=pedido,
+                        tipo_notificacion="PUNTO_ENCUENTRO",
+                        url_publica_pedido=url_publica,
+                    ),
+                    "url_whatsapp_general": construir_enlace_whatsapp_notificacion_cliente(
+                        pedido=pedido,
+                        tipo_notificacion="GENERAL",
+                        url_publica_pedido=url_publica,
+                    ),
+                    "metodos_pago_choices": [
+                        ("YAPE", "🟣 Yape"),
+                        ("EFECTIVO", "💵 Efectivo"),
+                        ("PLIN", "🔵 Plin"),
+                        ("TRANSFERENCIA", "🏦 Transferencia BCP / Interbank"),
+                    ],
+                    "agencias_choices": AgenciaEnvio.choices,
+                    "quien_paga_choices": QuienPagaFlete.choices,
+                    "envio_actual": envio_actual,
+                    "url_boleta_privada": url_boleta,
+                    "costo_envio_dot": str(pedido.costo_envio or Decimal("0.00")),
+                }
+            )
+        return super().change_view(request, object_id, form_url, extra_context=contexto)
+
     def notificacion_whatsapp(self, obj: Pedido) -> str:
         """Construye un botón dinámico con enlace directo a WhatsApp para notificar al cliente.
 
@@ -195,7 +300,8 @@ class PedidoAdmin(SimpleHistoryAdmin):
         Cuándo usarla: En la tabla changelist para que Richard avise con 1 solo clic.
         Si no opera:   Muestra botón genérico de contacto si no tiene estado de flujo específico.
         """
-        url_pedido = f"http://127.0.0.1:8000{reverse('pedidos:detalle_pedido', args=[obj.codigo])}"
+        base_url = getattr(settings, "SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+        url_pedido = f"{base_url}{reverse('pedidos:detalle_pedido', args=[obj.codigo])}"
         if obj.estado == EstadoPedido.COTIZADO:
             tipo = "COTIZADO"
             texto = "💬 Avisar Cotización"
@@ -380,13 +486,13 @@ class PedidoAdmin(SimpleHistoryAdmin):
             )
 
     def get_urls(self) -> list[Any]:
-        """Agrega la ruta personalizada de venta presencial (POS) dentro del admin de pedidos.
+        """Agrega rutas personalizadas de gestión y venta presencial dentro del admin de pedidos.
 
-        Qué hace:      Inyecta la URL admin:pedidos_pedido_venta_presencial antes de las rutas estándar.
-        Va hacia:      Resuelve la vista administrativa de venta presencial directa (Flujo C).
-        Depende de:    self.admin_site.admin_view y vista_venta_presencial.
-        Cuándo usarla: Al registrar las URLs del ModelAdmin de Pedido en Django.
-        Si no opera:   Retorna la lista de URLs padrão de ModelAdmin.
+        Qué hace:      Registra las URLs de flujo (cotizar, pagar, enviar, entregar, cancelar, POS).
+        Va hacia:      Resuelve las acciones contextuales desde change_form.html y change_list.html.
+        Depende de:    self.admin_site.admin_view y los métodos de vista de PedidoAdmin.
+        Cuándo usarla: Al inicializar las rutas de Django Admin para el modelo Pedido.
+        Si no opera:   Retorna la lista estándar de ModelAdmin.
         """
         urls = super().get_urls()
         custom_urls = [
@@ -395,8 +501,235 @@ class PedidoAdmin(SimpleHistoryAdmin):
                 self.admin_site.admin_view(self.vista_venta_presencial),
                 name="pedidos_pedido_venta_presencial",
             ),
+            path(
+                "<int:pedido_id>/cotizar/",
+                self.admin_site.admin_view(require_POST(self.vista_cotizar_pedido)),
+                name="pedidos_pedido_cotizar",
+            ),
+            path(
+                "<int:pedido_id>/confirmar-pago/",
+                self.admin_site.admin_view(require_POST(self.vista_confirmar_pago_pedido)),
+                name="pedidos_pedido_confirmar_pago",
+            ),
+            path(
+                "<int:pedido_id>/confirmar-y-entregar/",
+                self.admin_site.admin_view(require_POST(self.vista_confirmar_y_entregar_pedido)),
+                name="pedidos_pedido_confirmar_y_entregar",
+            ),
+            path(
+                "<int:pedido_id>/registrar-envio/",
+                self.admin_site.admin_view(require_POST(self.vista_registrar_envio_pedido)),
+                name="pedidos_pedido_registrar_envio",
+            ),
+            path(
+                "<int:pedido_id>/marcar-entregado/",
+                self.admin_site.admin_view(require_POST(self.vista_marcar_entregado_pedido)),
+                name="pedidos_pedido_marcar_entregado",
+            ),
+            path(
+                "<int:pedido_id>/cancelar/",
+                self.admin_site.admin_view(require_POST(self.vista_cancelar_pedido)),
+                name="pedidos_pedido_cancelar",
+            ),
         ]
         return custom_urls + urls
+
+    def _redirigir_a_ficha(self, pedido_id: int) -> HttpResponseRedirect:
+        """Retorna una redirección HTTP hacia la ficha de edición del pedido indicado.
+
+        Qué hace:      Resuelve reverse('admin:pedidos_pedido_change') con el ID del pedido.
+        Va hacia:      HttpResponseRedirect tras ejecutar una acción contextual del flujo.
+        Depende de:    django.urls.reverse.
+        Cuándo usarla: Al finalizar cada vista POST contextual de PedidoAdmin.
+        Si no opera:   Lanza NoReverseMatch si cambia el nombre de la ruta admin.
+        """
+        return HttpResponseRedirect(reverse("admin:pedidos_pedido_change", args=[pedido_id]))
+
+    def vista_cotizar_pedido(self, request: HttpRequest, pedido_id: int) -> HttpResponseRedirect:
+        """Procesa la cotización del costo de envío y pasa el pedido de NUEVO a COTIZADO.
+
+        Qué hace:      Lee costo_envio del POST, valida decimal y llama a cotizar_envio().
+        Va hacia:      Actualiza total, pasa a COTIZADO y recarga la ficha con aviso de éxito.
+        Depende de:    cotizar_envio, Pedido y messages.
+        Cuándo usarla: Al enviar el formulario Paso 1 dentro de la ficha de un pedido NUEVO.
+        Si no opera:   Informa error legible (ej. monto inválido) sin alterar el pedido.
+        """
+        pedido = get_object_or_404(Pedido, pk=pedido_id)
+        try:
+            costo = Decimal(request.POST.get("costo_envio", "").strip())
+            nota = request.POST.get("nota", "").strip()
+            cotizar_envio(pedido=pedido, costo_envio=costo, usuario=request.user, nota=nota)
+            self.message_user(
+                request,
+                f"Pedido {pedido.codigo} cotizado con envío S/ {costo:.2f}. Ya puedes avisar al cliente por WhatsApp.",
+                level=messages.SUCCESS,
+            )
+        except (InvalidOperation, ValueError):
+            self.message_user(
+                request,
+                "Ingresa un costo de envío válido en soles (ej. 15.00).",
+                level=messages.ERROR,
+            )
+        except (ErrorDominioEmuna, ValidationError) as exc:
+            self.message_user(request, str(exc), level=messages.ERROR)
+        return self._redirigir_a_ficha(pedido_id)
+
+    def vista_confirmar_pago_pedido(
+        self, request: HttpRequest, pedido_id: int
+    ) -> HttpResponseRedirect:
+        """Confirma el pago desde la ficha del pedido y descuenta stock atómicamente.
+
+        Qué hace:      Toma metodo_pago y nota del POST e invoca confirmar_pago().
+        Va hacia:      Pasa el pedido de COTIZADO a PAGADO creando movimientos VENTA.
+        Depende de:    confirmar_pago y bloqueo select_for_update().
+        Cuándo usarla: Al pulsar 'Confirmar Pago' dentro de la ficha de un pedido COTIZADO.
+        Si no opera:   Revierte todo y muestra alerta si falta stock o el estado no corresponde.
+        """
+        pedido = get_object_or_404(Pedido, pk=pedido_id)
+        metodo = request.POST.get("metodo_pago", "YAPE").strip() or "YAPE"
+        nota = request.POST.get("nota", "").strip()
+        try:
+            confirmar_pago(pedido=pedido, metodo_pago=metodo, usuario=request.user, nota=nota)
+            self.message_user(
+                request,
+                f"¡Pago confirmado para {pedido.codigo}! El stock de las camisetas fue descontado atómicamente.",
+                level=messages.SUCCESS,
+            )
+        except (ErrorDominioEmuna, ValidationError) as exc:
+            self.message_user(request, str(exc), level=messages.ERROR)
+        return self._redirigir_a_ficha(pedido_id)
+
+    def vista_confirmar_y_entregar_pedido(
+        self, request: HttpRequest, pedido_id: int
+    ) -> HttpResponseRedirect:
+        """Ejecuta el flujo rápido de Lima (COTIZADO -> PAGADO -> ENTREGADO) en un clic.
+
+        Qué hace:      Invoca confirmar_pago_y_entregar() descontando stock y cerrando la entrega.
+        Va hacia:      Registra PAGADO y ENTREGADO en TBL_LPEDIDO_ESTADO en la misma transacción.
+        Depende de:    confirmar_pago_y_entregar.
+        Cuándo usarla: En pedidos de Lima (Punto de Encuentro / Recojo) al entregar en persona.
+        Si no opera:   Muestra error si no hay stock suficiente o si la transición es inválida.
+        """
+        pedido = get_object_or_404(Pedido, pk=pedido_id)
+        metodo = request.POST.get("metodo_pago", "YAPE").strip() or "YAPE"
+        nota = f"Entrega presencial confirmada en {pedido.punto_encuentro or 'Lima'}."
+        try:
+            confirmar_pago_y_entregar(
+                pedido=pedido,
+                metodo_pago=metodo,
+                usuario=request.user,
+                nota=nota,
+            )
+            self.message_user(
+                request,
+                f"¡Entrega en Lima completada para {pedido.codigo}! Stock descontado y pedido ENTREGADO.",
+                level=messages.SUCCESS,
+            )
+        except (ErrorDominioEmuna, ValidationError) as exc:
+            self.message_user(request, str(exc), level=messages.ERROR)
+        return self._redirigir_a_ficha(pedido_id)
+
+    def vista_registrar_envio_pedido(
+        self, request: HttpRequest, pedido_id: int
+    ) -> HttpResponseRedirect:
+        """Registra la guía, clave de 4 dígitos y boleta privada pasando a ENVIADO.
+
+        Qué hace:      Valida formulario multipart de despacho y llama a registrar_envio_agencia().
+        Va hacia:      Crea TBL_TENVIO y transiciona el pedido de PAGADO a ENVIADO.
+        Depende de:    registrar_envio_agencia y archivo en request.FILES['imagen_boleta'].
+        Cuándo usarla: Cuando Richard vuelve de Shalom u Olva con la boleta física.
+        Si no opera:   Muestra el error específico (ej. clave distinta de 4 dígitos o falta boleta).
+        """
+        pedido = get_object_or_404(Pedido, pk=pedido_id)
+        try:
+            costo_flete = Decimal(request.POST.get("costo_flete", "0").strip())
+            registrar_envio_agencia(
+                pedido=pedido,
+                agencia=request.POST.get("agencia", pedido.agencia or AgenciaEnvio.SHALOM).strip(),
+                numero_orden_agencia=request.POST.get("numero_orden_agencia", "").strip(),
+                clave_recojo=request.POST.get("clave_recojo", "").strip(),
+                imagen_boleta=request.FILES.get("imagen_boleta"),
+                costo_flete=costo_flete,
+                quien_paga=request.POST.get(
+                    "quien_paga", QuienPagaFlete.CLIENTE_ADELANTADO
+                ).strip(),
+                cobrado=request.POST.get("cobrado") == "1",
+                notas=request.POST.get("notas", "").strip(),
+                usuario=request.user,
+            )
+            self.message_user(
+                request,
+                f"Despacho registrado en agencia para {pedido.codigo}. Ya puedes enviarle la guía y clave al cliente por WhatsApp.",
+                level=messages.SUCCESS,
+            )
+        except (InvalidOperation, ValueError):
+            self.message_user(
+                request,
+                "El costo real del flete debe ser un número válido (ej. 15.00).",
+                level=messages.ERROR,
+            )
+        except (ErrorDominioEmuna, ValidationError) as exc:
+            self.message_user(request, str(exc), level=messages.ERROR)
+        return self._redirigir_a_ficha(pedido_id)
+
+    def vista_marcar_entregado_pedido(
+        self, request: HttpRequest, pedido_id: int
+    ) -> HttpResponseRedirect:
+        """Marca el pedido como ENTREGADO tras recojo en agencia o entrega de delivery.
+
+        Qué hace:      Llama a cambiar_estado(..., ENTREGADO) actualizando fechas y bitácora.
+        Va hacia:      Finaliza el ciclo operativo del pedido en estado ENTREGADO.
+        Depende de:    cambiar_estado.
+        Cuándo usarla: Cuando el cliente retira en Shalom/Olva o recibe el motorizado en Lima.
+        Si no opera:   Informa error si el estado actual no admite pasar a ENTREGADO.
+        """
+        pedido = get_object_or_404(Pedido, pk=pedido_id)
+        try:
+            cambiar_estado(
+                pedido=pedido,
+                nuevo_estado=EstadoPedido.ENTREGADO,
+                usuario=request.user,
+                nota="Entrega final confirmada desde la ficha del pedido.",
+            )
+            self.message_user(
+                request,
+                f"¡Pedido {pedido.codigo} marcado como ENTREGADO!",
+                level=messages.SUCCESS,
+            )
+        except (ErrorDominioEmuna, ValidationError) as exc:
+            self.message_user(request, str(exc), level=messages.ERROR)
+        return self._redirigir_a_ficha(pedido_id)
+
+    def vista_cancelar_pedido(
+        self, request: HttpRequest, pedido_id: int
+    ) -> HttpResponseRedirect:
+        """Cancela el pedido desde su ficha y repone el stock si ya había sido pagado.
+
+        Qué hace:      Ejecuta cancelar_o_rechazar() respetando devolución física en ENVIADO.
+        Va hacia:      Cambia estado a CANCELADO y genera movimientos DEVOLUCION cuando aplica.
+        Depende de:    cancelar_o_rechazar.
+        Cuándo usarla: Al anular un pedido desde los botones del panel superior de la ficha.
+        Si no opera:   Muestra error si el pedido ya estaba cerrado o falta confirmar devolución.
+        """
+        pedido = get_object_or_404(Pedido, pk=pedido_id)
+        nota = request.POST.get("nota", "").strip() or "Cancelado desde la ficha del pedido."
+        devolucion_fisica = request.POST.get("devolucion_fisica") == "1"
+        try:
+            cancelar_o_rechazar(
+                pedido=pedido,
+                nuevo_estado=EstadoPedido.CANCELADO,
+                usuario=request.user,
+                nota=nota,
+                devolucion_fisica=devolucion_fisica,
+            )
+            self.message_user(
+                request,
+                f"Pedido {pedido.codigo} cancelado correctamente.",
+                level=messages.SUCCESS,
+            )
+        except (ErrorDominioEmuna, ValidationError) as exc:
+            self.message_user(request, str(exc), level=messages.ERROR)
+        return self._redirigir_a_ficha(pedido_id)
 
     def vista_venta_presencial(self, request: HttpRequest) -> HttpResponse:
         """Renderiza y procesa el formulario de venta presencial directa en mostrador (Flujo C).

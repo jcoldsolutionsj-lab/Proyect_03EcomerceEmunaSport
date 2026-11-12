@@ -607,3 +607,101 @@ def test_vista_admin_venta_presencial_pos(datos_base: dict) -> None:
     assert pedido_creado is not None
     assert pedido_creado.origen == OrigenPedido.PRESENCIAL
     assert pedido_creado.estado == EstadoPedido.ENTREGADO
+@pytest.mark.django_db
+def test_flujo_ui_admin_contextual_y_entrada_stock_como_richard(datos_base: dict) -> None:
+    """Verifica el flujo visual en /gestion/ usando exclusivamente la cuenta 'richard' (Dueño).
+
+    Qué hace:      Simula a Richard abriendo un pedido NUEVO de agencia, cotizándolo, confirmando pago,
+                   registrando despacho con boleta y reponiendo stock desde VarianteAdmin.
+    Va hacia:      Comprueba permisos del grupo Dueño, panel contextual y vistas POST en el admin.
+    Depende de:    PedidoAdmin, VarianteAdmin, change_form.html y permisos de preparar_local.
+    Cuándo usarla: Antes de validar manualmente en el navegador los escenarios de Richard.
+    Si no opera:   Falla si falta algún permiso en Dueño o si alguna ruta del panel da error HTTP.
+    """
+    richard = datos_base["richard"]
+    var_s = datos_base["var_s"]
+    stock_inicial = var_s.cantidad_stock
+
+    sesion: dict = {}
+    agregar_al_carrito(sesion=sesion, variante_id=var_s.id, cantidad=2)
+    pedido = crear_pedido_web(
+        sesion=sesion,
+        datos_cliente={
+            "cliente_nombre": "Luis Prueba UI",
+            "cliente_telefono": "987654321",
+            "cliente_dni": "71234567",
+            "tipo_entrega": TipoEntrega.AGENCIA,
+            "agencia": AgenciaEnvio.SHALOM,
+            "agencia_ciudad": "Piura",
+            "agencia_referencia": "Sede Principal",
+            "cf_turnstile_response": "mock-token-local",
+            "acepta_privacidad": True,
+        },
+    )
+
+    http_client = Client()
+    http_client.force_login(richard)
+
+    # 1. Richard abre la ficha del pedido y ve el Paso 1 (Cotizar envío)
+    url_ficha = reverse("admin:pedidos_pedido_change", args=[pedido.pk])
+    resp_ficha = http_client.get(url_ficha)
+    assert resp_ficha.status_code == 200
+    assert "Cotizar envío (pasar a COTIZADO)" in resp_ficha.content.decode("utf-8")
+
+    # 2. Richard cotiza S/ 18.00 -> COTIZADO
+    resp_cot = http_client.post(
+        reverse("admin:pedidos_pedido_cotizar", args=[pedido.pk]),
+        {"costo_envio": "18.00", "nota": "Tarifa Shalom Piura"},
+        follow=True,
+    )
+    assert resp_cot.status_code == 200
+    pedido.refresh_from_db()
+    assert pedido.estado == EstadoPedido.COTIZADO
+    assert pedido.total == Decimal("128.00")
+
+    # 3. Richard confirma pago Yape -> PAGADO y stock -2
+    resp_pago = http_client.post(
+        reverse("admin:pedidos_pedido_confirmar_pago", args=[pedido.pk]),
+        {"metodo_pago": "YAPE", "nota": "Yape confirmado en móvil"},
+        follow=True,
+    )
+    assert resp_pago.status_code == 200
+    pedido.refresh_from_db()
+    assert pedido.estado == EstadoPedido.PAGADO
+    var_s.refresh_from_db()
+    assert var_s.cantidad_stock == stock_inicial - 2
+
+    # 4. Richard registra despacho Shalom con boleta -> ENVIADO
+    foto = SimpleUploadedFile("guia_piura.jpg", b"imagen-guia", content_type="image/jpeg")
+    resp_env = http_client.post(
+        reverse("admin:pedidos_pedido_registrar_envio", args=[pedido.pk]),
+        {
+            "agencia": AgenciaEnvio.SHALOM,
+            "numero_orden_agencia": "SHA-PIU-1001",
+            "clave_recojo": "5678",
+            "costo_flete": "18.00",
+            "quien_paga": QuienPagaFlete.CLIENTE_ADELANTADO,
+            "cobrado": "1",
+            "imagen_boleta": foto,
+        },
+        follow=True,
+    )
+    assert resp_env.status_code == 200
+    pedido.refresh_from_db()
+    assert pedido.estado == EstadoPedido.ENVIADO
+    assert "Enviar Guía y Clave por WhatsApp" in resp_env.content.decode("utf-8")
+
+    # 5. Richard repone +5 unidades en VarianteAdmin con auditoría
+    url_var = reverse("admin:catalogo_variante_change", args=[var_s.pk])
+    resp_var = http_client.get(url_var)
+    assert resp_var.status_code == 200
+    assert "Registrar Movimiento de Stock" in resp_var.content.decode("utf-8")
+
+    resp_entrada = http_client.post(
+        reverse("admin:catalogo_variante_entrada_stock", args=[var_s.pk]),
+        {"cantidad": "5", "motivo": "Reposición desde taller"},
+        follow=True,
+    )
+    assert resp_entrada.status_code == 200
+    var_s.refresh_from_db()
+    assert var_s.cantidad_stock == stock_inicial - 2 + 5
