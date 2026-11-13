@@ -11,11 +11,132 @@
 {% endblock %}
 
 {% block content %}
-<div id="content-main" style="max-width: 1100px; margin: 0 auto; padding: 15px 0 40px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<style>
+  .pos-shell {
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 15px 0 40px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
+  }
+  .pos-card {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 22px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .pos-search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    max-width: 100%;
+  }
+  .pos-search-input {
+    height: 36px;
+    padding: 6px 12px;
+    border: 1px solid #94A3B8;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 320px;
+    max-width: 100%;
+    flex: 1 1 220px;
+    background: #FFFFFF;
+    color: #0F172A;
+    box-sizing: border-box;
+  }
+  .pos-pagination-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+  .pos-desglose-wrap {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    padding: 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  @media (max-width: 767px) {
+    .pos-shell {
+      padding: 4px 0 24px 0 !important;
+    }
+    .pos-header-inner {
+      padding: 14px 16px !important;
+    }
+    .pos-header-inner h1 {
+      font-size: 18px !important;
+      line-height: 1.3;
+    }
+    .pos-card {
+      padding: 14px !important;
+      margin-bottom: 16px !important;
+    }
+    .pos-search-bar {
+      width: 100%;
+    }
+    .pos-search-input {
+      width: 100% !important;
+      flex: 1 1 100% !important;
+    }
+    .pos-search-bar button {
+      flex: 1 1 auto;
+      min-height: 38px;
+    }
+    .pos-kpi-grid {
+      width: 100%;
+    }
+    .pos-kpi-card {
+      flex: 1 1 130px;
+      text-align: left !important;
+    }
+    .pos-desglose-wrap {
+      padding: 10px !important;
+    }
+    .pos-footer-actions {
+      flex-direction: column-reverse;
+      align-items: stretch !important;
+    }
+    .pos-footer-buttons {
+      width: 100%;
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+    .pos-footer-buttons button {
+      width: 100%;
+      min-height: 44px;
+      height: auto !important;
+      white-space: normal;
+      line-height: 1.3;
+    }
+    .pos-cancel-link {
+      text-align: center;
+      padding: 6px 0;
+      display: block;
+    }
+    .pos-qty-btn {
+      min-width: 34px !important;
+      min-height: 36px !important;
+    }
+    .pos-qty-input {
+      width: 52px !important;
+      min-height: 36px !important;
+    }
+  }
+</style>
+<div id="content-main" class="pos-shell">
 
   <!-- Cabecera Institucional Estilo Java JSP Enterprise -->
   <div style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
-    <div style="background: #1E293B; color: #FFFFFF; padding: 14px 22px; border-bottom: 3px solid #15803D;">
+    <div class="pos-header-inner" style="background: #1E293B; color: #FFFFFF; padding: 14px 22px; border-bottom: 3px solid #15803D;">
       <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #94A3B8; font-weight: 800;">
         Sistema de Caja y Mostrador · Emuná Sport
       </div>
@@ -38,7 +159,7 @@
     {% csrf_token %}
     
     <!-- 1. Datos del Cliente y Método de Pago -->
-    <div class="module" style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 20px; margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+    <div class="module pos-card">
       <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 15px; font-weight: 800; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px; color: #0F172A; text-transform: uppercase; letter-spacing: 0.04em;">
         1. Datos del Cliente y Método de Cobro
       </h2>
@@ -87,10 +208,10 @@
     </div>
 
     <!-- 2. Seleccionar Camisetas y Tallas con Buscador Único por Palabras y Paginación -->
-    <div class="module" style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 20px; margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+    <div class="module pos-card">
       
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px; margin-bottom: 16px;">
-        <div>
+        <div style="min-width: 0;">
           <h2 style="margin: 0; font-size: 15px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.04em;">
             2. Seleccionar Camisetas y Tallas
           </h2>
@@ -100,13 +221,13 @@
         </div>
 
         <!-- Buscador Único Indexado por Palabras (Filtra al escribir y consulta toda la BD con Buscar/Enter) -->
-        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+        <div class="pos-search-bar">
           <input type="text"
                  id="input-busqueda-servidor"
+                 class="pos-search-input"
                  oninput="filtrarTablaEnVivo(this.value)"
                  placeholder="🔍 Buscar por palabras (ej. Argentina Messi L)..."
-                 value="{{ busqueda|default:'' }}"
-                 style="height: 36px; padding: 6px 12px; border: 1px solid #94A3B8; border-radius: 4px; font-size: 13px; width: 320px; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
+                 value="{{ busqueda|default:'' }}">
           <button type="button" onclick="ejecutarBusquedaServidor()" style="background: #1E293B; color: #FFFFFF; border: none; height: 36px; padding: 0 16px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
             Buscar
           </button>
@@ -193,8 +314,9 @@
                 </td>
                 <td style="padding: 10px 12px; text-align: center; background: #FAF5FF;">
                   <div style="display: inline-flex; align-items: center; gap: 4px;">
-                    <button type="button" onclick="ajustarCantidad({{ var.id }}, -1)" title="Restar 1" style="width: 28px; height: 32px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: 900; font-size: 15px; cursor: pointer; color: #475569;">−</button>
-                    <input type="number" 
+                    <button type="button" class="pos-qty-btn" onclick="ajustarCantidad({{ var.id }}, -1)" title="Restar 1" style="width: 28px; height: 32px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: 900; font-size: 15px; cursor: pointer; color: #475569;">−</button>
+                    <input type="number"
+                           class="pos-qty-input"
                            name="cant_{{ var.id }}" 
                            id="cant_{{ var.id }}" 
                            value="0" 
@@ -210,7 +332,7 @@
                            data-precio-base="{{ var.producto.precio_unidad|stringformat:'s' }}"
                            data-stock-max="{{ var.cantidad_stock }}"
                            style="width: 55px; height: 32px; text-align: center; border: 1px solid #94A3B8; border-radius: 4px; font-weight: 800; font-size: 14px; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
-                    <button type="button" onclick="ajustarCantidad({{ var.id }}, 1)" title="Sumar 1" style="width: 28px; height: 32px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: 900; font-size: 15px; cursor: pointer; color: #15803D;">+</button>
+                    <button type="button" class="pos-qty-btn" onclick="ajustarCantidad({{ var.id }}, 1)" title="Sumar 1" style="width: 28px; height: 32px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: 900; font-size: 15px; cursor: pointer; color: #15803D;">+</button>
                   </div>
                 </td>
               </tr>
@@ -233,7 +355,7 @@
         </div>
         
         {% if paginador.num_pages > 1 %}
-          <div style="display: flex; gap: 4px; align-items: center;">
+          <div class="pos-pagination-links">
             {% if pagina_obj.has_previous %}
               <a href="?page=1{% if busqueda %}&q={{ busqueda }}{% endif %}" style="padding: 5px 10px; background: #FFFFFF; border: 1px solid #CBD5E1; color: #1E293B; text-decoration: none; border-radius: 4px; font-weight: 700;">« Primera</a>
               <a href="?page={{ pagina_obj.previous_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}" style="padding: 5px 10px; background: #FFFFFF; border: 1px solid #CBD5E1; color: #1E293B; text-decoration: none; border-radius: 4px; font-weight: 700;">‹ Anterior</a>
@@ -254,9 +376,9 @@
     </div>
 
     <!-- 3. CUADRO TOTALIZADOR / RESUMEN EN TIEMPO REAL -->
-    <div class="module" id="modulo-totalizador-venta" style="background: #FFFFFF; border: 1px solid #CBD5E1; border-top: 4px solid #15803D; border-radius: 6px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+    <div class="module pos-card" id="modulo-totalizador-venta" style="border-top: 4px solid #15803D; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px; margin-bottom: 14px;">
-        <div>
+        <div style="min-width: 0; flex: 1 1 240px;">
           <span style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: #15803D; letter-spacing: 0.06em;">
             3. Resumen y Totalizador de Venta Presencial
           </span>
@@ -266,17 +388,17 @@
         </div>
         
         <!-- Indicadores Numéricos Grandes -->
-        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-          <div style="text-align: right; background: #F8FAFC; border: 1px solid #CBD5E1; padding: 8px 16px; border-radius: 4px;">
+        <div class="pos-kpi-grid" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <div class="pos-kpi-card" style="text-align: right; background: #F8FAFC; border: 1px solid #CBD5E1; padding: 8px 16px; border-radius: 4px;">
             <span style="display: block; font-size: 11px; text-transform: uppercase; color: #475569; font-weight: 800;">Total Prendas:</span>
             <strong id="kpi-total-prendas" style="font-size: 24px; font-weight: 900; color: #0F172A; font-family: monospace;">0</strong>
             <span style="font-size: 12px; color: #64748B; font-weight: 700;">unid.</span>
           </div>
-          <div id="kpi-ahorro-card" style="display: none; text-align: right; background: #EFF6FF; border: 1px solid #93C5FD; padding: 8px 16px; border-radius: 4px;">
+          <div id="kpi-ahorro-card" class="pos-kpi-card" style="display: none; text-align: right; background: #EFF6FF; border: 1px solid #93C5FD; padding: 8px 16px; border-radius: 4px;">
             <span style="display: block; font-size: 11px; text-transform: uppercase; color: #1E40AF; font-weight: 800;">[AZUL] Ahorro x Mayor:</span>
             <strong id="kpi-total-ahorro" style="font-size: 24px; font-weight: 900; color: #1D4ED8; font-family: monospace;">S/ 0.00</strong>
           </div>
-          <div style="text-align: right; background: #DCFCE7; border: 1px solid #86EFAC; padding: 8px 18px; border-radius: 4px;">
+          <div class="pos-kpi-card" style="text-align: right; background: #DCFCE7; border: 1px solid #86EFAC; padding: 8px 18px; border-radius: 4px;">
             <span style="display: block; font-size: 11px; text-transform: uppercase; color: #166534; font-weight: 800;">Total a Cobrar:</span>
             <strong id="kpi-total-soles" style="font-size: 26px; font-weight: 900; color: #14532D; font-family: monospace;">S/ 0.00</strong>
           </div>
@@ -284,7 +406,7 @@
       </div>
 
       <!-- Tabla Dinámica con el Desglose de Camisetas que se van a Vender -->
-      <div id="contenedor-desglose" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 14px;">
+      <div id="contenedor-desglose" class="pos-desglose-wrap">
         <p id="mensaje-vacio-resumen" style="margin: 0; color: #64748B; font-size: 13px; font-style: italic;">
           ℹ️ Ninguna camiseta seleccionada todavía. Ingresa la cantidad en la tabla de arriba o pulsa el botón <strong>+</strong> para sumar unidades.
         </p>
@@ -328,12 +450,12 @@
     </div>
 
     <!-- Botones de Acción Finales -->
-    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
-      <a href="{% url 'admin:pedidos_pedido_changelist' %}" style="color: #64748B; text-decoration: underline; font-weight: 700; font-size: 14px;">
+    <div class="pos-footer-actions" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+      <a href="{% url 'admin:pedidos_pedido_changelist' %}" class="pos-cancel-link" style="color: #64748B; text-decoration: underline; font-weight: 700; font-size: 14px;">
         ← Cancelar y volver al listado de pedidos
       </a>
       
-      <div style="display: flex; gap: 12px; align-items: center;">
+      <div class="pos-footer-buttons" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
         <button type="button" onclick="limpiarTodoElCarrito()" style="background: #FFFFFF; color: #DC2626; border: 1px solid #EF4444; padding: 12px 18px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer;">
           ✕ Limpiar Selección
         </button>

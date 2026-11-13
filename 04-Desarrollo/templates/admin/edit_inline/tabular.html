@@ -18,6 +18,7 @@
   </h2>
   {% if inline_admin_formset.is_collapsible %}</summary>{% endif %}
    {{ inline_admin_formset.formset.non_form_errors }}
+   <div class="emuna-inline-scroll">
    <table>
      <thead><tr>
        <th class="original"></th>
@@ -77,6 +78,7 @@
      {% endfor %}
      </tbody>
    </table>
+   </div>
   {% if inline_admin_formset.is_collapsible %}</details>{% endif %}
 </fieldset>
   </div>

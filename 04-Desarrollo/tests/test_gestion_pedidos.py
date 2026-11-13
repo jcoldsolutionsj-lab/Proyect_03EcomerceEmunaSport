@@ -851,3 +851,31 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
     assert resp_pos_post.status_code == 200
     pedido_mayor = Pedido.objects.filter(cliente_nombre="Cliente Mayorista POS").latest("id")
     assert pedido_mayor.total == Decimal("150.00")
+
+    # 7. Todas las vistas dentro de /gestion/ incluyen reglas responsive, navegación móvil y scroll inline
+    assert "emuna-mobile-quicknav" in cuerpo_prod
+    assert "emuna-inline-scroll" in cuerpo_prod
+    assert "pos-desglose-wrap" in cuerpo_pos
+    assert "@media (max-width: 1024px)" in cuerpo_pos
+
+    for ruta_gestion in (
+        reverse("admin:index"),
+        reverse("admin:app_list", kwargs={"app_label": "catalogo"}),
+        reverse("admin:app_list", kwargs={"app_label": "pedidos"}),
+        reverse("admin:pedidos_pedido_change", args=[pedido.pk]),
+        reverse("admin:catalogo_variante_change", args=[var_s.pk]),
+    ):
+        resp_g = http_client.get(ruta_gestion)
+        assert resp_g.status_code == 200
+        html_g = resp_g.content.decode("utf-8")
+        assert "emuna-mobile-quicknav" in html_g
+        assert "emuna-touch-tooltip" in html_g
+        assert "@media (max-width: 767px)" in html_g
+
+    # Login de /gestion/ sin usuario autenticado omite quicknav y mantiene soporte móvil
+    cliente_anon = Client()
+    resp_login = cliente_anon.get(reverse("admin:login"))
+    assert resp_login.status_code == 200
+    html_login = resp_login.content.decode("utf-8")
+    assert '<nav class="emuna-mobile-quicknav"' not in html_login
+    assert ".login #container" in html_login
