@@ -2,8 +2,8 @@
 
 > La IA lee este archivo al empezar cada sesión y lo actualiza al terminar. Mantenerlo corto.
 
-**Última actualización:** 2026-11-12
-**Fase actual:** **Fase 3 completada, aprobada y fusionada en `develop`** (`29 passed` en `pytest`, 0 errores en `ruff`, diccionario de datos validado al 100% con 13 tablas y 134 columnas). Se cerró el control atómico de stock, bitácora inmutable `TBL_TMOVIMIENTO_STOCK`, envíos privados `TBL_TENVIO`, seguimiento en vivo `/pedidos/<codigo>/estado-json/` con notificaciones y modal emergente, diseño Enterprise Java/JSP claro con tooltips `toltip.png` táctiles, POS presencial con descuento por mayor en vivo y paginación/buscador indexado, además de diseño 100% responsivo para móvil y tablet en `/gestion/` (`360px` verificado sin desbordes horizontales). Lista para iniciar la **Fase 4: Tablero y alertas**.
+**Última actualización:** 2026-11-13
+**Fase actual:** **Fase 4 completada y validada en `feature/fase-4-tablero-alertas`** (`32 passed` en `pytest`, 0 errores en `ruff`, verificación visual móvil `360x740` y escritorio `1280x800` aprobada). Se implementó el Tablero Operativo y Alertas (`/gestion/tablero/`) con métricas Web vs. POS por período, cola en tiempo real, 4 paneles de alerta/ranking con semáforos e íconos `toltip.png`, exportación CSV segura con BOM UTF-8 anti-inyección de fórmulas y accesos directos desde `/gestion/` y la barra rápida móvil. Lista para confirmar merge hacia `develop` e iniciar la **Fase 5: Preparación despliegue y API**.
 
 ## Dónde quedamos
 - Documentos **01 al 15** completos y alineados; copia intacta de los originales en `01-Relevamiento/fuentes/documentos-originales/`.
@@ -36,12 +36,19 @@
   - **Pruebas integrales:** `tests/test_gestion_pedidos.py` con 9 escenarios clave (matriz de transiciones, Flujos A/B/C, rollback por stock insuficiente, restitución por cancelación, inmutabilidad de movimientos, seguridad de boletas y vista POS admin).
   - Script k6 `escenarios-base.js` actualizado con el modo `concurrencia_stock` listo para ejecutar contra PostgreSQL en Render (Fase 5).
 
+- **Fase 4 implementada en `feature/fase-4-tablero-alertas` (pendiente merge a `develop`):**
+  - **Métricas y selectores (`apps/tablero/selectores.py`):** cálculo de ingresos confirmados (`PAGADO`/`ENVIADO`/`ENTREGADO`), desglose Web vs. POS presencial, unidades vendidas, ticket promedio, filtros rápidos (`hoy`, `7dias`, `mes`, `todo`, rango personalizado `desde`/`hasta`), evolución diaria con barra proporcional, cola operativa en vivo, ranking Top 10 más vendidos y productos activos sin rotación en los últimos `dias_sin_ventas` días.
+  - **Alertas críticas y semáforos:** detección de tallas agotadas (`[ROJO]`) y stock bajo (`[ÁMBAR]`) respetando `Variante.umbral_stock_bajo` individual o el umbral global de `ConfiguracionTienda` mediante `Coalesce`, además de pedidos pendientes (`NUEVO`/`COTIZADO`) con más de `horas_pedido_pendiente` horas y enlace directo por WhatsApp. Resguardo adicional en `VarianteAdmin.stock_semaforo` y `umbral_col` ante umbrales `None`.
+  - **Exportación CSV segura (`apps/tablero/servicios.py`):** descarga con BOM UTF-8 (`utf-8-sig` compatible con Excel) para ventas del período y alertas de stock, neutralizando inyección de fórmulas (`=`, `+`, `-`, `@`, tab, CR) mediante `_sanitizar_celda_csv` y encabezados `Cache-Control: no-store`.
+  - **UI Enterprise Java/JSP y móvil (`templates/tablero/resumen_tablero.html`, `templates/admin/base_site.html`):** ruta privada `/gestion/tablero/` protegida exclusivamente para usuarios activos `staff`/`superuser`/`Dueño` (`302`/`403`), accesos directos en `/gestion/` y barra rápida móvil, diseño verificado en `360x740` (sin desborde horizontal, tablas con scroll interno) y `1280x800`.
+  - **Pruebas:** `tests/test_tablero.py` (3 escenarios completos alcanzando **32 pruebas pasando al 100%**).
+
 ## En curso
-- Revisión y aprobación del plan de la **Fase 4: Tablero y alertas** con Jonathan antes de crear su rama de desarrollo.
+- Confirmación de Jonathan para fusionar `feature/fase-4-tablero-alertas` en `develop` e iniciar la **Fase 5 – Preparación despliegue y API**.
 
 ## Siguiente paso
-1. Esperar aprobación de Jonathan sobre el plan de la **Fase 4 (Tablero y alertas)**.
-2. Crear `feature/fase-4-tablero-alertas` desde `develop` e implementar el tablero operativo con métricas, alertas y exportación CSV.
+1. Con la confirmación de Jonathan, fusionar (`--no-ff`) `feature/fase-4-tablero-alertas` en `develop` y subir a `origin`.
+2. Iniciar la **Fase 5: Preparación despliegue y API** (configuración PostgreSQL/Render, endpoints REST/Swagger, CORS/whitenoise y pruebas k6).
 
 ## Bloqueos y pendientes con Richard
 Ver los 7 puntos de negocio en `00-Gestion/11-decisiones-cambios.md`.

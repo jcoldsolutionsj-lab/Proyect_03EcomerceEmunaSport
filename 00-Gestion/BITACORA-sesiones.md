@@ -2,6 +2,18 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-13 (Fase 4) – Tablero operativo de ventas, alertas con semáforos y exportación CSV segura
+- **Hecho:**
+  - Se creó el módulo completo de analítica operativa en `apps/tablero/`:
+    - `selectores.py`: `resolver_rango_fechas`, `listar_alertas_stock_bajo` (usando `Coalesce` con `ConfiguracionTienda.umbral_stock_bajo` cuando `Variante.umbral_stock_bajo` es `None`), `listar_pedidos_pendientes_antiguos` (con enlace directo de WhatsApp y acceso administrativo), `obtener_resumen_tablero` (ventas confirmadas Web vs. POS, ticket promedio, cola en tiempo real, Top 10 más vendidos, sin ventas recientes y evolución diaria) y `listar_pedidos_ventas_para_csv`.
+    - `servicios.py`: `generar_csv_ventas` y `generar_csv_alertas_stock` con BOM UTF-8 (`utf-8-sig`) y sanitización anti-inyección de fórmulas Excel (`_sanitizar_celda_csv`).
+    - `views.py` y `urls.py`: rutas privadas `/gestion/tablero/`, `/gestion/tablero/exportar-ventas.csv` y `/gestion/tablero/exportar-stock.csv` protegidas para `staff`/`superuser`/`Dueño` (`302` anónimos, `403` clientes sin permiso).
+  - Se diseñó `templates/tablero/resumen_tablero.html` con estética Enterprise Java/JSP clara, semáforos `[ROJO]`/`[ÁMBAR]`/`[VERDE]`, tooltips `toltip.png` visibles también sobre cabeceras oscuras y grillas alineadas arriba (`align-items: start`).
+  - Se integró el acceso directo `📊 Tablero` en la barra móvil `.emuna-mobile-quicknav` y los botones ejecutivos `.emuna-index-shortcuts` en `/gestion/` (`templates/admin/base_site.html`), además de proteger `VarianteAdmin.stock_semaforo` y `umbral_col` en `apps/catalogo/admin.py` frente a variantes con umbral global `None`.
+  - Verificación integral: pruebas automatizadas en `tests/test_tablero.py` (**32 pruebas pasando al 100%** en `pytest` y **0 errores** en `ruff check 04-Desarrollo`), más capturas en Edge headless (`360x740` sin desborde horizontal y `1280x800`).
+- **Decidido:** mantener el tablero en la rama `feature/fase-4-tablero-alertas` listo para su revisión final con Jonathan antes del merge hacia `develop`.
+- **Queda:** confirmación de Jonathan para fusionar `feature/fase-4-tablero-alertas` en `develop` e iniciar la **Fase 5: Preparación despliegue y API**.
+
 ## 2026-11-12 (Cierre Fase 3) – Rediseño móvil integral en `/gestion/`, pulido Java/JSP, POS mayorista y merge a `develop`
 - **Hecho:**
   - Se optimizó el seguimiento en vivo de clientes con popup modal de activación de avisos, botón animado de campana e ícono formal `toltip.png` en todos los encabezados, inlines (`Variantes de talla`, `Reglas de precio por mayor`, `Imágenes de producto`) y tablas administrativas.
