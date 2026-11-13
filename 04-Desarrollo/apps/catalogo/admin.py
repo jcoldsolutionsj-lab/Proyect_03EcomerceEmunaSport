@@ -310,6 +310,27 @@ class MovimientoStockAdmin(admin.ModelAdmin):
         "creado_por",
         "fecha_creacion",
     )
+    fieldsets = (
+        (
+            "Auditoría de Inventario (Kárdex Inmutable)",
+            {
+                "fields": (
+                    "fecha_creacion",
+                    "tipo",
+                    "cantidad",
+                    "variante",
+                    "motivo",
+                    "pedido",
+                    "creado_por",
+                ),
+                "description": (
+                    "Registro inalterable de auditoría para trazabilidad del stock de Emuná Sport. "
+                    "Las cantidades negativas (-) representan salidas de almacén por venta o arqueo; "
+                    "las cantidades positivas (+) representan ingresos de mercadería o devoluciones por pedido cancelado."
+                ),
+            },
+        ),
+    )
     ordering = ("-fecha_creacion",)
 
     @admin.display(

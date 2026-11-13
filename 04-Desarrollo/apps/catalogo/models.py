@@ -640,7 +640,8 @@ class MovimientoStock(models.Model):
     )
     cantidad = models.IntegerField(
         db_column="MOV_NCANTIDAD",
-        verbose_name="Cantidad con signo (positiva o negativa; distinta de 0)",
+        verbose_name="Cantidad",
+        help_text="Variación con signo (+ entrada de mercadería / devolución, - salida por venta o ajuste). Distinta de 0.",
     )
     motivo = models.CharField(
         max_length=200,

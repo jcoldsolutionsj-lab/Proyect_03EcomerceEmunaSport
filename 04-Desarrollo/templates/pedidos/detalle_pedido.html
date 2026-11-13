@@ -3,6 +3,33 @@
 
 {% block meta_titulo %}Pedido {{ codigo }} – {{ etiqueta_estado }} | {{ tienda_config.nombre|default:"Emuná Sport" }}{% endblock %}
 {% block meta_descripcion %}Detalle y estado en vivo del pedido {{ codigo }} en Emuná Sport. Descarga tu comprobante en PDF y coordina con Richard por WhatsApp.{% endblock %}
+{% block scripts_cabecera_extra %}
+<style>
+  /* Animación de 2 saltos cada 2 segundos para el botón de avisos */
+  @keyframes saltosAvisosDosVeces {
+    0%, 45%, 100% {
+      transform: translateY(0);
+    }
+    10% {
+      transform: translateY(-8px);
+    }
+    20% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-5px);
+    }
+  }
+  .boton-brinco-avisos {
+    animation: saltosAvisosDosVeces 2s ease-in-out infinite;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  }
+  .boton-brinco-avisos:hover {
+    animation-play-state: paused;
+  }
+</style>
+{% endblock %}
+
 
 {% block contenido %}
 <section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10"
@@ -19,11 +46,30 @@
            intervaloTitulo: null,
            intervaloPolling: null,
 
+           modalAvisosAbierto: false,
+
            init() {
              window.addEventListener('focus', () => this.detenerParpadeoTitulo());
              if (!this.esTerminal) {
                this.intervaloPolling = setInterval(() => this.verificarActualizacion(), 15000);
+               // Si el usuario aún no ha definido permiso de avisos, mostrar el pop-up a los 700ms
+               if (this.permisoNotif === 'default') {
+                 setTimeout(() => {
+                   if (this.permisoNotif === 'default') {
+                     this.modalAvisosAbierto = true;
+                   }
+                 }, 700);
+               }
              }
+           },
+
+           cerrarModalAvisos() {
+             this.modalAvisosAbierto = false;
+           },
+
+           async aceptarAvisosDesdeModal() {
+             this.modalAvisosAbierto = false;
+             await this.activarNotificaciones();
            },
 
            copiarNumeroYape(numero) {
@@ -131,6 +177,71 @@
            }
          }">
 
+  <!-- Modal Pop-Up Alert para Activar Avisos en Tiempo Real (Estilo Enterprise) -->
+  <div x-show="modalAvisosAbierto"
+       x-cloak
+       style="display: none;"
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-[2px]">
+    <div @click.away="cerrarModalAvisos()"
+         class="bg-white border-2 border-[#0F172A] shadow-2xl max-w-md w-full overflow-hidden text-slate-900">
+
+      <!-- Cabecera Enterprise Tipo Java JSP -->
+      <div class="bg-[#0F172A] text-white px-5 py-3.5 flex items-center justify-between border-b-2 border-slate-900">
+        <div class="flex items-center gap-2.5 font-black uppercase text-xs sm:text-sm tracking-wide">
+          <span class="text-base">🔔</span>
+          <span>Avisos de Seguimiento en Tiempo Real</span>
+        </div>
+        <button type="button"
+                @click="cerrarModalAvisos()"
+                title="Cerrar ventana"
+                class="text-slate-400 hover:text-white font-bold text-lg leading-none cursor-pointer p-1">
+          ✕
+        </button>
+      </div>
+
+      <!-- Contenido del Modal -->
+      <div class="p-6 text-xs sm:text-sm text-slate-800 space-y-4">
+        <div class="bg-slate-100 border border-slate-300 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <span class="text-slate-500 uppercase font-bold tracking-wider">Código de Pedido:</span>
+            <span class="font-extrabold text-slate-900 ml-1">{{ codigo }}</span>
+          </div>
+          <div>
+            <span class="text-slate-500 uppercase font-bold tracking-wider">Estado actual:</span>
+            <span class="font-extrabold text-slate-900 ml-1">{{ etiqueta_estado }}</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <p class="font-bold text-slate-900 text-sm">
+            ¿Deseas activar los avisos automáticos en este dispositivo?
+          </p>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Te notificaremos en tu pantalla o celular en el mismo instante en que <strong>Richard</strong> confirme tu pago, prepare tus prendas o registre el número de guía de Shalom u Olva.
+          </p>
+          <p class="text-xs text-slate-500 italic">
+            Así no tendrás que estar actualizando manualmente la página a cada momento.
+          </p>
+        </div>
+      </div>
+
+      <!-- Botones Aceptar / Cancelar -->
+      <div class="bg-slate-100 border-t border-slate-200 px-6 py-3.5 flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-3">
+        <button type="button"
+                @click="cerrarModalAvisos()"
+                class="w-full sm:w-auto px-4 py-2 bg-white border border-slate-400 text-slate-700 hover:bg-slate-200 font-bold uppercase text-[11px] tracking-wider cursor-pointer text-center">
+          Cancelar
+        </button>
+        <button type="button"
+                @click="aceptarAvisosDesdeModal()"
+                class="w-full sm:w-auto px-5 py-2 bg-[#0F172A] border-2 border-black text-[#39FF14] hover:bg-black font-extrabold uppercase text-[11px] tracking-wider cursor-pointer shadow-md text-center">
+          ✓ Aceptar y Activar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Barra de Seguimiento en Vivo y Control de Avisos del Navegador -->
   <div class="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-silver bg-neutral-50 px-4 py-3 text-xs">
     <div class="flex items-center gap-2 text-ink">
@@ -154,7 +265,7 @@
       <template x-if="!esTerminal && permisoNotif === 'default'">
         <button type="button"
                 @click="activarNotificaciones()"
-                class="px-3 py-1.5 bg-white border border-ink text-ink font-extrabold uppercase text-[11px] tracking-wider hover:bg-neon transicion-tactil cursor-pointer">
+                class="px-3 py-1.5 bg-white border-2 border-ink text-ink font-extrabold uppercase text-[11px] tracking-wider hover:bg-neon transicion-tactil cursor-pointer boton-brinco-avisos">
           🔔 Activar avisos en este dispositivo
         </button>
       </template>

@@ -785,6 +785,6 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
         resp_adm = http_client.get(reverse(ruta_admin))
         assert resp_adm.status_code == 200
         cuerpo = resp_adm.content.decode("utf-8")
-        assert "ⓘ" in cuerpo
+        assert "/static/toltip.png" in cuerpo
         if "movimientostock" in ruta_admin:
             assert "Salida -1" in cuerpo
