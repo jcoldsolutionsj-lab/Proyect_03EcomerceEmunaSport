@@ -20,6 +20,18 @@ class ImagenProductoInline(admin.TabularInline):
 
     model = ImagenProducto
     extra = 1
+    tooltip_titulo = (
+        "Fotografías que verá el cliente en la tienda para este modelo de camiseta. "
+        "Marca una como principal y ordena con 0, 1, 2..."
+    )
+    tooltips_columnas = {
+        "orden": "Posición en la galería (0 aparece primero).",
+        "es_principal": "Si está marcada, esta foto será la portada en el catálogo y tarjetas.",
+        "ruta_original": "Archivo o URL de la foto en alta resolución.",
+        "ruta_miniatura": "Archivo o URL de miniatura optimizada para el catálogo.",
+        "ruta_detalle": "Archivo o URL para la vista ampliada del producto.",
+        "texto_alternativo": "Descripción corta de la imagen (accesibilidad y SEO).",
+    }
     fields = (
         "orden",
         "es_principal",
@@ -35,6 +47,18 @@ class VarianteInline(admin.TabularInline):
 
     model = Variante
     extra = 1
+    tooltip_titulo = (
+        "Tallas disponibles de este modelo de camiseta con su SKU único y stock físico en almacén."
+    )
+    tooltips_columnas = {
+        "talla": "Talla comercial de la camiseta (ej. S, M, L, XL).",
+        "sku": "Código único interno de inventario para esta combinación modelo + talla.",
+        "cantidad_stock": "Unidades físicas disponibles en almacén para venta.",
+        "umbral_stock_bajo": "Cantidad mínima desde la cual se muestra alerta ÁMBAR de stock bajo.",
+        "activa": "Si está desmarcada, la talla no se podrá comprar en la tienda ni en el POS.",
+        "color": "Color específico de esta variante si difiere del modelo base.",
+        "modelo": "Sub-modelo o corte (ej. Versión Jugador, Aficionado).",
+    }
     fields = ("talla", "sku", "cantidad_stock", "umbral_stock_bajo", "activa", "color", "modelo")
 
 
@@ -43,6 +67,14 @@ class ReglaPrecioInline(admin.TabularInline):
 
     model = ReglaPrecio
     extra = 1
+    tooltip_titulo = (
+        "Escalas de descuento por volumen (ej. desde 3 unidades o desde 6 unidades). "
+        "El descuento aplica automáticamente combinando tallas distintas de este mismo modelo."
+    )
+    tooltips_columnas = {
+        "cantidad_minima": "Cantidad mínima total de unidades de este modelo (sumando cualquier talla) para activar este precio.",
+        "precio_unidad": "Nuevo precio por cada unidad en soles (S/) cuando el cliente alcanza la cantidad mínima.",
+    }
     fields = ("cantidad_minima", "precio_unidad")
 
 

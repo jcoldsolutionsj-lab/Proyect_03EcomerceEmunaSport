@@ -14,7 +14,7 @@ from django.utils.html import format_html
 from django.views.decorators.http import require_POST
 from simple_history.admin import SimpleHistoryAdmin
 
-from apps.catalogo.models import Variante
+from apps.catalogo.models import ReglaPrecio, Variante
 from apps.nucleo.admin_helpers import encabezado_con_tooltip
 from apps.nucleo.excepciones import ErrorDominioEmuna
 
@@ -45,6 +45,19 @@ class ItemPedidoInline(admin.TabularInline):
 
     model = ItemPedido
     extra = 0
+    tooltip_titulo = (
+        "Detalle inmutable de camisetas, tallas y precios unitarios aplicados en este pedido."
+    )
+    tooltips_columnas = {
+        "variante": "Referencia a la talla específica en inventario.",
+        "nombre_producto": "Nombre del modelo registrado al momento de la compra.",
+        "sku": "Código SKU descontado del almacén.",
+        "talla": "Talla vendida.",
+        "color": "Color de la variante.",
+        "precio_unidad": "Precio unitario real cobrado (incluye descuento por mayor si aplicó).",
+        "cantidad": "Cantidad de unidades de esta talla.",
+        "subtotal": "Monto total de esta línea (precio unitario x cantidad).",
+    }
     readonly_fields = (
         "variante",
         "nombre_producto",
@@ -74,6 +87,9 @@ class EnvioInline(admin.StackedInline):
 
     model = Envio
     extra = 0
+    tooltip_titulo = (
+        "Datos del envío por agencia (número de orden, clave de recojo y boleta privada) registrados por Richard."
+    )
     fields = (
         "agencia",
         "numero_orden_agencia",
@@ -111,7 +127,7 @@ class EnvioInline(admin.StackedInline):
         if obj and obj.pk and obj.imagen_boleta:
             url = reverse("pedidos:ver_boleta_privada", args=[obj.pk])
             return format_html(
-                '<a href="{}" target="_blank" style="background:#0F172A;color:#10B981;font-weight:bold;padding:5px 10px;border-radius:4px;text-decoration:none;">📄 Ver boleta privada</a>',
+                '<a href="{}" target="_blank" style="background:#1E293B;color:#FFFFFF;font-weight:bold;padding:5px 10px;border-radius:4px;text-decoration:none;border:1px solid #0F172A;">📄 Ver boleta privada</a>',
                 url,
             )
         return "Sin boleta adjunta"
@@ -124,6 +140,16 @@ class RegistroEstadoPedidoInline(admin.TabularInline):
 
     model = RegistroEstadoPedido
     extra = 0
+    tooltip_titulo = (
+        "Historial de auditoría con cada cambio de estado, quién lo realizó y fecha exacta."
+    )
+    tooltips_columnas = {
+        "estado_anterior": "Estado previo antes de la transición.",
+        "estado_nuevo": "Nuevo estado asignado al pedido.",
+        "cambiado_por": "Usuario del equipo que ejecutó la acción.",
+        "nota": "Observación o motivo guardado en la transición.",
+        "fecha_creacion": "Fecha y hora exacta en que se registró el movimiento.",
+    }
     readonly_fields = (
         "estado_anterior",
         "estado_nuevo",
@@ -1060,6 +1086,7 @@ class PedidoAdmin(SimpleHistoryAdmin):
         """
         variantes_qs = (
             Variante.objects.select_related("producto", "producto__categoria")
+            .prefetch_related("producto__reglas_precio")
             .filter(activa=True, producto__activo=True, cantidad_stock__gt=0)
             .order_by("producto__nombre", "talla")
         )
@@ -1127,6 +1154,18 @@ class PedidoAdmin(SimpleHistoryAdmin):
                 except ErrorDominioEmuna as exc:
                     form_error = str(exc)
 
+        reglas_productos_map: dict[str, list[dict[str, Any]]] = {}
+        for regla in ReglaPrecio.objects.filter(producto__activo=True).order_by(
+            "producto_id", "cantidad_minima"
+        ):
+            pid = str(regla.producto_id)
+            reglas_productos_map.setdefault(pid, []).append(
+                {
+                    "cantidad_minima": regla.cantidad_minima,
+                    "precio_unidad": float(regla.precio_unidad),
+                }
+            )
+
         contexto = {
             **self.admin_site.each_context(request),
             "title": "Registrar Venta Presencial (POS Directo)",
@@ -1135,6 +1174,7 @@ class PedidoAdmin(SimpleHistoryAdmin):
             "paginador": paginador,
             "busqueda": busqueda,
             "total_disponibles": paginador.count,
+            "reglas_productos_map": reglas_productos_map,
             "form_error": form_error,
             "post_data": request.POST if request.method == "POST" else None,
         }

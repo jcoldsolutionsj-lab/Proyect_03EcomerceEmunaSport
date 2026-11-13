@@ -10,7 +10,7 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.catalogo.models import MovimientoStock, TipoMovimientoStock
+from apps.catalogo.models import MovimientoStock, ReglaPrecio, TipoMovimientoStock
 from apps.catalogo.selectores import obtener_producto_detalle_por_slug
 from apps.nucleo.excepciones import (
     DatosEnvioIncompletosError,
@@ -806,10 +806,48 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
         if "movimientostock" in ruta_admin:
             assert "Salida -1" in cuerpo
 
-    # 5. POS de venta presencial tiene 1 solo buscador y tooltips en todas las columnas
+    # 5. Ficha de Producto renderiza toltip.png en títulos inline y columnas
+    resp_prod = http_client.get(
+        reverse("admin:catalogo_producto_change", args=[var_s.producto_id])
+    )
+    assert resp_prod.status_code == 200
+    cuerpo_prod = resp_prod.content.decode("utf-8")
+    assert "Imágenes de producto" in cuerpo_prod
+    assert "Variantes de talla" in cuerpo_prod
+    assert "Reglas de precio por mayor" in cuerpo_prod
+    assert "/static/toltip.png" in cuerpo_prod
+    assert "Escalas de descuento por volumen" in cuerpo_prod
+
+    # 6. POS de venta presencial tiene 1 solo buscador, tooltips, reglas JSON por mayor y aplica 3+ en POST
+    ReglaPrecio.objects.get_or_create(
+        producto=var_s.producto,
+        cantidad_minima=3,
+        defaults={"precio_unidad": Decimal("50.00")},
+    )
+    var_s.refresh_from_db()
+    if var_s.cantidad_stock < 3:
+        var_s.cantidad_stock = 5
+        var_s.save(update_fields=["cantidad_stock"])
+
     resp_pos = http_client.get(reverse("admin:pedidos_pedido_venta_presencial"))
     assert resp_pos.status_code == 200
     cuerpo_pos = resp_pos.content.decode("utf-8")
     assert "input-busqueda-servidor" in cuerpo_pos
     assert "filtro-rapido-local" not in cuerpo_pos
     assert "/static/toltip.png" in cuerpo_pos
+    assert "pos-reglas-precio-data" in cuerpo_pos
+    assert "3+ u: S/ 50.00" in cuerpo_pos
+
+    resp_pos_post = http_client.post(
+        reverse("admin:pedidos_pedido_venta_presencial"),
+        {
+            "cliente_nombre": "Cliente Mayorista POS",
+            "metodo_pago": "YAPE",
+            "marcar_entregado": "1",
+            f"cant_{var_s.id}": "3",
+        },
+        follow=True,
+    )
+    assert resp_pos_post.status_code == 200
+    pedido_mayor = Pedido.objects.filter(cliente_nombre="Cliente Mayorista POS").latest("id")
+    assert pedido_mayor.total == Decimal("150.00")

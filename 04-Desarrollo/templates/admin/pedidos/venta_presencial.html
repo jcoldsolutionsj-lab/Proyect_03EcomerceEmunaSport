@@ -165,7 +165,16 @@
                   {{ var.sku }}
                 </td>
                 <td style="padding: 10px 12px; font-weight: 800; color: #15803D; text-align: right; font-family: monospace;">
-                  S/ {{ var.producto.precio_unidad|floatformat:2 }}
+                  <div>S/ {{ var.producto.precio_unidad|floatformat:2 }}</div>
+                  {% if var.producto.reglas_precio.all %}
+                    <div style="margin-top: 3px; font-size: 10px; color: #1E40AF; font-weight: 700; white-space: nowrap;">
+                      {% for regla in var.producto.reglas_precio.all %}
+                        <span style="display: inline-block; background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 3px; padding: 1px 5px; margin-left: 2px;">
+                          {{ regla.cantidad_minima }}+ u: S/ {{ regla.precio_unidad|floatformat:2 }}
+                        </span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
                 </td>
                 <td style="padding: 10px 12px; text-align: center;">
                   {% if var.cantidad_stock > 5 %}
@@ -193,10 +202,12 @@
                            max="{{ var.cantidad_stock }}" 
                            oninput="onInputCantidad({{ var.id }})" 
                            data-id="{{ var.id }}"
+                           data-producto-id="{{ var.producto_id }}"
                            data-nombre="{{ var.producto.nombre }}"
                            data-talla="{{ var.talla }}"
                            data-sku="{{ var.sku }}"
                            data-precio="{{ var.producto.precio_unidad|stringformat:'s' }}"
+                           data-precio-base="{{ var.producto.precio_unidad|stringformat:'s' }}"
                            data-stock-max="{{ var.cantidad_stock }}"
                            style="width: 55px; height: 32px; text-align: center; border: 1px solid #94A3B8; border-radius: 4px; font-weight: 800; font-size: 14px; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
                     <button type="button" onclick="ajustarCantidad({{ var.id }}, 1)" title="Sumar 1" style="width: 28px; height: 32px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: 900; font-size: 15px; cursor: pointer; color: #15803D;">+</button>
@@ -255,11 +266,15 @@
         </div>
         
         <!-- Indicadores Numéricos Grandes -->
-        <div style="display: flex; gap: 18px; align-items: center;">
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
           <div style="text-align: right; background: #F8FAFC; border: 1px solid #CBD5E1; padding: 8px 16px; border-radius: 4px;">
             <span style="display: block; font-size: 11px; text-transform: uppercase; color: #475569; font-weight: 800;">Total Prendas:</span>
             <strong id="kpi-total-prendas" style="font-size: 24px; font-weight: 900; color: #0F172A; font-family: monospace;">0</strong>
             <span style="font-size: 12px; color: #64748B; font-weight: 700;">unid.</span>
+          </div>
+          <div id="kpi-ahorro-card" style="display: none; text-align: right; background: #EFF6FF; border: 1px solid #93C5FD; padding: 8px 16px; border-radius: 4px;">
+            <span style="display: block; font-size: 11px; text-transform: uppercase; color: #1E40AF; font-weight: 800;">[AZUL] Ahorro x Mayor:</span>
+            <strong id="kpi-total-ahorro" style="font-size: 24px; font-weight: 900; color: #1D4ED8; font-family: monospace;">S/ 0.00</strong>
           </div>
           <div style="text-align: right; background: #DCFCE7; border: 1px solid #86EFAC; padding: 8px 18px; border-radius: 4px;">
             <span style="display: block; font-size: 11px; text-transform: uppercase; color: #166534; font-weight: 800;">Total a Cobrar:</span>
@@ -291,7 +306,7 @@
               </th>
               <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: right;">
                 P. Unitario
-                <img src="/static/toltip.png" alt="Ayuda" title="Precio unitario referencial en soles." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+                <img src="/static/toltip.png" alt="Ayuda" title="Precio unitario real aplicado. Si sumas 3+ o 6+ unidades de un mismo modelo (incluso mezclando tallas), se aplica automáticamente el precio por mayor." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
               </th>
               <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: right;">
                 Subtotal
@@ -331,10 +346,30 @@
   </form>
 </div>
 
-<!-- Lógica JavaScript de Totalizador, Persistencia de Páginas y Buscador Único -->
+<!-- Lógica JavaScript de Totalizador (con Tramos por Mayor), Persistencia de Páginas y Buscador Único -->
+{{ reglas_productos_map|json_script:"pos-reglas-precio-data" }}
 <script>
   const STORAGE_KEY = 'emuna_pos_carrito_v1';
+  const REGLAS_POR_PRODUCTO = JSON.parse(
+    document.getElementById('pos-reglas-precio-data')?.textContent || '{}'
+  );
   let carritoPOS = {};
+
+  function obtenerPrecioPorMayor(productoId, precioBase, totalUnidadesProducto) {
+    if (!productoId || totalUnidadesProducto <= 1) {
+      return precioBase;
+    }
+    const reglas = REGLAS_POR_PRODUCTO[String(productoId)] || [];
+    let mejorRegla = null;
+    for (const regla of reglas) {
+      if (regla.cantidad_minima <= totalUnidadesProducto) {
+        if (!mejorRegla || regla.cantidad_minima > mejorRegla.cantidad_minima) {
+          mejorRegla = regla;
+        }
+      }
+    }
+    return mejorRegla ? parseFloat(mejorRegla.precio_unidad) : precioBase;
+  }
 
   function cargarCarritoDesdeStorage() {
     try {
@@ -361,6 +396,11 @@
       const id = inp.dataset.id;
       if (id && carritoPOS[id]) {
         inp.value = carritoPOS[id].cantidad;
+        // Enriquecer con productoId / precioBase si provenía de una sesión anterior
+        carritoPOS[id].productoId = inp.dataset.productoId || carritoPOS[id].productoId;
+        carritoPOS[id].precioBase = parseFloat(
+          inp.dataset.precioBase || inp.dataset.precio || carritoPOS[id].precioBase || carritoPOS[id].precio || '0'
+        );
       }
     });
   }
@@ -402,13 +442,15 @@
         cant = maxStock;
         inp.value = cant;
       }
-      const precio = parseFloat(inp.dataset.precio || '0');
+      const precioBase = parseFloat(inp.dataset.precioBase || inp.dataset.precio || '0');
       carritoPOS[id] = {
         id: id,
+        productoId: inp.dataset.productoId || '',
         nombre: inp.dataset.nombre || 'Camiseta',
         talla: inp.dataset.talla || '',
         sku: inp.dataset.sku || '',
-        precio: precio,
+        precio: precioBase,
+        precioBase: precioBase,
         cantidad: cant,
         maxStock: maxStock,
       };
@@ -440,7 +482,17 @@
   function actualizarVistaTotalizador() {
     let totalPrendas = 0;
     let totalMonto = 0;
+    let totalAhorro = 0;
     const items = Object.values(carritoPOS);
+
+    // 1. Sumar cantidades por modelo (productoId) combinando tallas diferentes
+    const totalesPorProducto = {};
+    items.forEach(item => {
+      const pid = String(item.productoId || '');
+      if (pid) {
+        totalesPorProducto[pid] = (totalesPorProducto[pid] || 0) + item.cantidad;
+      }
+    });
 
     const tbody = document.getElementById('tbody-desglose-resumen');
     const tabla = document.getElementById('tabla-desglose-resumen');
@@ -459,8 +511,21 @@
 
       items.forEach(item => {
         totalPrendas += item.cantidad;
-        const subtotal = item.precio * item.cantidad;
+        const pid = String(item.productoId || '');
+        const precioBase = parseFloat(item.precioBase ?? item.precio ?? 0);
+        const totalModelo = pid ? (totalesPorProducto[pid] || item.cantidad) : item.cantidad;
+        const precioAplicado = obtenerPrecioPorMayor(pid, precioBase, totalModelo);
+        const tieneDescuento = precioAplicado < precioBase;
+        const subtotal = precioAplicado * item.cantidad;
+        const ahorroLinea = Math.max(0, (precioBase - precioAplicado) * item.cantidad);
         totalMonto += subtotal;
+        totalAhorro += ahorroLinea;
+
+        const htmlPrecioUnit = tieneDescuento
+          ? `<span style="text-decoration:line-through;color:#94A3B8;font-size:11px;display:block;">S/ ${precioBase.toFixed(2)}</span>
+             <strong style="color:#1D4ED8;">S/ ${precioAplicado.toFixed(2)}</strong>
+             <span style="display:inline-block;background:#DBEAFE;color:#1E40AF;border:1px solid #93C5FD;padding:1px 4px;border-radius:3px;font-size:9px;font-weight:800;">[POR MAYOR]</span>`
+          : `S/ ${precioAplicado.toFixed(2)}`;
 
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #E2E8F0';
@@ -475,7 +540,7 @@
             ${item.cantidad}
           </td>
           <td style="padding: 8px 10px; text-align: right; color: #475569; font-family: monospace;">
-            S/ ${item.precio.toFixed(2)}
+            ${htmlPrecioUnit}
           </td>
           <td style="padding: 8px 10px; text-align: right; font-weight: 800; color: #15803D; font-family: monospace;">
             S/ ${subtotal.toFixed(2)}
@@ -495,6 +560,12 @@
           inputsOcultos.appendChild(hInput);
         }
       });
+    }
+
+    const kpiAhorroCard = document.getElementById('kpi-ahorro-card');
+    if (kpiAhorroCard) {
+      kpiAhorroCard.style.display = totalAhorro > 0 ? 'block' : 'none';
+      document.getElementById('kpi-total-ahorro').innerText = 'S/ ' + totalAhorro.toFixed(2);
     }
 
     document.getElementById('kpi-total-prendas').innerText = totalPrendas;
