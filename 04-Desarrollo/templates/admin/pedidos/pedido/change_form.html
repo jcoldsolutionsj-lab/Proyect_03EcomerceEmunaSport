@@ -4,69 +4,97 @@
 {% block object-tools %}
   {{ block.super }}
   {% if change and original %}
-  <div id="panel-flujo-pedido" style="background: #0F172A; color: #F8FAFC; border: 1px solid #334155; border-left: 6px solid #10B981; border-radius: 8px; padding: 18px 20px; margin: 12px 0 22px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
-    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 14px;">
+  <div id="panel-flujo-pedido" style="background: #FFFFFF; color: #0F172A; border: 1px solid #CBD5E1; border-radius: 6px; margin: 12px 0 22px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+    
+    <!-- Cabecera Institucional Estilo Java JSP Enterprise -->
+    <div style="background: #1E293B; color: #FFFFFF; padding: 14px 20px; border-bottom: 2px solid #0F172A; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px;">
       <div>
-        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #94A3B8; font-weight: 700;">
-          Flujo de Gestión · Emuná Sport
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #94A3B8; font-weight: 800;">
+          Sistema de Gestión Operativa · Emuná Sport
         </div>
-        <h2 style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800; color: #FFFFFF; background: transparent; padding: 0;">
+        <h2 style="margin: 4px 0 0 0; font-size: 19px; font-weight: 800; color: #FFFFFF; background: transparent; padding: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
           Pedido {{ original.codigo }}
-          <span style="display: inline-block; margin-left: 8px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: #10B981; color: #052E16; font-weight: 800; vertical-align: middle;">
-            {{ original.get_estado_display }}
-          </span>
-          <span style="display: inline-block; margin-left: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: #1E293B; color: #E2E8F0; border: 1px solid #475569; vertical-align: middle;">
-            {{ original.get_tipo_entrega_display }}
+          
+          {% if original.estado == 'COTIZADO' %}
+            <span style="background: #FEF3C7; color: #92400E; border: 1px solid #F59E0B; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
+              🟡 [ÁMBAR] Cotizado (esperando pago o entrega)
+            </span>
+          {% elif original.estado == 'PAGADO' %}
+            <span style="background: #DCFCE7; color: #166534; border: 1px solid #22C55E; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
+              🟢 [VERDE] Pago Confirmado (preparar prendas)
+            </span>
+          {% elif original.estado == 'ENVIADO' %}
+            <span style="background: #DBEAFE; color: #1E40AF; border: 1px solid #3B82F6; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
+              🔵 [AZUL] En Camino (Guía y Clave registradas)
+            </span>
+          {% elif original.estado == 'ENTREGADO' %}
+            <span style="background: #DCFCE7; color: #14532D; border: 1px solid #16A34A; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
+              🟢 [VERDE] Entregado al Cliente
+            </span>
+          {% elif original.estado == 'CANCELADO' %}
+            <span style="background: #FEE2E2; color: #991B1B; border: 1px solid #EF4444; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
+              🔴 [ROJO] Cancelado
+            </span>
+          {% else %}
+            <span style="background: #F1F5F9; color: #334155; border: 1px solid #94A3B8; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
+              ⚪ [GRIS] {{ original.get_estado_display }}
+            </span>
+          {% endif %}
+
+          <span style="background: #0F172A; color: #E2E8F0; border: 1px solid #475569; padding: 3px 10px; font-size: 12px; font-weight: 600; border-radius: 4px;">
+            📍 {{ original.get_tipo_entrega_display }}
           </span>
         </h2>
         <div style="margin-top: 6px; font-size: 13px; color: #CBD5E1;">
           Subtotal camisetas: <strong>S/ {{ original.subtotal|floatformat:2 }}</strong> ·
-          Envío: <strong>{% if original.costo_envio is not None %}S/ {{ original.costo_envio|floatformat:2 }}{% else %}Por cotizar{% endif %}</strong> ·
-          Total actual: <strong style="color: #34D399; font-size: 15px;">S/ {{ original.total|floatformat:2 }}</strong>
+          Envío / Flete: <strong>{% if original.costo_envio is not None %}S/ {{ original.costo_envio|floatformat:2 }}{% else %}Por cotizar{% endif %}</strong> ·
+          Total a cobrar: <strong style="color: #4ADE80; font-size: 15px; font-family: monospace;">S/ {{ original.total|floatformat:2 }}</strong>
         </div>
       </div>
 
       <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-        <a href="{{ url_publica_pedido }}" target="_blank" style="background: #1E293B; color: #F8FAFC; border: 1px solid #475569; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 13px;">
-          🌐 Ver pedido público / PDF
+        <a href="{{ url_publica_pedido }}" target="_blank" style="background: #FFFFFF; color: #1E293B; border: 1px solid #CBD5E1; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: 700; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+          🌐 Ver comprobante público / PDF
         </a>
         {% if original.estado == 'COTIZADO' %}
-          <a href="{{ url_whatsapp_cotizado }}" target="_blank" style="background: #25D366; color: #FFFFFF; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 800; font-size: 13px;">
+          <a href="{{ url_whatsapp_cotizado }}" target="_blank" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; padding: 7px 14px; border-radius: 4px; text-decoration: none; font-weight: 800; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
             💬 Avisar Cotización por WhatsApp
           </a>
         {% elif original.estado == 'ENVIADO' %}
-          <a href="{{ url_whatsapp_enviado }}" target="_blank" style="background: #0284C7; color: #FFFFFF; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 800; font-size: 13px;">
+          <a href="{{ url_whatsapp_enviado }}" target="_blank" style="background: #1D4ED8; color: #FFFFFF; border: 1px solid #1E40AF; padding: 7px 14px; border-radius: 4px; text-decoration: none; font-weight: 800; font-size: 12px;">
             🚚 Enviar Guía y Clave por WhatsApp
           </a>
         {% elif original.tipo_entrega == 'PUNTO_ENCUENTRO' and original.estado == 'NUEVO' %}
-          <a href="{{ url_whatsapp_punto }}" target="_blank" style="background: #D97706; color: #FFFFFF; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 800; font-size: 13px;">
+          <a href="{{ url_whatsapp_punto }}" target="_blank" style="background: #D97706; color: #FFFFFF; border: 1px solid #B45309; padding: 7px 14px; border-radius: 4px; text-decoration: none; font-weight: 800; font-size: 12px;">
             📍 Coordinar Punto por WhatsApp
           </a>
         {% else %}
-          <a href="{{ url_whatsapp_general }}" target="_blank" style="background: #25D366; color: #FFFFFF; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 800; font-size: 13px;">
+          <a href="{{ url_whatsapp_general }}" target="_blank" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; padding: 7px 14px; border-radius: 4px; text-decoration: none; font-weight: 800; font-size: 12px;">
             💬 WhatsApp al cliente
           </a>
         {% endif %}
       </div>
     </div>
 
+    <!-- Cuerpo de Acciones Operativas -->
+    <div style="background: #F8FAFC; padding: 18px 20px;">
     {% if original.estado == 'NUEVO' %}
       <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between;">
-        <form method="post" action="{% url 'admin:pedidos_pedido_cotizar' original.pk %}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; flex: 1 1 520px; background: #1E293B; padding: 14px; border-radius: 6px; border: 1px solid #334155;">
+        <form method="post" action="{% url 'admin:pedidos_pedido_cotizar' original.pk %}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; flex: 1 1 520px; background: #FFFFFF; padding: 16px; border-radius: 4px; border: 1px solid #CBD5E1; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
           {% csrf_token %}
           <div>
-            <label for="id_cotizar_costo_envio" style="display: block; font-size: 12px; font-weight: 700; color: #A7F3D0; margin-bottom: 4px;">
+            <label for="id_cotizar_costo_envio" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 5px;">
               Paso 1 · Costo de envío (S/) *
             </label>
-            <input type="number" id="id_cotizar_costo_envio" name="costo_envio" step="0.01" min="0" required placeholder="Ej. 15.00" value="15.00" style="width: 130px; padding: 8px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF; font-weight: 700;">
+            <input type="number" id="id_cotizar_costo_envio" name="costo_envio" step="0.01" min="0" required placeholder="Ej. 15.00" value="15.00" style="width: 140px; height: 38px; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A; font-weight: 700; box-sizing: border-box;">
           </div>
           <div style="flex: 1 1 200px;">
-            <label for="id_cotizar_nota" style="display: block; font-size: 12px; font-weight: 700; color: #CBD5E1; margin-bottom: 4px;">
+            <label for="id_cotizar_nota" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 5px;">
               Nota interna (opcional)
             </label>
-            <input type="text" id="id_cotizar_nota" name="nota" placeholder="Ej. Cotizado por {{ original.get_agencia_display|default:'delivery' }}" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF;">
+            <input type="text" id="id_cotizar_nota" name="nota" placeholder="Ej. Cotizado por {{ original.get_agencia_display|default:'delivery' }}" style="width: 100%; height: 38px; box-sizing: border-box; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A;">
           </div>
-          <button type="submit" style="background: #10B981; color: #052E16; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 800; font-size: 13px; cursor: pointer;">
+          <button type="submit" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; height: 38px; padding: 0 18px; border-radius: 4px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
             💰 Cotizar envío (pasar a COTIZADO)
           </button>
         </form>
@@ -74,8 +102,8 @@
         <form method="post" action="{% url 'admin:pedidos_pedido_cancelar' original.pk %}" style="display: flex; gap: 8px; align-items: center;">
           {% csrf_token %}
           <input type="hidden" name="nota" value="Cancelado desde la ficha en estado NUEVO.">
-          <button type="submit" onclick="return confirm('¿Seguro que deseas cancelar este pedido?');" style="background: #7F1D1D; color: #FECACA; border: 1px solid #EF4444; padding: 9px 14px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;">
-            ❌ Cancelar pedido
+          <button type="submit" onclick="return confirm('¿Seguro que deseas cancelar este pedido?');" style="background: #FFFFFF; color: #DC2626; border: 1px solid #EF4444; height: 38px; padding: 0 16px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
+            ✕ Cancelar pedido
           </button>
         </form>
       </div>
@@ -83,104 +111,104 @@
     {% elif original.estado == 'COTIZADO' %}
       <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; justify-content: space-between;">
         {% if original.tipo_entrega == 'PUNTO_ENCUENTRO' or original.tipo_entrega == 'RECOJO' %}
-          <form method="post" action="{% url 'admin:pedidos_pedido_confirmar_y_entregar' original.pk %}" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; background: #064E3B; padding: 14px; border-radius: 6px; border: 1px solid #10B981; flex: 1 1 420px;">
+          <form method="post" action="{% url 'admin:pedidos_pedido_confirmar_y_entregar' original.pk %}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; background: #FFFFFF; padding: 16px; border-radius: 4px; border: 1px solid #CBD5E1; border-top: 3px solid #15803D; flex: 1 1 440px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
             {% csrf_token %}
-            <div>
-              <label for="id_pago_rapido_metodo" style="display: block; font-size: 12px; font-weight: 700; color: #A7F3D0; margin-bottom: 4px;">
+            <div style="flex: 1 1 200px;">
+              <label for="id_pago_rapido_metodo" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #166534; margin-bottom: 5px;">
                 Método cobrado en Lima *
               </label>
-              <select id="id_pago_rapido_metodo" name="metodo_pago" style="padding: 8px 10px; border-radius: 5px; border: 1px solid #34D399; background: #0F172A; color: #FFFFFF; font-weight: 600;">
+              <select id="id_pago_rapido_metodo" name="metodo_pago" style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background-color: #FFFFFF !important; color: #0F172A !important; font-weight: 700; font-size: 13px; box-sizing: border-box;">
                 {% for cod, etiq in metodos_pago_choices %}
                   <option value="{{ cod }}">{{ etiq }}</option>
                 {% endfor %}
               </select>
             </div>
-            <button type="submit" style="background: #39FF14; color: #052E16; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 800; font-size: 13px; cursor: pointer;">
-              ⚡ Confirmar Pago y Entregar en 1 Paso (Descuenta Stock)
+            <button type="submit" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; height: 38px; padding: 0 18px; border-radius: 4px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+              ✓ Confirmar Pago y Entregar en 1 Paso (Descuenta Stock)
             </button>
           </form>
         {% endif %}
 
-        <form method="post" action="{% url 'admin:pedidos_pedido_confirmar_pago' original.pk %}" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; background: #1E293B; padding: 14px; border-radius: 6px; border: 1px solid #334155; flex: 1 1 380px;">
+        <form method="post" action="{% url 'admin:pedidos_pedido_confirmar_pago' original.pk %}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; background: #FFFFFF; padding: 16px; border-radius: 4px; border: 1px solid #CBD5E1; border-top: 3px solid #2563EB; flex: 1 1 400px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
           {% csrf_token %}
-          <div>
-            <label for="id_pago_metodo" style="display: block; font-size: 12px; font-weight: 700; color: #C4B5FD; margin-bottom: 4px;">
-              Paso 2 · Pago verificado *
+          <div style="flex: 1 1 160px;">
+            <label for="id_pago_metodo" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #1E40AF; margin-bottom: 5px;">
+              Paso 2 · Método Verificado *
             </label>
-            <select id="id_pago_metodo" name="metodo_pago" style="padding: 8px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF; font-weight: 600;">
+            <select id="id_pago_metodo" name="metodo_pago" style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background-color: #FFFFFF !important; color: #0F172A !important; font-weight: 700; font-size: 13px; box-sizing: border-box;">
               {% for cod, etiq in metodos_pago_choices %}
                 <option value="{{ cod }}">{{ etiq }}</option>
               {% endfor %}
             </select>
           </div>
           <div style="flex: 1 1 150px;">
-            <label for="id_pago_nota" style="display: block; font-size: 12px; font-weight: 700; color: #CBD5E1; margin-bottom: 4px;">
+            <label for="id_pago_nota" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 5px;">
               Referencia / Nota
             </label>
-            <input type="text" id="id_pago_nota" name="nota" placeholder="Ej. Yape confirmado" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF;">
+            <input type="text" id="id_pago_nota" name="nota" placeholder="Ej. Yape confirmado" style="width: 100%; height: 38px; box-sizing: border-box; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A;">
           </div>
-          <button type="submit" style="background: #8B5CF6; color: #FFFFFF; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 800; font-size: 13px; cursor: pointer;">
-            🟣 Confirmar Pago (COTIZADO → PAGADO)
+          <button type="submit" style="background: #2563EB; color: #FFFFFF; border: 1px solid #1D4ED8; height: 38px; padding: 0 18px; border-radius: 4px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+            ✓ Confirmar Pago (COTIZADO → PAGADO)
           </button>
         </form>
 
         <form method="post" action="{% url 'admin:pedidos_pedido_cancelar' original.pk %}" style="display: flex; gap: 8px; align-items: center;">
           {% csrf_token %}
           <input type="hidden" name="nota" value="Cancelado desde la ficha en estado COTIZADO.">
-          <button type="submit" onclick="return confirm('¿Seguro que deseas cancelar este pedido?');" style="background: #7F1D1D; color: #FECACA; border: 1px solid #EF4444; padding: 9px 14px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;">
-            ❌ Cancelar
+          <button type="submit" onclick="return confirm('¿Seguro que deseas cancelar este pedido?');" style="background: #FFFFFF; color: #DC2626; border: 1px solid #EF4444; height: 38px; padding: 0 14px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
+            ✕ Cancelar
           </button>
         </form>
       </div>
 
     {% elif original.estado == 'PAGADO' %}
       {% if original.tipo_entrega == 'AGENCIA' %}
-        <form method="post" enctype="multipart/form-data" action="{% url 'admin:pedidos_pedido_registrar_envio' original.pk %}" style="background: #1E293B; padding: 16px; border-radius: 6px; border: 1px solid #0284C7; margin-bottom: 12px;">
+        <form method="post" enctype="multipart/form-data" action="{% url 'admin:pedidos_pedido_registrar_envio' original.pk %}" style="background: #FFFFFF; padding: 18px; border-radius: 4px; border: 1px solid #CBD5E1; border-top: 3px solid #0284C7; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
           {% csrf_token %}
-          <div style="font-size: 13px; font-weight: 800; color: #38BDF8; margin-bottom: 12px;">
+          <div style="font-size: 13px; font-weight: 800; color: #0369A1; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.04em;">
             Paso 3 · Registrar Despacho en Agencia (PAGADO → ENVIADO)
           </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 12px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px;">
             <div>
-              <label for="id_env_agencia" style="display: block; font-size: 12px; font-weight: 700; color: #CBD5E1; margin-bottom: 4px;">Agencia *</label>
-              <select id="id_env_agencia" name="agencia" style="width: 100%; padding: 7px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF;">
+              <label for="id_env_agencia" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 5px;">Agencia *</label>
+              <select id="id_env_agencia" name="agencia" style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background-color: #FFFFFF !important; color: #0F172A !important; font-weight: 600; font-size: 13px; box-sizing: border-box;">
                 {% for cod, etiq in agencias_choices %}
                   <option value="{{ cod }}" {% if original.agencia == cod %}selected{% endif %}>{{ etiq }}</option>
                 {% endfor %}
               </select>
             </div>
             <div>
-              <label for="id_env_orden" style="display: block; font-size: 12px; font-weight: 700; color: #CBD5E1; margin-bottom: 4px;">N° Orden / Guía *</label>
-              <input type="text" id="id_env_orden" name="numero_orden_agencia" required maxlength="30" placeholder="Ej. SHA-0019283" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF;">
+              <label for="id_env_orden" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 5px;">N° Orden / Guía *</label>
+              <input type="text" id="id_env_orden" name="numero_orden_agencia" required maxlength="30" placeholder="Ej. SHA-0019283" style="width: 100%; height: 38px; box-sizing: border-box; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A; font-weight: 600;">
             </div>
             <div>
-              <label for="id_env_clave" style="display: block; font-size: 12px; font-weight: 700; color: #FDE68A; margin-bottom: 4px;">Clave recojo (4 dígitos) *</label>
-              <input type="text" id="id_env_clave" name="clave_recojo" required maxlength="4" minlength="4" pattern="[0-9]{4}" placeholder="Ej. 4821" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF; font-family: monospace; font-weight: 800;">
+              <label for="id_env_clave" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #92400E; margin-bottom: 5px;">Clave recojo (4 dígitos) *</label>
+              <input type="text" id="id_env_clave" name="clave_recojo" required maxlength="4" minlength="4" pattern="[0-9]{4}" placeholder="Ej. 4821" style="width: 100%; height: 38px; box-sizing: border-box; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A; font-family: monospace; font-weight: 800;">
             </div>
             <div>
-              <label for="id_env_flete" style="display: block; font-size: 12px; font-weight: 700; color: #CBD5E1; margin-bottom: 4px;">Costo flete real (S/) *</label>
-              <input type="number" id="id_env_flete" name="costo_flete" required step="0.01" min="0" value="{{ costo_envio_dot }}" style="width: 100%; box-sizing: border-box; padding: 7px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF;">
+              <label for="id_env_flete" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 5px;">Costo flete real (S/) *</label>
+              <input type="number" id="id_env_flete" name="costo_flete" required step="0.01" min="0" value="{{ costo_envio_dot }}" style="width: 100%; height: 38px; box-sizing: border-box; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A; font-weight: 600;">
             </div>
             <div>
-              <label for="id_env_quien" style="display: block; font-size: 12px; font-weight: 700; color: #CBD5E1; margin-bottom: 4px;">¿Quién paga el flete? *</label>
-              <select id="id_env_quien" name="quien_paga" style="width: 100%; padding: 7px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF;">
+              <label for="id_env_quien" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 5px;">¿Quién paga el flete? *</label>
+              <select id="id_env_quien" name="quien_paga" style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background-color: #FFFFFF !important; color: #0F172A !important; font-weight: 600; font-size: 13px; box-sizing: border-box;">
                 {% for cod, etiq in quien_paga_choices %}
                   <option value="{{ cod }}">{{ etiq }}</option>
                 {% endfor %}
               </select>
             </div>
             <div>
-              <label for="id_env_boleta" style="display: block; font-size: 12px; font-weight: 700; color: #A7F3D0; margin-bottom: 4px;">Foto/PDF boleta (privada) *</label>
-              <input type="file" id="id_env_boleta" name="imagen_boleta" required accept="image/*,.pdf" style="width: 100%; color: #E2E8F0; font-size: 12px;">
+              <label for="id_env_boleta" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #15803D; margin-bottom: 5px;">Foto/PDF boleta (privada) *</label>
+              <input type="file" id="id_env_boleta" name="imagen_boleta" required accept="image/*,.pdf" style="width: 100%; height: 38px; padding: 4px 6px; border: 1px solid #94A3B8; border-radius: 4px; background: #FFFFFF; color: #0F172A; font-size: 12px; box-sizing: border-box;">
             </div>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-            <label style="display: flex; align-items: center; gap: 6px; color: #CBD5E1; font-size: 12px; cursor: pointer;">
-              <input type="checkbox" name="cobrado" value="1" checked style="accent-color: #10B981;">
-              Flete ya incluido / cobrado al cliente
+            <label style="display: flex; align-items: center; gap: 6px; color: #334155; font-size: 12px; font-weight: 600; cursor: pointer;">
+              <input type="checkbox" name="cobrado" value="1" checked style="accent-color: #15803D;">
+              Flete ya cobrado al cliente
             </label>
-            <input type="text" name="notas" placeholder="Observaciones de despacho (opcional)" style="flex: 1 1 220px; padding: 7px 10px; border-radius: 5px; border: 1px solid #475569; background: #0F172A; color: #FFFFFF;">
-            <button type="submit" style="background: #0284C7; color: #FFFFFF; border: none; padding: 9px 18px; border-radius: 6px; font-weight: 800; font-size: 13px; cursor: pointer;">
+            <input type="text" name="notas" placeholder="Observaciones de despacho (opcional)" style="flex: 1 1 220px; height: 38px; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
+            <button type="submit" style="background: #0284C7; color: #FFFFFF; border: 1px solid #0369A1; height: 38px; padding: 0 18px; border-radius: 4px; font-weight: 800; font-size: 13px; cursor: pointer;">
               🚚 Registrar Envío y pasar a ENVIADO
             </button>
           </div>
@@ -191,7 +219,7 @@
         {% if original.tipo_entrega != 'AGENCIA' %}
           <form method="post" action="{% url 'admin:pedidos_pedido_marcar_entregado' original.pk %}">
             {% csrf_token %}
-            <button type="submit" style="background: #10B981; color: #052E16; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 800; font-size: 13px; cursor: pointer;">
+            <button type="submit" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; height: 38px; padding: 0 16px; border-radius: 4px; font-weight: 800; font-size: 13px; cursor: pointer;">
               📦 Marcar como ENTREGADO al cliente
             </button>
           </form>
@@ -199,21 +227,21 @@
         <form method="post" action="{% url 'admin:pedidos_pedido_cancelar' original.pk %}">
           {% csrf_token %}
           <input type="hidden" name="nota" value="Cancelado desde la ficha en estado PAGADO (stock repuesto).">
-          <button type="submit" onclick="return confirm('Este pedido ya está PAGADO. Al cancelar se repondrá automáticamente el stock al inventario. ¿Continuar?');" style="background: #7F1D1D; color: #FECACA; border: 1px solid #EF4444; padding: 9px 14px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;">
-            ❌ Cancelar pedido y reponer stock
+          <button type="submit" onclick="return confirm('Este pedido ya está PAGADO. Al cancelar se repondrá automáticamente el stock al inventario. ¿Continuar?');" style="background: #FFFFFF; color: #DC2626; border: 1px solid #EF4444; height: 38px; padding: 0 14px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
+            ✕ Cancelar pedido y reponer stock
           </button>
         </form>
       </div>
 
     {% elif original.estado == 'ENVIADO' %}
       <div style="display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: center;">
-        <div style="background: #1E293B; padding: 12px 16px; border-radius: 6px; border: 1px solid #334155; font-size: 13px;">
+        <div style="background: #FFFFFF; padding: 12px 16px; border-radius: 4px; border: 1px solid #CBD5E1; font-size: 13px; color: #1E293B; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
           {% if envio_actual %}
             <strong>Despacho registrado:</strong> {{ envio_actual.get_agencia_display }} ·
             Orden <strong>{{ envio_actual.numero_orden_agencia }}</strong> ·
-            Clave secreta: <strong style="color: #FDE68A; font-family: monospace;">{{ envio_actual.clave_recojo }}</strong>
+            Clave secreta: <strong style="color: #92400E; font-family: monospace; font-size: 14px;">{{ envio_actual.clave_recojo }}</strong>
             {% if url_boleta_privada %}
-              · <a href="{{ url_boleta_privada }}" target="_blank" style="color: #34D399; font-weight: 700; text-decoration: underline;">📄 Ver Boleta Privada</a>
+              · <a href="{{ url_boleta_privada }}" target="_blank" style="color: #15803D; font-weight: 700; text-decoration: underline;">📄 Ver Boleta Privada</a>
             {% endif %}
           {% endif %}
         </div>
@@ -221,17 +249,17 @@
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
           <form method="post" action="{% url 'admin:pedidos_pedido_marcar_entregado' original.pk %}">
             {% csrf_token %}
-            <button type="submit" style="background: #10B981; color: #052E16; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 800; font-size: 13px; cursor: pointer;">
+            <button type="submit" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; height: 38px; padding: 0 16px; border-radius: 4px; font-weight: 800; font-size: 13px; cursor: pointer;">
               📦 Confirmar Recojo / Marcar ENTREGADO
             </button>
           </form>
           <form method="post" action="{% url 'admin:pedidos_pedido_cancelar' original.pk %}" style="display: flex; gap: 8px; align-items: center;">
             {% csrf_token %}
-            <label style="color: #FECACA; font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
-              <input type="checkbox" name="devolucion_fisica" value="1" required style="accent-color: #EF4444;">
+            <label style="color: #991B1B; font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer; font-weight: 600;">
+              <input type="checkbox" name="devolucion_fisica" value="1" required style="accent-color: #DC2626;">
               Devolución física recibida
             </label>
-            <button type="submit" onclick="return confirm('Se cancelará el envío y se repondrá el stock por devolución física. ¿Continuar?');" style="background: #7F1D1D; color: #FECACA; border: 1px solid #EF4444; padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer;">
+            <button type="submit" onclick="return confirm('Se cancelará el envío y se repondrá el stock por devolución física. ¿Continuar?');" style="background: #FFFFFF; color: #DC2626; border: 1px solid #EF4444; height: 38px; padding: 0 12px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
               ↩️ Cancelar con devolución
             </button>
           </form>
@@ -239,10 +267,11 @@
       </div>
 
     {% else %}
-      <div style="background: #1E293B; padding: 10px 14px; border-radius: 6px; border: 1px solid #334155; font-size: 13px; color: #CBD5E1;">
+      <div style="background: #FFFFFF; padding: 12px 16px; border-radius: 4px; border: 1px solid #CBD5E1; font-size: 13px; color: #334155;">
         ✅ Ciclo de este pedido cerrado en estado <strong>{{ original.get_estado_display }}</strong>. Toda la trazabilidad y movimientos de stock quedaron guardados abajo.
       </div>
     {% endif %}
+    </div>
   </div>
   {% endif %}
 {% endblock %}

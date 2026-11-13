@@ -5,7 +5,8 @@ from typing import Any
 from django.conf import settings
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
-from django.db.models import QuerySet
+from django.core.paginator import Paginator
+from django.db.models import Q, QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import path, reverse
@@ -1047,17 +1048,37 @@ class PedidoAdmin(SimpleHistoryAdmin):
     def vista_venta_presencial(self, request: HttpRequest) -> HttpResponse:
         """Renderiza y procesa el formulario de venta presencial directa en mostrador (Flujo C).
 
-        Qué hace:      Permite a Richard seleccionar prendas, cobrar en efectivo/Yape y descontar stock.
+        Qué hace:      Permite a Richard buscar por palabras, paginar variantes y registrar ventas POS.
         Va hacia:      Crea Pedido con origen PRESENCIAL y redirige al detalle en el admin.
-        Depende de:    registrar_venta_presencial y Variante.
+        Depende de:    registrar_venta_presencial, Paginator y Variante.
         Cuándo usarla: Al pulsar el botón '+ Registrar Venta Presencial' en la cabecera de pedidos.
         Si no opera:   Muestra alertas de validación o stock insuficiente sin perder los datos ingresados.
         """
-        variantes = (
-            Variante.objects.select_related("producto")
+        variantes_qs = (
+            Variante.objects.select_related("producto", "producto__categoria")
             .filter(activa=True, producto__activo=True, cantidad_stock__gt=0)
             .order_by("producto__nombre", "talla")
         )
+
+        busqueda = request.GET.get("q", "").strip()
+        if busqueda:
+            palabras = busqueda.split()
+            filtro = Q()
+            for p in palabras:
+                filtro &= (
+                    Q(producto__nombre__icontains=p)
+                    | Q(sku__icontains=p)
+                    | Q(talla__icontains=p)
+                    | Q(color__icontains=p)
+                    | Q(producto__categoria__nombre__icontains=p)
+                )
+            variantes_qs = variantes_qs.filter(filtro)
+
+        # Paginación enterprise: 15 variantes por página para proteger memoria y base de datos
+        paginador = Paginator(variantes_qs, 15)
+        numero_pagina = request.GET.get("page", 1)
+        pagina_obj = paginador.get_page(numero_pagina)
+
         form_error = ""
 
         if request.method == "POST":
@@ -1068,15 +1089,16 @@ class PedidoAdmin(SimpleHistoryAdmin):
             notas = request.POST.get("notas", "").strip()
 
             lineas: list[dict[str, Any]] = []
-            for var in variantes:
-                campo_cant = f"cant_{var.id}"
-                cant_str = request.POST.get(campo_cant, "0").strip()
-                try:
-                    cant = int(cant_str)
-                    if cant > 0:
-                        lineas.append({"variante_id": var.id, "cantidad": cant})
-                except ValueError:
-                    continue
+            for clave, valor in request.POST.items():
+                if clave.startswith("cant_"):
+                    var_id_str = clave[5:]
+                    try:
+                        var_id = int(var_id_str)
+                        cant = int(str(valor).strip())
+                        if cant > 0:
+                            lineas.append({"variante_id": var_id, "cantidad": cant})
+                    except (ValueError, TypeError):
+                        continue
 
             if not lineas:
                 form_error = "Debes ingresar al menos una camiseta con cantidad mayor a 0."
@@ -1104,7 +1126,11 @@ class PedidoAdmin(SimpleHistoryAdmin):
         contexto = {
             **self.admin_site.each_context(request),
             "title": "Registrar Venta Presencial (POS Directo)",
-            "variantes": variantes,
+            "variantes": pagina_obj.object_list,
+            "pagina_obj": pagina_obj,
+            "paginador": paginador,
+            "busqueda": busqueda,
+            "total_disponibles": paginador.count,
             "form_error": form_error,
             "post_data": request.POST if request.method == "POST" else None,
         }

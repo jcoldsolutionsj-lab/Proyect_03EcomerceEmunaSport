@@ -570,10 +570,17 @@ def test_vista_admin_venta_presencial_pos(datos_base: dict) -> None:
     http_client.force_login(richard)
     url_pos = reverse("admin:pedidos_pedido_venta_presencial")
 
-    # 1. GET renderiza formulario con variantes disponibles
+    # 1. GET renderiza formulario con variantes disponibles, paginación y búsqueda
     resp_get = http_client.get(url_pos)
     assert resp_get.status_code == 200
     assert "Registrar Venta Presencial" in resp_get.content.decode("utf-8")
+    assert resp_get.context["pagina_obj"] is not None
+    assert "modulo-totalizador-venta" in resp_get.content.decode("utf-8")
+
+    # 1.1 GET con búsqueda indexada por palabras
+    resp_busq = http_client.get(url_pos + "?q=Argentina+Messi")
+    assert resp_busq.status_code == 200
+    assert "ARGENTINA X MESSI" in resp_busq.content.decode("utf-8")
 
     # 2. POST sin cantidades seleccionadas -> Muestra error sin guardar
     resp_post_vacio = http_client.post(
