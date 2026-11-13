@@ -862,14 +862,19 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
         reverse("admin:index"),
         reverse("admin:app_list", kwargs={"app_label": "catalogo"}),
         reverse("admin:app_list", kwargs={"app_label": "pedidos"}),
+        reverse("admin:catalogo_categoria_changelist"),
+        reverse("admin:catalogo_variante_changelist"),
+        reverse("admin:pedidos_pedido_changelist"),
         reverse("admin:pedidos_pedido_change", args=[pedido.pk]),
         reverse("admin:catalogo_variante_change", args=[var_s.pk]),
     ):
         resp_g = http_client.get(ruta_gestion)
         assert resp_g.status_code == 200
         html_g = resp_g.content.decode("utf-8")
-        assert "emuna-mobile-quicknav" in html_g
+        assert '<nav class="emuna-mobile-quicknav"' in html_g
         assert "emuna-touch-tooltip" in html_g
+        assert "clear: both !important" in html_g
+        assert "#tabla-variantes-pos" in html_g
         assert "@media (max-width: 767px)" in html_g
 
     # Login de /gestion/ sin usuario autenticado omite quicknav y mantiene soporte móvil

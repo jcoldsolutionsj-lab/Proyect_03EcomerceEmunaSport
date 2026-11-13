@@ -2,8 +2,8 @@
 
 > La IA lee este archivo al empezar cada sesión y lo actualiza al terminar. Mantenerlo corto.
 
-**Última actualización:** 2026-11-11
-**Fase actual:** **Fase 3 completada y verificada al 100%** en la rama `feature/fase-3-gestion-pedidos-stock` (`29 passed` en `pytest`, 0 errores en `ruff`, diccionario de datos validado al 100% con 13 tablas y 134 columnas). Se implementaron el control atómico de stock anti-deadlock con `select_for_update()`, la bitácora inmutable de auditoría de inventario (`TBL_TMOVIMIENTO_STOCK`), la tabla de envíos por agencia con clave de 4 dígitos y boleta privada (`TBL_TENVIO`), la máquina de transiciones de estado del pedido, el panel de administración personalizado para Richard con acciones rápidas, botón WhatsApp inteligente de notificación al cliente y la interfaz POS para registrar ventas presenciales en mostrador (Flujo C). Listo para commit y merge a `develop`.
+**Última actualización:** 2026-11-12
+**Fase actual:** **Fase 3 completada, aprobada y fusionada en `develop`** (`29 passed` en `pytest`, 0 errores en `ruff`, diccionario de datos validado al 100% con 13 tablas y 134 columnas). Se cerró el control atómico de stock, bitácora inmutable `TBL_TMOVIMIENTO_STOCK`, envíos privados `TBL_TENVIO`, seguimiento en vivo `/pedidos/<codigo>/estado-json/` con notificaciones y modal emergente, diseño Enterprise Java/JSP claro con tooltips `toltip.png` táctiles, POS presencial con descuento por mayor en vivo y paginación/buscador indexado, además de diseño 100% responsivo para móvil y tablet en `/gestion/` (`360px` verificado sin desbordes horizontales). Lista para iniciar la **Fase 4: Tablero y alertas**.
 
 ## Dónde quedamos
 - Documentos **01 al 15** completos y alineados; copia intacta de los originales en `01-Relevamiento/fuentes/documentos-originales/`.
@@ -15,7 +15,7 @@
 - **Fase 2 completada y fusionada en `develop` (`ff4f8ef`):**
   - App `pedidos`: modelos `Pedido`, `ItemPedido`, `RegistroEstadoPedido` (`TBL_LPEDIDO_ESTADO`, inmutable) e `HistorialPedido`.
   - Carrito HTMX en sesión con cálculo de precio por mayor unificado entre tallas `S/M/L/XL`, checkout con 4 modalidades, logos oficiales de Shalom y Olva Courier, comprobante PDF ReportLab con logo dinámico y QR oficial de Yape de Richard, y enlace dinámico de WhatsApp con desglose de prendas.
-- **Fase 3 completada y probada al 100% (`feature/fase-3-gestion-pedidos-stock`):**
+- **Fase 3 completada, probada al 100% y fusionada en `develop` (`feature/fase-3-gestion-pedidos-stock`):**
   - **Inventario inmutable:** `MovimientoStock` (`TBL_TMOVIMIENTO_STOCK`) con bloqueo en `save()` y `delete()`, constraint `MOV_NCANTIDAD <> 0` e índice por variante y fecha de creación.
   - **Despacho por agencia:** `Envio` (`TBL_TENVIO`) con relación 1 a 1 con Pedido, número de guía/orden, clave de recojo privada de 4 dígitos, foto de boleta privada con vista autenticada (`/pedidos/envio/<id>/boleta/`), flete y quién paga.
   - **Servicios del corazón del negocio:**
@@ -37,11 +37,11 @@
   - Script k6 `escenarios-base.js` actualizado con el modo `concurrencia_stock` listo para ejecutar contra PostgreSQL en Render (Fase 5).
 
 ## En curso
-- Revisión de la **Fase 3** por parte de Jonathan en `feature/fase-3-gestion-pedidos-stock` antes de fusionar a `develop`.
+- Revisión y aprobación del plan de la **Fase 4: Tablero y alertas** con Jonathan antes de crear su rama de desarrollo.
 
 ## Siguiente paso
-1. Fusionar `feature/fase-3-gestion-pedidos-stock` a `develop`.
-2. Iniciar la **Fase 4: Panel visual de Richard con métricas y alertas de stock bajo**.
+1. Esperar aprobación de Jonathan sobre el plan de la **Fase 4 (Tablero y alertas)**.
+2. Crear `feature/fase-4-tablero-alertas` desde `develop` e implementar el tablero operativo con métricas, alertas y exportación CSV.
 
 ## Bloqueos y pendientes con Richard
 Ver los 7 puntos de negocio en `00-Gestion/11-decisiones-cambios.md`.

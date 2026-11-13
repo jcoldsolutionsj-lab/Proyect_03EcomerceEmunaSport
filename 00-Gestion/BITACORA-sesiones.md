@@ -2,6 +2,16 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-12 (Cierre Fase 3) – Rediseño móvil integral en `/gestion/`, pulido Java/JSP, POS mayorista y merge a `develop`
+- **Hecho:**
+  - Se optimizó el seguimiento en vivo de clientes con popup modal de activación de avisos, botón animado de campana e ícono formal `toltip.png` en todos los encabezados, inlines (`Variantes de talla`, `Reglas de precio por mayor`, `Imágenes de producto`) y tablas administrativas.
+  - Se implementó el cálculo en vivo de reglas de precio por mayor por producto en el POS presencial (`/gestion/pedidos/pedido/venta-presencial/`), buscador único indexado por palabras, totalizador de prendas, paginación (`15` por página) y paginación uniforme en módulos del Admin (`15` / `20` ítems).
+  - Se aplicó el diseño serio Enterprise Java/JSP claro con escala `zoom: 0.85` en escritorio y `zoom: 1` en tablet/móvil (`<= 1024 px`), forzando variables claras ante dispositivos con modo oscuro para preservar legibilidad y contraste.
+  - Se resolvió el diseño móvil completo de `/gestion/` (inicio, changelists de categorías/variantes/pedidos/kardex, formularios e inlines y tarjetas táctiles en POS) moviendo la barra rápida `.emuna-mobile-quicknav` a `{% block header %}`, corrigiendo `clear: both` de `#content-related` y ajustando `overflow-x: clip` + scroll horizontal en tablas e inlines (`scrollWidth === 360px` en vista `360x740` verificado visualmente).
+  - Verificación completa: `ruff check 04-Desarrollo` con **0 errores** y `pytest` con **29 pruebas pasando al 100%**, más actualización documental y merge final a `develop`.
+- **Decidido:** cerrar **Fase 3** en `develop` y presentar a Jonathan el plan detallado de **Fase 4 – Tablero y alertas** antes de codificar.
+- **Queda:** aprobación de Jonathan del plan de Fase 4 para crear la rama `feature/fase-4-tablero-alertas` e iniciar implementación.
+
 ## 2026-11-12 – Seguimiento en vivo, bloque contextual por estado y tooltips admin en Fase 3
 - **Hecho:**
   - Se añadió actualización automática en vivo en `/pedidos/<codigo>/` mediante endpoint JSON ligero (`/pedidos/<codigo>/estado-json/`) y parcial HTMX/fetch (`parcial_seguimiento_pedido.html`): si Richard cambia el estado o cotiza el flete, la pestaña del cliente se actualiza sola cada 15 s, muestra un aviso visual en pantalla, parpadea el título de la pestaña, vibra en móvil y dispara notificaciones nativas del navegador (con permiso del usuario).
