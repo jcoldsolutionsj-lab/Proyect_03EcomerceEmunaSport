@@ -2,8 +2,8 @@
 
 > La IA lee este archivo al empezar cada sesión y lo actualiza al terminar. Mantenerlo corto.
 
-**Última actualización:** 2026-11-10
-**Fase actual:** **Fase 2 completada y verificada al 100%** en `feature/fase-2-carrito-pedido-whatsapp` (`18 passed` en `pytest`, 0 errores en `ruff`, diccionario de datos validado con 13 tablas y 134 columnas). Se incorporaron los logos oficiales de Shalom y Olva Courier en la selección de agencia en checkout, enlace inteligente de WhatsApp con desglose de camisetas y tallas en carrito/checkout, incrustación de logos en el comprobante PDF, QR de Yape oficial y notas de entrega. Listo para commit/merge a `develop` e iniciar la **Fase 3 (Panel de Richard, transiciones de estado y descuento atómico de stock)**.
+**Última actualización:** 2026-11-12
+**Fase actual:** **Fase 3 completada, aprobada y fusionada en `develop`** (`29 passed` en `pytest`, 0 errores en `ruff`, diccionario de datos validado al 100% con 13 tablas y 134 columnas). Se cerró el control atómico de stock, bitácora inmutable `TBL_TMOVIMIENTO_STOCK`, envíos privados `TBL_TENVIO`, seguimiento en vivo `/pedidos/<codigo>/estado-json/` con notificaciones y modal emergente, diseño Enterprise Java/JSP claro con tooltips `toltip.png` táctiles, POS presencial con descuento por mayor en vivo y paginación/buscador indexado, además de diseño 100% responsivo para móvil y tablet en `/gestion/` (`360px` verificado sin desbordes horizontales). Lista para iniciar la **Fase 4: Tablero y alertas**.
 
 ## Dónde quedamos
 - Documentos **01 al 15** completos y alineados; copia intacta de los originales en `01-Relevamiento/fuentes/documentos-originales/`.
@@ -11,22 +11,41 @@
 - **Fase 0 completada y fusionada en `develop` (`bae4844`):**
   - App `nucleo` (`TBL_RCONFIGURACION_TIENDA`, `TBL_RMETODO_PAGO`), `preparar_local`, grupo `Dueño`, sanitización anti-XSS y validadores de DNI/celular peruano.
 - **Fase 1 completada y fusionada en `develop` (`e1492aa`):**
-  - App `catalogo` (`TBL_RCATEGORIA`, `TBL_RPRODUCTO`, `TBL_RIMAGEN_PRODUCTO`, `TBL_RVARIANTE`, `TBL_RREGLA_PRECIO`), procesamiento WebP (400 px y 900 px), `cargar_demo` con «ARGENTINA X MESSI #10», carrusel de 3 videos 16:9 a `0.72x` con efecto máquina de escribir, lupa zoom 2.2x en ficha, widget flotante de WhatsApp con 2 saltos pin-pon + radar verde + badge `(1)`, QA móvil/desktop y SEO completo.
-- **Fase 2 implementada y probada en `04-Desarrollo/` (`feature/fase-2-carrito-pedido-whatsapp`):**
-  - App `pedidos`: modelos `Pedido` (`TBL_TPEDIDO`), `ItemPedido` (`TBL_TPEDIDO_ITEM`), `RegistroEstadoPedido` (`TBL_LPEDIDO_ESTADO`, inmutable) e `HistorialPedido` (`TBL_HPEDIDO` con `django-simple-history`).
-  - `selectores.py`: `obtener_carrito_detallado` (suma unidades del mismo producto combinando tallas `S + M + L + XL` y aplica tarifa mayorista en el servidor), `obtener_pedido_publico` (oculta DNI completo como `******15` y muestra datos de Yape cuando está en `COTIZADO`) y `construir_enlace_whatsapp_pedido`.
-  - `servicios.py`: `agregar_al_carrito`, `eliminar_del_carrito`, `vaciar_carrito`, `generar_codigo_pedido_unico` (`EMU-XXXXXX` no adivinable), `validar_turnstile_cloudflare`, `crear_pedido_web` (`@transaction.atomic`, triple protección antispam Turnstile + `django-ratelimit` + *honeypot*, nace en `COTIZADO` con envío `S/ 0.00` para `PUNTO_ENCUENTRO`/`RECOJO` y en `NUEVO` para `AGENCIA`/`DELIVERY_LIMA`) y `generar_pdf_pedido` con **ReportLab**.
-  - Plantillas y vistas HTMX: cajón lateral reactivo (`templates/pedidos/parcial_cajon_carrito.html`), página completa `/carrito/`, checkout `/pedidos/checkout/` con las 4 modalidades de Richard, y página de seguimiento `/pedidos/<codigo>/` con un único CTA `#39FF14` hacia WhatsApp + descarga de PDF (`/pedidos/<codigo>/pdf/`).
-  - Suite completa de Fase 0 + Fase 1 + Fase 2 pasando al 100% (`17 passed`, `0` errores en `ruff`, 11 tablas auditadas con `test_estandar_bd.py`).
+  - App `catalogo` (`TBL_RCATEGORIA`, `TBL_RPRODUCTO`, `TBL_RIMAGEN_PRODUCTO`, `TBL_RVARIANTE`, `TBL_RREGLA_PRECIO`), procesamiento WebP (400 px y 900 px), `cargar_demo` con «ARGENTINA X MESSI #10», carrusel de videos a `0.72x`, lupa zoom 2.2x en ficha, widget flotante de WhatsApp y SEO completo.
+- **Fase 2 completada y fusionada en `develop` (`ff4f8ef`):**
+  - App `pedidos`: modelos `Pedido`, `ItemPedido`, `RegistroEstadoPedido` (`TBL_LPEDIDO_ESTADO`, inmutable) e `HistorialPedido`.
+  - Carrito HTMX en sesión con cálculo de precio por mayor unificado entre tallas `S/M/L/XL`, checkout con 4 modalidades, logos oficiales de Shalom y Olva Courier, comprobante PDF ReportLab con logo dinámico y QR oficial de Yape de Richard, y enlace dinámico de WhatsApp con desglose de prendas.
+- **Fase 3 completada, probada al 100% y fusionada en `develop` (`feature/fase-3-gestion-pedidos-stock`):**
+  - **Inventario inmutable:** `MovimientoStock` (`TBL_TMOVIMIENTO_STOCK`) con bloqueo en `save()` y `delete()`, constraint `MOV_NCANTIDAD <> 0` e índice por variante y fecha de creación.
+  - **Despacho por agencia:** `Envio` (`TBL_TENVIO`) con relación 1 a 1 con Pedido, número de guía/orden, clave de recojo privada de 4 dígitos, foto de boleta privada con vista autenticada (`/pedidos/envio/<id>/boleta/`), flete y quién paga.
+  - **Servicios del corazón del negocio:**
+    - `cambiar_estado`: validación estricta según matriz oficial de transiciones, actualización de timestamps y bitácora `TBL_LPEDIDO_ESTADO`.
+    - `cotizar_envio`: actualiza flete y pasa `NUEVO -> COTIZADO`.
+    - `confirmar_pago`: transacción atómica con `select_for_update()` ordenado por `id` de variante (anti-deadlock), descuenta stock y genera movimientos `VENTA`.
+    - `confirmar_pago_y_entregar`: Flujo B de Lima en un solo paso (`COTIZADO -> PAGADO -> ENTREGADO`) con doble registro en bitácora.
+    - `registrar_envio_agencia`: valida clave de 4 dígitos, flete y foto de boleta pasando `PAGADO -> ENVIADO`.
+    - `cancelar_o_rechazar`: repone automáticamente el inventario creando movimientos `DEVOLUCION` si el pedido estaba pagado.
+    - `registrar_venta_presencial`: Flujo C POS en mostrador/feria con precio mayorista automático, pedido `PRESENCIAL`, descuento de stock y estado `ENTREGADO`.
+    - `construir_enlace_whatsapp_notificacion_cliente`: enlaces automáticos con markdown para avisar cotización, enviar orden/clave de agencia o coordinar punto de encuentro.
+  - **Panel administrativo de Richard:**
+    - `PedidoAdmin`: acciones masivas para confirmar pago, entrega rápida en Lima, marcar entregado y cancelar con reposición.
+    - Columna changelist `Avisar por WhatsApp` con botón dinámico según el estado del pedido.
+    - `EnvioInline` y `EnvioAdmin` para gestión de despachos.
+    - Interfaz POS personalizada `/admin/pedidos/pedido/venta-presencial/` con formulario táctil para mostrador.
+    - `MovimientoStockAdmin` 100% solo lectura y `VarianteAdmin` con stock protegido.
+  - **Pruebas integrales:** `tests/test_gestion_pedidos.py` con 9 escenarios clave (matriz de transiciones, Flujos A/B/C, rollback por stock insuficiente, restitución por cancelación, inmutabilidad de movimientos, seguridad de boletas y vista POS admin).
+  - Script k6 `escenarios-base.js` actualizado con el modo `concurrencia_stock` listo para ejecutar contra PostgreSQL en Render (Fase 5).
 
 ## En curso
-- Revisión en vivo de la **Fase 2** por parte de Jonathan en `feature/fase-2-carrito-pedido-whatsapp` antes de hacer commit, fusionar a `develop` y pasar a la **Fase 3**.
+- Revisión y aprobación del plan de la **Fase 4: Tablero y alertas** con Jonathan antes de crear su rama de desarrollo.
 
 ## Siguiente paso
-1. Confirmar commit de `feature/fase-2-carrito-pedido-whatsapp`, merge a `develop` y abrir `feature/fase-3-gestion-pedidos-stock` (Fase 3: transiciones de estado, cotizar envío, confirmar pago con descuento atómico de stock `select_for_update()`, entrega en punto de encuentro en un paso, venta presencial directa y registro de despacho por agencia).
+1. Esperar aprobación de Jonathan sobre el plan de la **Fase 4 (Tablero y alertas)**.
+2. Crear `feature/fase-4-tablero-alertas` desde `develop` e implementar el tablero operativo con métricas, alertas y exportación CSV.
 
 ## Bloqueos y pendientes con Richard
 Ver los 7 puntos de negocio en `00-Gestion/11-decisiones-cambios.md`.
 
 ## Datos que aún faltan
-- QR de Yape y titular de la cuenta (Richard lo entregará; se sube desde el panel, nunca al repositorio).
+- Credenciales de PostgreSQL en Render (Jonathan las compartirá en la Fase 5).
+- Credenciales y URL de Cloudflare R2 / S3 para migrar los archivos multimedia privados en Fase 6.

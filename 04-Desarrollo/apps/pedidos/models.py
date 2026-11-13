@@ -1,4 +1,4 @@
-"""Modelos de datos de la app pedidos: Pedido, ItemPedido y RegistroEstadoPedido."""
+"""Modelos de datos de la app pedidos: Pedido, ItemPedido, RegistroEstadoPedido y Envio."""
 from decimal import Decimal
 
 from django.conf import settings
@@ -49,6 +49,14 @@ class AgenciaEnvio(models.TextChoices):
     SHALOM = "SHALOM", "Agencia Shalom"
     OLVA = "OLVA", "Olva Courier"
     OTRA = "OTRA", "Otra agencia"
+
+
+class QuienPagaFlete(models.TextChoices):
+    """Quién asume y cancela el flete de la agencia en TBL_TENVIO."""
+
+    CLIENTE_ADELANTADO = "CLIENTE_ADELANTADO", "El cliente pagó el flete antes del despacho"
+    CLIENTE_EN_DESTINO = "CLIENTE_EN_DESTINO", "El cliente paga el flete al recoger (pago en destino)"
+    RICHARD_ADELANTO = "RICHARD_ADELANTO", "Richard adelantó el flete (pendiente de cobro al cliente)"
 
 
 class Pedido(models.Model):
@@ -582,4 +590,145 @@ class RegistroEstadoPedido(models.Model):
             )
         if self.nota:
             self.nota = limpiar_texto_seguro(self.nota, longitud_maxima=255)
+        super().save(*args, **kwargs)
+
+
+
+class Envio(models.Model):
+    """Datos del envío por agencia para pedidos con entrega AGENCIA (TBL_TENVIO)."""
+
+    id = models.BigAutoField(
+        primary_key=True,
+        db_column="ENV_NID",
+        verbose_name="Identificador",
+    )
+    pedido = models.OneToOneField(
+        Pedido,
+        on_delete=models.PROTECT,
+        related_name="envio",
+        db_column="PED_NID",
+        verbose_name="Pedido",
+    )
+    agencia = models.CharField(
+        max_length=10,
+        choices=AgenciaEnvio.choices,
+        db_column="ENV_CAGENCIA",
+        verbose_name="Agencia de transporte",
+    )
+    numero_orden_agencia = models.CharField(
+        max_length=30,
+        db_column="ENV_CNUMERO_ORDEN_AGENCIA",
+        verbose_name="Número de orden / guía de la agencia",
+    )
+    clave_recojo = models.CharField(
+        max_length=4,
+        db_column="ENV_CCLAVE_RECOJO",
+        verbose_name="Clave de 4 dígitos para recojo (privada)",
+    )
+    imagen_boleta = models.FileField(
+        upload_to="private/boletas/",
+        max_length=255,
+        db_column="ENV_CIMAGEN_BOLETA",
+        verbose_name="Foto de la boleta de la agencia (privada)",
+    )
+    costo_flete = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        db_column="ENV_NCOSTO_FLETE",
+        verbose_name="Costo real del flete (S/)",
+    )
+    quien_paga = models.CharField(
+        max_length=20,
+        choices=QuienPagaFlete.choices,
+        db_column="ENV_CQUIEN_PAGA",
+        verbose_name="Quién asume el pago del flete",
+    )
+    cobrado = models.BooleanField(
+        default=False,
+        db_column="ENV_OCOBRADO",
+        verbose_name="Flete cobrado al cliente",
+    )
+    fecha_despacho = models.DateTimeField(
+        db_column="ENV_DFECHA_DESPACHO",
+        verbose_name="Fecha y hora de despacho en agencia",
+    )
+    notas = models.TextField(
+        null=True,
+        blank=True,
+        db_column="ENV_CNOTAS",
+        verbose_name="Observaciones de despacho",
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        db_column="ENV_DFECHA_CREACION",
+        verbose_name="Fecha de creación",
+    )
+    fecha_actualizacion = models.DateTimeField(
+        auto_now=True,
+        db_column="ENV_DFECHA_ACTUALIZACION",
+        verbose_name="Fecha de última actualización",
+    )
+
+    class Meta:
+        db_table = "TBL_TENVIO"
+        ordering = ["-fecha_despacho"]
+        verbose_name = "Envío por agencia"
+        verbose_name_plural = "Envíos por agencia"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(costo_flete__gte=Decimal("0.00")),
+                name="TBL_TENVIO_COSTO_FLETE_CK",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        """Devuelve el resumen legible del envío por agencia con código de pedido.
+
+        Qué hace:      Formatea '{agencia} - Orden: {numero_orden_agencia} ({pedido.codigo})'.
+        Va hacia:      Panel administrativo de Richard y reportes de despacho.
+        Depende de:    Campos agencia, numero_orden_agencia y pedido.
+        Cuándo usarla: Automáticamente al convertir la instancia Envio a cadena de texto.
+        Si no opera:   Retorna 'Envío de pedido' si aún no tiene atributos completos.
+        """
+        cod = self.pedido.codigo if hasattr(self, "pedido") and self.pedido else "Sin pedido"
+        return f"{self.get_agencia_display()} – Orden: {self.numero_orden_agencia} ({cod})"
+
+    def clean(self) -> None:
+        """Valida que la clave de recojo tenga 4 dígitos y sanitiza orden y notas.
+
+        Qué hace:      Verifica longitud y formato numérico de clave_recojo y limpia textos.
+        Va hacia:      Validación obligatoria antes de persistir en TBL_TENVIO.
+        Depende de:    limpiar_texto_seguro y campos del modelo.
+        Cuándo usarla: En formularios del admin y servicios antes de guardar el envío.
+        Si no opera:   Lanza ValidationError con mensaje descriptivo para Richard.
+        """
+        self.numero_orden_agencia = limpiar_texto_seguro(
+            str(self.numero_orden_agencia or ""), longitud_maxima=30
+        )
+        if not self.numero_orden_agencia:
+            raise ValidationError("Ingresa el número de orden o guía de la agencia.")
+
+        clave = str(self.clave_recojo or "").strip()
+        if len(clave) != 4 or not clave.isdigit():
+            raise ValidationError(
+                "La clave de recojo de la agencia debe tener exactamente 4 dígitos numéricos."
+            )
+        self.clave_recojo = clave
+
+        if self.costo_flete is None or self.costo_flete < Decimal("0.00"):
+            raise ValidationError("El costo del flete no puede ser negativo.")
+
+        if self.notas:
+            self.notas = limpiar_texto_seguro(str(self.notas), longitud_maxima=500)
+
+    def save(self, *args, **kwargs) -> None:
+        """Ejecuta full_clean() y persiste el envío de agencia en TBL_TENVIO.
+
+        Qué hace:      Valida y almacena los datos de despacho de la agencia en base de datos.
+        Va hacia:      Tabla física TBL_TENVIO.
+        Depende de:    clean() y models.Model.save().
+        Cuándo usarla: Al registrar el despacho en la agencia en registrar_envio_agencia.
+        Si no opera:   Propaga ValidationError si los datos no cumplen las restricciones.
+        """
+        self.full_clean()
         super().save(*args, **kwargs)

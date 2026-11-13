@@ -1,6 +1,7 @@
-"""Modelos de datos del catálogo: Categoria, Producto, ImagenProducto, Variante y ReglaPrecio."""
+"""Modelos de datos del catálogo: Categoria, Producto, ImagenProducto, Variante, ReglaPrecio y MovimientoStock."""
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -604,3 +605,143 @@ class ReglaPrecio(models.Model):
         """
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+
+class TipoMovimientoStock(models.TextChoices):
+    """Tipos de movimiento de inventario en TBL_TMOVIMIENTO_STOCK."""
+
+    ENTRADA = "ENTRADA", "Entrada de mercadería"
+    VENTA = "VENTA", "Salida por venta"
+    AJUSTE = "AJUSTE", "Ajuste de inventario"
+    DEVOLUCION = "DEVOLUCION", "Devolución por cancelación / rechazo"
+
+
+class MovimientoStock(models.Model):
+    """Cada entrada o salida de stock. Inmutable: no se edita ni se borra (TBL_TMOVIMIENTO_STOCK)."""
+
+    id = models.BigAutoField(
+        primary_key=True,
+        db_column="MOV_NID",
+        verbose_name="Identificador",
+    )
+    variante = models.ForeignKey(
+        Variante,
+        on_delete=models.PROTECT,
+        related_name="movimientos",
+        db_column="VAR_NID",
+        verbose_name="Variante afectada",
+    )
+    tipo = models.CharField(
+        max_length=15,
+        choices=TipoMovimientoStock.choices,
+        db_column="MOV_CTIPO",
+        verbose_name="Tipo de movimiento",
+    )
+    cantidad = models.IntegerField(
+        db_column="MOV_NCANTIDAD",
+        verbose_name="Cantidad",
+        help_text="Variación con signo (+ entrada de mercadería / devolución, - salida por venta o ajuste). Distinta de 0.",
+    )
+    motivo = models.CharField(
+        max_length=200,
+        db_column="MOV_CMOTIVO",
+        verbose_name="Motivo del movimiento",
+    )
+    pedido = models.ForeignKey(
+        "pedidos.Pedido",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_stock",
+        db_column="PED_NID",
+        verbose_name="Pedido asociado (si aplica)",
+    )
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_stock_creados",
+        db_column="USU_NID_CREADO_POR",
+        verbose_name="Usuario que registró el movimiento",
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        db_column="MOV_DFECHA_CREACION",
+        verbose_name="Fecha de creación",
+    )
+
+    class Meta:
+        db_table = "TBL_TMOVIMIENTO_STOCK"
+        ordering = ["-fecha_creacion"]
+        verbose_name = "Movimiento de stock"
+        verbose_name_plural = "Movimientos de stock"
+        indexes = [
+            models.Index(
+                fields=["variante", "fecha_creacion"],
+                name="TBL_TMOVIMIENTO_STOCK_VAR_NID_MOV_DFECHA_CREACION_IX",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(cantidad=0),
+                name="TBL_TMOVIMIENTO_STOCK_CANTIDAD_CK",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        """Devuelve el resumen legible del movimiento con tipo, cantidad y variante.
+
+        Qué hace:      Formatea '{tipo} {cantidad} unid. - {variante.producto.nombre} ({talla})'.
+        Va hacia:      Panel administrativo de auditoría y trazabilidad de inventario.
+        Depende de:    Atributos tipo, cantidad y variante.
+        Cuándo usarla: Automáticamente al convertir el movimiento en cadena de texto.
+        Si no opera:   Retorna 'Movimiento #{id}' si la variante no está disponible.
+        """
+        signo = "+" if self.cantidad > 0 else ""
+        return f"{self.get_tipo_display()} ({signo}{self.cantidad} unid.) – {self.variante}"
+
+    def clean(self) -> None:
+        """Valida que la cantidad no sea cero y sanitiza el motivo del movimiento.
+
+        Qué hace:      Comprueba cantidad != 0 y limpia texto del motivo.
+        Va hacia:      Validación previa al guardado en TBL_TMOVIMIENTO_STOCK.
+        Depende de:    limpiar_texto_seguro y campos cantidad y motivo.
+        Cuándo usarla: Automáticamente antes de guardar el movimiento.
+        Si no opera:   Lanza ValidationError si cantidad es 0 o motivo está vacío.
+        """
+        if self.cantidad == 0:
+            raise ValidationError("La cantidad del movimiento de stock no puede ser 0.")
+        self.motivo = limpiar_texto_seguro(str(self.motivo or ""), longitud_maxima=200)
+        if not self.motivo:
+            raise ValidationError("El motivo del movimiento de stock es obligatorio.")
+
+    def save(self, *args, **kwargs) -> None:
+        """Garantiza la inmutabilidad de los movimientos de stock impidiendo su modificación.
+
+        Qué hace:      Lanza ValidationError si ya existe clave primaria (update bloqueado).
+        Va hacia:      Tabla física inmutable TBL_TMOVIMIENTO_STOCK.
+        Depende de:    self.pk y models.Model.save().
+        Cuándo usarla: Al crear un nuevo registro de movimiento de stock.
+        Si no opera:   Bloquea cualquier intento de actualización de un movimiento existente.
+        """
+        if self.pk:
+            raise ValidationError(
+                "Los movimientos de stock son inmutables y no se pueden modificar."
+            )
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs) -> None:
+        """Garantiza la inmutabilidad de los movimientos de stock impidiendo su eliminación.
+
+        Qué hace:      Lanza ValidationError bloqueando el borrado de registros de auditoría.
+        Va hacia:      Preserva la integridad de TBL_TMOVIMIENTO_STOCK.
+        Depende de:    Regla de auditoría inmutable del estándar.
+        Cuándo usarla: Bloquea cualquier invocación a delete() en instancias o QuerySets.
+        Si no opera:   Impide la pérdida del rastro histórico de entradas y salidas.
+        """
+        raise ValidationError(
+            "Los movimientos de stock son inmutables y no se pueden eliminar."
+        )

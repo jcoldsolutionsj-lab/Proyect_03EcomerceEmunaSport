@@ -1,13 +1,22 @@
 """Vistas delgadas de la app pedidos: Carrito HTMX, Checkout, Detalle del Pedido y PDF."""
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+import mimetypes
+
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseForbidden,
+    JsonResponse,
+)
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from django_ratelimit.decorators import ratelimit
 
 from apps.nucleo.excepciones import ErrorDominioEmuna
 
-from .models import AgenciaEnvio, TipoEntrega
+from .models import AgenciaEnvio, Envio, TipoEntrega
 from .selectores import (
     construir_enlace_whatsapp_pedido,
     obtener_carrito_detallado,
@@ -210,12 +219,12 @@ def vista_checkout(request: HttpRequest) -> HttpResponse:
 @ratelimit(key="ip", rate="30/m", method="GET", block=True)
 @require_GET
 def vista_detalle_pedido_publico(request: HttpRequest, codigo: str) -> HttpResponse:
-    """Muestra la página pública del pedido con un único CTA hacia WhatsApp y descarga de PDF.
+    """Muestra la página pública del pedido con actualización en vivo y CTA contextual.
 
-    Qué hace:      Obtiene el resumen público seguro (sin DNI completo) y construye el link a WhatsApp.
-    Va hacia:      Renderiza templates/pedidos/detalle_pedido.html.
+    Qué hace:      Obtiene el resumen público seguro (sin DNI ni claves) y arma el link WhatsApp.
+    Va hacia:      Renderiza detalle_pedido.html o parcial_seguimiento_pedido.html si parcial=1.
     Depende de:    obtener_pedido_publico y construir_enlace_whatsapp_pedido.
-    Cuándo usarla: En la ruta /pedidos/<codigo>/ tras completar el checkout o desde el link de WhatsApp.
+    Cuándo usarla: En /pedidos/<codigo>/ tras completar el checkout o durante el seguimiento en vivo.
     Si no opera:   Devuelve 404 si el código no existe.
     """
     datos_publicos = obtener_pedido_publico(codigo=codigo)
@@ -232,8 +241,36 @@ def vista_detalle_pedido_publico(request: HttpRequest, codigo: str) -> HttpRespo
         **datos_publicos,
         "url_publica_pedido": url_absoluta,
         "url_whatsapp_pedido": url_whatsapp_pedido,
+        "url_estado_json": reverse("pedidos:estado_pedido_json", kwargs={"codigo": pedido.codigo}),
     }
+    if request.GET.get("parcial") == "1":
+        return render(request, "pedidos/parcial_seguimiento_pedido.html", contexto)
     return render(request, "pedidos/detalle_pedido.html", contexto)
+
+
+@ratelimit(key="ip", rate="60/m", method="GET", block=True)
+@require_GET
+def vista_estado_pedido_json(request: HttpRequest, codigo: str) -> JsonResponse:
+    """Retorna el estado actual del pedido en JSON ligero para seguimiento en tiempo real.
+
+    Qué hace:      Expone estado, etiqueta legible, envío y total sin datos privados ni claves.
+    Va hacia:      JsonResponse consumido cada 15 segundos desde /pedidos/<codigo>/.
+    Depende de:    obtener_pedido_publico.
+    Cuándo usarla: Para detectar transiciones sin recargar toda la pestaña del cliente.
+    Si no opera:   Devuelve 404 si el código público no existe.
+    """
+    datos = obtener_pedido_publico(codigo=codigo)
+    costo_envio = datos["costo_envio"]
+    return JsonResponse(
+        {
+            "codigo": datos["codigo"],
+            "estado": datos["estado"],
+            "etiqueta_estado": datos["etiqueta_estado"],
+            "costo_envio": f"{costo_envio:.2f}" if costo_envio is not None else None,
+            "total": f"{datos['total']:.2f}",
+            "es_estado_terminal": datos["es_estado_terminal"],
+        }
+    )
 
 
 @ratelimit(key="ip", rate="20/m", method="GET", block=True)
@@ -286,3 +323,35 @@ def vista_api_carrito_resumen(request: HttpRequest) -> JsonResponse:
             ],
         }
     )
+
+
+@require_GET
+def vista_ver_boleta_privada(request: HttpRequest, envio_id: int) -> HttpResponse:
+    """Sirve de forma privada y autenticada la foto de la boleta de agencia.
+
+    Qué hace:      Verifica permisos de staff o grupo Dueño y transmite el archivo binario.
+    Va hacia:      FileResponse con MIME type seguro para visualización en navegador.
+    Depende de:    Envio y permisos de sesión del usuario autenticado.
+    Cuándo usarla: Al pulsar 'Ver boleta privada' desde el panel de administración de Richard.
+    Si no opera:   Retorna HTTP 403 Forbidden para usuarios anónimos o clientes sin privilegios.
+    """
+    if not request.user.is_authenticated or not (
+        request.user.is_staff or request.user.groups.filter(name="Dueño").exists()
+    ):
+        return HttpResponseForbidden("Acceso denegado a comprobantes privados de despacho.")
+
+    envio = get_object_or_404(Envio.objects.select_related("pedido"), id=envio_id)
+    if not envio.imagen_boleta:
+        raise Http404("El envío no cuenta con imagen de boleta registrada.")
+
+    try:
+        archivo = envio.imagen_boleta.open("rb")
+    except (FileNotFoundError, OSError):
+        raise Http404("El archivo de la boleta no se encuentra en el almacenamiento.") from None
+
+    nombre_archivo = envio.imagen_boleta.name.lower()
+    tipo_mime, _ = mimetypes.guess_type(nombre_archivo)
+    if not tipo_mime:
+        tipo_mime = "application/octet-stream"
+
+    return FileResponse(archivo, content_type=tipo_mime)

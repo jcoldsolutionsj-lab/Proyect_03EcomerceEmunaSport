@@ -187,20 +187,116 @@ def obtener_carrito_detallado(sesion: SessionBase | dict[str, Any]) -> dict[str,
 
 
 def obtener_pedido_por_codigo(*, codigo: str) -> Pedido:
-    """Busca un pedido por su código público no adivinable con ítems e historial precargados.
+    """Busca un pedido por su código público no adivinable con ítems, envío e historial.
 
     Qué hace:      Consulta TBL_TPEDIDO por PED_CCODIGO (insensible a mayúsculas/minúsculas).
-    Va hacia:      Retorna la instancia de Pedido con items y bitácora de estados.
+    Va hacia:      Retorna la instancia de Pedido con items, envío y bitácora de estados.
     Depende de:    Pedido, ItemPedido, RegistroEstadoPedido y get_object_or_404.
     Cuándo usarla: En vistas públicas de seguimiento, generador de PDF y servicios.
     Si no opera:   Lanza Http404 si el código no existe o tiene formato inválido.
     """
     codigo_limpio = limpiar_texto_seguro(codigo, longitud_maxima=20).upper()
-    qs = Pedido.objects.select_related("metodo_pago").prefetch_related(
+    qs = Pedido.objects.select_related("metodo_pago", "envio").prefetch_related(
         Prefetch("items", queryset=ItemPedido.objects.select_related("variante").order_by("id")),
         Prefetch("historial_estados", queryset=RegistroEstadoPedido.objects.order_by("fecha_creacion")),
     )
     return get_object_or_404(qs, codigo=codigo_limpio)
+
+
+def _construir_siguiente_paso_publico(
+    *, pedido: Pedido, envio_publico: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Determina el título, guía y botón contextual según el estado actual del pedido.
+
+    Qué hace:      Adapta el bloque 'Siguiente Paso' de la página pública al ciclo real de venta.
+    Va hacia:      Retorna diccionario con badge, titulo, descripcion, texto_boton y es_cta_principal.
+    Depende de:    EstadoPedido y TipoEntrega.
+    Cuándo usarla: En obtener_pedido_publico() al renderizar /pedidos/<codigo>/.
+    Si no opera:   Retorna mensaje genérico de consulta por WhatsApp.
+    """
+    est = pedido.estado
+    if est == EstadoPedido.NUEVO:
+        return {
+            "badge": "⚡ Siguiente Paso Recomendado",
+            "titulo": "Envía tu Pedido a Richard por WhatsApp",
+            "descripcion": (
+                f"Haz clic en el botón verde neón para enviarle a Richard el resumen automático "
+                f"de tu pedido {pedido.codigo} y que te cotice el envío al instante."
+            ),
+            "texto_boton": "ENVIAR A RICHARD POR WHATSAPP →",
+            "es_cta_principal": True,
+        }
+    if est == EstadoPedido.COTIZADO:
+        if pedido.tipo_entrega in (TipoEntrega.PUNTO_ENCUENTRO, TipoEntrega.RECOJO):
+            return {
+                "badge": "📍 Siguiente Paso: Coordinar Entrega",
+                "titulo": "Coordina punto y hora con Richard",
+                "descripcion": (
+                    f"Tu pedido {pedido.codigo} está listo (Envío S/ 0.00). Coordina la hora exacta "
+                    "con Richard por WhatsApp; puedes yapearle usando el QR o al recibir tu prenda."
+                ),
+                "texto_boton": "COORDINAR ENTREGA POR WHATSAPP →",
+                "es_cta_principal": True,
+            }
+        return {
+            "badge": "🟣 Siguiente Paso: Pago con Yape",
+            "titulo": "Realiza el Yape y envía tu captura",
+            "descripcion": (
+                f"Tu envío ya fue cotizado. Realiza el Yape por S/ {pedido.total:.2f} usando el QR "
+                f"de abajo y envíale la captura a Richard para separar tus camisetas al instante."
+            ),
+            "texto_boton": "ENVIAR CAPTURA DE PAGO POR WHATSAPP →",
+            "es_cta_principal": True,
+        }
+    if est == EstadoPedido.PAGADO:
+        return {
+            "badge": "✅ Pago Confirmado · Separado",
+            "titulo": "Richard está preparando tu paquete",
+            "descripcion": (
+                f"¡Gracias! Tu pago por S/ {pedido.total:.2f} fue verificado y tus camisetas ya están "
+                "separadas del almacén. Te avisaremos apenas salgan a despacho."
+            ),
+            "texto_boton": "CONSULTAR SOBRE MI PEDIDO POR WHATSAPP",
+            "es_cta_principal": False,
+        }
+    if est == EstadoPedido.ENVIADO:
+        detalle_guia = (
+            f"Despachado por {envio_publico['agencia']} (N° Orden/Guía: {envio_publico['numero_orden_agencia']}). "
+            if envio_publico
+            else "Tu paquete ya salió hacia tu destino. "
+        )
+        return {
+            "badge": "🚚 Pedido en Camino",
+            "titulo": "¡Tu paquete ya fue despachado!",
+            "descripcion": (
+                f"{detalle_guia}Por seguridad, Richard te envió tu clave secreta de recojo de 4 dígitos "
+                "directamente a tu WhatsApp."
+            ),
+            "texto_boton": "CONSULTAR CLAVE DE RECOJO POR WHATSAPP",
+            "es_cta_principal": False,
+        }
+    if est == EstadoPedido.ENTREGADO:
+        return {
+            "badge": "🎉 Pedido Entregado",
+            "titulo": "¡Gracias por tu compra en Emuná Sport!",
+            "descripcion": (
+                f"Tu pedido {pedido.codigo} fue entregado con éxito. ¡Disfruta tus camisetas! "
+                "Si necesitas algo más, escríbenos por WhatsApp."
+            ),
+            "texto_boton": "ESCRIBIR A RICHARD POR WHATSAPP",
+            "es_cta_principal": False,
+        }
+    etiqueta = pedido.get_estado_display()
+    return {
+        "badge": f"⚠️ Pedido {etiqueta}",
+        "titulo": f"Pedido {etiqueta}",
+        "descripcion": (
+            f"El pedido {pedido.codigo} se encuentra cerrado como {etiqueta.lower()}. "
+            "Si tienes alguna duda o deseas retomarlo, escríbenos."
+        ),
+        "texto_boton": "CONSULTAR CON RICHARD POR WHATSAPP",
+        "es_cta_principal": False,
+    }
 
 
 def obtener_pedido_publico(*, codigo: str) -> dict[str, Any]:
@@ -223,6 +319,24 @@ def obtener_pedido_publico(*, codigo: str) -> dict[str, Any]:
             .filter(tipo=TipoMetodoPago.YAPE)
             .first()
         )
+
+    envio_obj = getattr(pedido, "envio", None)
+    envio_publico: dict[str, Any] | None = None
+    if envio_obj and pedido.estado in (EstadoPedido.ENVIADO, EstadoPedido.ENTREGADO):
+        envio_publico = {
+            "agencia": envio_obj.get_agencia_display(),
+            "numero_orden_agencia": envio_obj.numero_orden_agencia,
+            "fecha_despacho": envio_obj.fecha_despacho,
+        }
+
+    siguiente_paso = _construir_siguiente_paso_publico(
+        pedido=pedido, envio_publico=envio_publico
+    )
+    es_estado_terminal = pedido.estado in (
+        EstadoPedido.ENTREGADO,
+        EstadoPedido.CANCELADO,
+        EstadoPedido.RECHAZADO,
+    )
 
     return {
         "pedido": pedido,
@@ -247,50 +361,90 @@ def obtener_pedido_publico(*, codigo: str) -> dict[str, Any]:
         "fecha_creacion": pedido.fecha_creacion,
         "mostrar_datos_pago_yape": pedido.estado == EstadoPedido.COTIZADO,
         "metodo_yape": metodo_yape,
+        "envio_publico": envio_publico,
+        "siguiente_paso": siguiente_paso,
+        "es_estado_terminal": es_estado_terminal,
     }
 
 
 def construir_enlace_whatsapp_pedido(*, pedido: Pedido, url_publica_pedido: str) -> str:
-    """Construye el enlace wa.me hacia Richard con el resumen estructurado del pedido recién creado.
+    """Construye el enlace wa.me hacia Richard adaptado al estado actual del pedido.
 
-    Qué hace:      Formatea código, ítems, tallas, modalidad de entrega, total y link del pedido.
-    Va hacia:      Retorna una URL https://wa.me/51... lista para el CTA único en verde neón.
-    Depende de:    obtener_configuracion_tienda, Pedido y sus líneas ItemPedido.
-    Cuándo usarla: En la página de confirmación del pedido (/pedidos/<codigo>/).
+    Qué hace:      Formatea código, ítems, modalidad o consulta específica según el estado del pedido.
+    Va hacia:      Retorna una URL https://api.whatsapp.com/send?... para el botón de la página pública.
+    Depende de:    obtener_configuracion_tienda, Pedido, Envio y sus líneas ItemPedido.
+    Cuándo usarla: En la página de seguimiento (/pedidos/<codigo>/) en cada etapa del flujo.
     Si no opera:   Usa el número por defecto de Emuná Sport si aún no hay configuración en BD.
     """
     config = obtener_configuracion_tienda()
-    lineas_items = [
-        f"• {item.cantidad}x {item.nombre_producto} (Talla {item.talla}) – S/ {item.subtotal}"
-        for item in pedido.items.all()
-    ]
-    detalle_prendas = "\n".join(lineas_items)
 
-    if pedido.tipo_entrega == TipoEntrega.PUNTO_ENCUENTRO:
-        linea_entrega = (
-            f"*Punto de encuentro en Lima:* {pedido.punto_encuentro or 'Por coordinar'} "
-            "(Envío S/ 0.00 – Pago con Yape al recibir)"
+    if pedido.estado == EstadoPedido.PAGADO:
+        mensaje = (
+            f"Hola Richard, tengo una consulta sobre mi pedido *{pedido.codigo}* "
+            f"(Pago Confirmado por S/ {pedido.total:.2f}).\n"
+            f"*Ver pedido:* {url_publica_pedido}"
         )
-    elif pedido.tipo_entrega == TipoEntrega.RECOJO:
-        linea_entrega = "*Modalidad:* Recojo acordado (Envío S/ 0.00)"
-    elif pedido.tipo_entrega == TipoEntrega.AGENCIA:
-        agencia_txt = pedido.get_agencia_display() if pedido.agencia else "Agencia"
-        linea_entrega = (
-            f"*Envío por {agencia_txt}:* {pedido.agencia_ciudad or ''} "
-            f"({pedido.agencia_referencia or 'Sede principal'}) – Flete por cotizar"
+    elif pedido.estado == EstadoPedido.ENVIADO:
+        envio = getattr(pedido, "envio", None)
+        guia = f" ({envio.get_agencia_display()} – Orden {envio.numero_orden_agencia})" if envio else ""
+        mensaje = (
+            f"Hola Richard, mi pedido *{pedido.codigo}* ya figura En Camino{guia}. "
+            f"¿Me confirmas la clave de recojo de 4 dígitos por favor?\n"
+            f"*Ver pedido:* {url_publica_pedido}"
+        )
+    elif pedido.estado == EstadoPedido.ENTREGADO:
+        mensaje = (
+            f"Hola Richard, ya recibí conforme mi pedido *{pedido.codigo}* de *Emuná Sport*. "
+            f"¡Muchas gracias!"
+        )
+    elif pedido.estado in (EstadoPedido.CANCELADO, EstadoPedido.RECHAZADO):
+        mensaje = (
+            f"Hola Richard, te escribo sobre mi pedido *{pedido.codigo}* "
+            f"(estado: {pedido.get_estado_display()}).\n"
+            f"*Ver pedido:* {url_publica_pedido}"
+        )
+    elif pedido.estado == EstadoPedido.COTIZADO and pedido.tipo_entrega in (
+        TipoEntrega.AGENCIA,
+        TipoEntrega.DELIVERY_LIMA,
+    ):
+        mensaje = (
+            f"Hola Richard, ya recibí la cotización de mi pedido *{pedido.codigo}* "
+            f"(Total: *S/ {pedido.total:.2f}*). Aquí te envío mi captura de Yape para confirmar "
+            f"y separar mis camisetas:\n*Ver pedido:* {url_publica_pedido}"
         )
     else:
-        linea_entrega = (
-            f"*Delivery en Lima:* {pedido.punto_encuentro or 'Por coordinar'} "
-            "– Delivery por cotizar"
+        lineas_items = [
+            f"• {item.cantidad}x {item.nombre_producto} (Talla {item.talla}) – S/ {item.subtotal}"
+            for item in pedido.items.all()
+        ]
+        detalle_prendas = "\n".join(lineas_items)
+
+        if pedido.tipo_entrega == TipoEntrega.PUNTO_ENCUENTRO:
+            linea_entrega = (
+                f"*Punto de encuentro en Lima:* {pedido.punto_encuentro or 'Por coordinar'} "
+                "(Envío S/ 0.00 – Pago con Yape al recibir)"
+            )
+        elif pedido.tipo_entrega == TipoEntrega.RECOJO:
+            linea_entrega = "*Modalidad:* Recojo acordado (Envío S/ 0.00)"
+        elif pedido.tipo_entrega == TipoEntrega.AGENCIA:
+            agencia_txt = pedido.get_agencia_display() if pedido.agencia else "Agencia"
+            linea_entrega = (
+                f"*Envío por {agencia_txt}:* {pedido.agencia_ciudad or ''} "
+                f"({pedido.agencia_referencia or 'Sede principal'}) – Flete por cotizar"
+            )
+        else:
+            linea_entrega = (
+                f"*Delivery en Lima:* {pedido.punto_encuentro or 'Por coordinar'} "
+                "– Delivery por cotizar"
+            )
+
+        mensaje = (
+            f"Hola Richard, acabo de registrar mi pedido *{pedido.codigo}* en *Emuná Sport*:\n\n"
+            f"*Cliente:* {pedido.cliente_nombre}\n"
+            f"{linea_entrega}\n\n"
+            f"*Camisetas solicitadas:*\n{detalle_prendas}\n\n"
+            f"*Total camisetas:* S/ {pedido.subtotal}\n"
+            f"*Ver mi pedido y PDF:* {url_publica_pedido}"
         )
 
-    mensaje = (
-        f"Hola Richard, acabo de registrar mi pedido *{pedido.codigo}* en *Emuná Sport*:\n\n"
-        f"*Cliente:* {pedido.cliente_nombre}\n"
-        f"{linea_entrega}\n\n"
-        f"*Camisetas solicitadas:*\n{detalle_prendas}\n\n"
-        f"*Total camisetas:* S/ {pedido.subtotal}\n"
-        f"*Ver mi pedido y PDF:* {url_publica_pedido}"
-    )
     return f"https://api.whatsapp.com/send?phone=51{config.numero_whatsapp}&text={quote(mensaje)}"

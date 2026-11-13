@@ -1,0 +1,1040 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block responsive %}
+{{ block.super }}
+<style>
+  /* Reducción global de escala (-15% de zoom) en escritorio para densidad empresarial tipo Java JSP */
+  html {
+    zoom: 0.85;
+  }
+
+  /* Forzar paleta corporativa clara Enterprise Java/JSP incluso si el dispositivo tiene modo oscuro */
+  :root,
+  html[data-theme="light"],
+  html[data-theme="auto"],
+  html[data-theme="dark"] {
+    color-scheme: light;
+    --primary: #1E293B;
+    --secondary: #0F172A;
+    --accent: #15803D;
+    --primary-fg: #FFFFFF;
+    --body-fg: #0F172A;
+    --body-bg: #EEF2F6;
+    --body-quiet-color: #475569;
+    --body-loud-color: #0F172A;
+    --header-color: #FFFFFF;
+    --header-bg: #1E293B;
+    --header-link-color: #FFFFFF;
+    --breadcrumbs-fg: #CBD5E1;
+    --breadcrumbs-link-fg: #FFFFFF;
+    --breadcrumbs-bg: #334155;
+    --link-fg: #0369A1;
+    --link-hover-color: #0F172A;
+    --link-selected-fg: #1E293B;
+    --hairline-color: #E2E8F0;
+    --border-color: #CBD5E1;
+    --darkened-bg: #F8FAFC;
+    --selected-bg: #E2E8F0;
+    --selected-row: #EFF6FF;
+    --button-fg: #FFFFFF;
+    --button-bg: #1E293B;
+    --button-hover-bg: #0F172A;
+    --default-button-bg: #15803D;
+    --default-button-hover-bg: #166534;
+    --close-button-bg: #64748B;
+    --close-button-hover-bg: #475569;
+    --delete-button-bg: #B91C1C;
+    --delete-button-hover-bg: #991B1B;
+    --object-tools-fg: #FFFFFF;
+    --object-tools-bg: #334155;
+    --object-tools-hover-bg: #1E293B;
+    --message-success-bg: #DCFCE7;
+    --message-warning-bg: #FEF3C7;
+    --message-error-bg: #FEE2E2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root,
+    html[data-theme="auto"],
+    html[data-theme="light"],
+    html[data-theme="dark"] {
+      color-scheme: light;
+      --body-fg: #0F172A;
+      --body-bg: #EEF2F6;
+      --body-quiet-color: #475569;
+      --body-loud-color: #0F172A;
+      --darkened-bg: #F8FAFC;
+      --selected-bg: #E2E8F0;
+      --selected-row: #EFF6FF;
+      --link-fg: #0369A1;
+      --link-hover-color: #0F172A;
+      --hairline-color: #E2E8F0;
+      --border-color: #CBD5E1;
+      --button-fg: #FFFFFF;
+      --button-bg: #1E293B;
+      --button-hover-bg: #0F172A;
+      --default-button-bg: #15803D;
+      --default-button-hover-bg: #166534;
+    }
+  }
+
+  /* Contención base de caja: evita height:100% rígido y overflow-x:hidden que provoca scroll anidado y aplasta flexbox */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  html, body {
+    height: auto !important;
+    min-height: 100%;
+    max-width: 100%;
+    overflow-x: clip !important;
+    background: #EEF2F6 !important;
+    color: #0F172A !important;
+  }
+  #container {
+    height: auto !important;
+    min-height: 100vh;
+    background: #EEF2F6 !important;
+  }
+  #container, .main, .content, #content, #content-main, .module, fieldset, .inline-group, .inline-related {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .module, .inline-group, .form-row {
+    background-color: #FFFFFF;
+    color: #0F172A;
+  }
+  #content > h1, h1, h2, h3 {
+    color: #0F172A;
+  }
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="url"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  textarea,
+  select {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+    border-color: #94A3B8;
+  }
+  .theme-toggle, #user-tools .theme-toggle {
+    display: none !important;
+  }
+
+  /* Estética corporativa seria en cabecera, tablas, filtros y paginación */
+  #header {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border-bottom: 3px solid #15803D !important;
+    flex-shrink: 0;
+  }
+  #site-name a:link, #site-name a:visited {
+    color: #FFFFFF !important;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+  div.breadcrumbs {
+    background: #334155 !important;
+    color: #CBD5E1 !important;
+    border-bottom: 1px solid #1E293B;
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+  div.breadcrumbs a {
+    color: #FFFFFF !important;
+    font-weight: 600;
+  }
+  .module h2, .module caption, .inline-group h2, #changelist-filter h2 {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+  }
+  .module caption a.section:link,
+  .module caption a.section:visited {
+    color: #FFFFFF !important;
+    text-decoration: none;
+  }
+
+  /* Barra rápida móvil (oculta en escritorio/tablet donde existe la barra lateral) */
+  .emuna-mobile-quicknav {
+    display: none;
+  }
+
+  /* Garantizar que ningún combo box (<select>) recorte verticalmente los textos */
+  select, .actions select {
+    min-height: 34px;
+    line-height: 1.4 !important;
+    padding: 4px 10px !important;
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+
+  /* Tablas y secciones inline desplazables horizontalmente sin romper la página */
+  #changelist .results,
+  .emuna-inline-scroll,
+  .emuna-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Tooltips PNG visibles siempre en escritorio, tablet y móvil */
+  img.help-tooltip,
+  img[src*="toltip.png"] {
+    display: inline-block !important;
+    flex-shrink: 0;
+  }
+
+  /* Popover táctil para tooltips (útil en celulares y tablets donde no existe hover) */
+  #emuna-touch-tooltip {
+    position: fixed;
+    z-index: 9999;
+    max-width: min(320px, calc(100vw - 24px));
+    background: #0F172A;
+    color: #FFFFFF;
+    border: 1px solid #334155;
+    border-left: 4px solid #15803D;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.32);
+    display: none;
+  }
+
+  /* Paginación visible estilo corporativo y adaptable */
+  .paginator {
+    background: #F8FAFC !important;
+    border-top: 1px solid #CBD5E1 !important;
+    padding: 10px 12px !important;
+    font-weight: 600;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .paginator a:link, .paginator a:visited {
+    background: #FFFFFF !important;
+    color: #1E293B !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 4px !important;
+    padding: 4px 9px !important;
+    display: inline-block;
+  }
+  .paginator a:hover {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+  }
+  .paginator .this-page {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border: 1px solid #0F172A !important;
+    border-radius: 4px !important;
+    padding: 4px 9px !important;
+    display: inline-block;
+  }
+
+  /* Componentes corporativos reutilizables para paneles operativos y POS */
+  .emuna-panel {
+    background: #FFFFFF;
+    color: #0F172A;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    margin: 12px 0 22px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    overflow: hidden;
+    max-width: 100%;
+  }
+  .emuna-panel-header {
+    background: #1E293B;
+    color: #FFFFFF;
+    padding: 14px 20px;
+    border-bottom: 2px solid #0F172A;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+  }
+  .emuna-panel-body {
+    background: #F8FAFC;
+    padding: 18px 20px;
+  }
+  .emuna-form-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    flex: 1 1 320px;
+    min-width: 0;
+    max-width: 100%;
+    background: #FFFFFF;
+    padding: 16px;
+    border-radius: 4px;
+    border: 1px solid #CBD5E1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .emuna-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    height: auto;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 800;
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: normal;
+    text-align: center;
+    cursor: pointer;
+    text-decoration: none;
+    max-width: 100%;
+  }
+  .emuna-input-corto {
+    width: 140px;
+    max-width: 100%;
+  }
+
+  /* ==================== TABLET Y LAPTOP COMPACTA (<= 1024px) ==================== */
+  @media (max-width: 1024px) {
+    /* En tablet y móvil restauramos escala 1:1 para evitar textos diminutos y fallos de 100vw */
+    html {
+      zoom: 1;
+    }
+
+    #container {
+      min-width: 0 !important;
+    }
+    #header {
+      padding: 12px 18px !important;
+      gap: 8px;
+    }
+    div.breadcrumbs {
+      padding: 10px 18px !important;
+    }
+    #content, .dashboard #content {
+      width: auto !important;
+      padding: 14px 16px 24px !important;
+    }
+
+    /* Dashboard /gestion/: eliminar float de #content-main y hacer clear:both en #content-related para que nunca se monte */
+    #content-main {
+      float: none !important;
+      width: 100% !important;
+    }
+    .colMS, .colSM {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+    #content-related,
+    .colMS #content-related,
+    .colSM #content-related {
+      width: 100% !important;
+      float: none !important;
+      clear: both !important;
+      margin: 20px 0 0 0 !important;
+    }
+
+    /* Changelist coloca el panel de filtros debajo de la tabla en tablets/compactas */
+    #changelist {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 14px;
+    }
+    #changelist-filter {
+      flex: 0 0 auto !important;
+      width: 100% !important;
+      margin: 8px 0 0 0 !important;
+      position: static !important;
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 6px !important;
+      overflow: hidden;
+      background: #FFFFFF !important;
+    }
+    #toolbar {
+      background: #F8FAFC !important;
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 6px !important;
+      padding: 10px 12px !important;
+      margin-bottom: 12px !important;
+    }
+    #changelist-search > div {
+      max-width: 100% !important;
+      width: 100% !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+      gap: 8px !important;
+    }
+    #toolbar form #searchbar {
+      flex: 1 1 180px !important;
+      width: auto !important;
+      min-width: 0 !important;
+      height: 38px !important;
+      min-height: 38px !important;
+      padding: 6px 10px !important;
+      font-size: 14px !important;
+      border: 1px solid #94A3B8 !important;
+      border-radius: 4px !important;
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+      margin: 0 !important;
+    }
+    #toolbar form input[type="submit"] {
+      height: 38px !important;
+      min-height: 38px !important;
+      padding: 0 16px !important;
+      background: #1E293B !important;
+      color: #FFFFFF !important;
+      border: 1px solid #0F172A !important;
+      border-radius: 4px !important;
+      font-weight: 700 !important;
+      font-size: 13px !important;
+      margin: 0 !important;
+    }
+
+    /* Permitir que formularios largos y tarjetas se ajusten al ancho disponible con o sin sidebar */
+    .aligned .form-row,
+    .aligned .form-row > div {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    .related-widget-wrapper {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    /* Botones superiores (object-tools) en fila flexible limpia tipo Enterprise */
+    .object-tools {
+      float: none !important;
+      display: flex !important;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 14px 0 !important;
+      padding: 0 !important;
+      overflow: visible !important;
+    }
+    .object-tools li {
+      float: none !important;
+      margin: 0 !important;
+      height: auto !important;
+      display: flex !important;
+    }
+    .object-tools a,
+    .object-tools li a {
+      float: none !important;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      height: auto !important;
+      line-height: 1.3 !important;
+      padding: 7px 14px !important;
+      border-radius: 4px !important;
+      white-space: normal !important;
+      font-weight: 700 !important;
+      background-position: right 10px center !important;
+    }
+    .object-tools a.addlink {
+      padding-right: 30px !important;
+    }
+
+    /* Tablas inline en formularios: evitar que .original p se recorte verticalmente y ajustar inputs */
+    .inline-group .tabular tr.has_original td,
+    .inline-group .tabular tr.has_original th {
+      padding-top: 2.4rem !important;
+      padding-bottom: 10px !important;
+      vertical-align: top !important;
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+    }
+    .inline-group .tabular td.original p {
+      position: absolute !important;
+      top: auto !important;
+      margin-top: -1.9rem !important;
+      left: 8px !important;
+      right: auto !important;
+      height: auto !important;
+      min-height: 18px !important;
+      line-height: 1.35 !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      color: #334155 !important;
+      overflow: visible !important;
+      white-space: nowrap !important;
+      background: transparent !important;
+      padding: 2px 0 !important;
+    }
+    .inline-group .tabular th {
+      white-space: nowrap !important;
+      padding: 8px 10px !important;
+      background: #F8FAFC !important;
+      color: #1E293B !important;
+    }
+    .inline-group .tabular td {
+      padding: 8px 10px !important;
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+    }
+    .inline-group .tabular table td input.vTextField {
+      width: 145px !important;
+      min-width: 90px !important;
+      max-width: 220px !important;
+    }
+    .inline-group .tabular table td input.vURLField {
+      width: 190px !important;
+      min-width: 130px !important;
+    }
+    .inline-group .tabular table td input[type="number"],
+    .inline-group .tabular table td input.vIntegerField {
+      width: 82px !important;
+      min-width: 68px !important;
+    }
+    .inline-group .tabular table td select {
+      min-width: 115px;
+    }
+  }
+
+  /* ==================== MÓVIL (<= 767px) ==================== */
+  @media (max-width: 767px) {
+    #header {
+      padding: 12px 14px !important;
+      align-items: flex-start !important;
+    }
+    #branding {
+      width: 100%;
+    }
+    #site-name {
+      font-size: 16px !important;
+      margin: 0 0 6px 0 !important;
+      line-height: 1.25;
+    }
+    #user-tools {
+      float: none !important;
+      margin: 0 !important;
+      font-size: 11px !important;
+      line-height: 1.7 !important;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 8px;
+      text-align: left !important;
+    }
+    #user-tools .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    div.breadcrumbs {
+      padding: 9px 14px !important;
+      font-size: 12px !important;
+    }
+    #content, .dashboard #content {
+      padding: 12px 12px 24px !important;
+    }
+    #content > h1 {
+      font-size: 18px !important;
+      line-height: 1.3;
+      margin: 0 0 12px 0 !important;
+      color: #0F172A;
+      font-weight: 700;
+    }
+
+    /* Navegación rápida táctil visible únicamente en celular (también en /gestion/ inicio) */
+    .emuna-mobile-quicknav {
+      display: flex !important;
+      flex-shrink: 0 !important;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: #F1F5F9;
+      border-bottom: 1px solid #CBD5E1;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      width: 100%;
+    }
+    .emuna-mobile-quicknav::-webkit-scrollbar {
+      display: none;
+    }
+    .emuna-mobile-quicknav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 5px 10px;
+      background: #FFFFFF;
+      color: #1E293B !important;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .emuna-mobile-quicknav a.emuna-qnav-activo:not(.emuna-qnav-pos) {
+      background: #1E293B;
+      color: #FFFFFF !important;
+      border-color: #0F172A;
+    }
+    .emuna-mobile-quicknav a.emuna-qnav-pos {
+      background: #15803D;
+      color: #FFFFFF !important;
+      border-color: #166534;
+    }
+
+    /* Pantalla de Login adaptada a celulares pequeños */
+    .login #container {
+      width: calc(100% - 24px) !important;
+      max-width: 420px;
+      min-width: 0 !important;
+      margin: 28px auto !important;
+    }
+
+    /* Tarjetas del Dashboard /gestion/ y vistas de app */
+    .dashboard .module,
+    #content-related .module {
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 6px !important;
+      overflow: hidden;
+      margin-bottom: 16px !important;
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .dashboard .module table tr,
+    .dashboard .module table th,
+    .dashboard .module table td {
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+      border-bottom: 1px solid #E2E8F0 !important;
+    }
+    .dashboard .module table th a:link,
+    .dashboard .module table th a:visited,
+    .dashboard .module table td a:link,
+    .dashboard .module table td a:visited {
+      color: #0369A1 !important;
+    }
+    .dashboard .module caption a.section {
+      display: block;
+      padding: 4px 6px;
+      font-size: 12px;
+    }
+    .dashboard .module table th,
+    .dashboard .module table td {
+      padding: 11px 10px !important;
+      white-space: normal !important;
+      word-break: break-word;
+      font-size: 13px !important;
+    }
+    .dashboard .module table td {
+      white-space: nowrap !important;
+      width: 1%;
+    }
+    .dashboard .module table td a {
+      padding: 4px 6px !important;
+      font-size: 12px !important;
+      font-weight: 700;
+    }
+    #content-related .module h2 {
+      padding: 11px 14px !important;
+      font-size: 13px !important;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    #content-related h3,
+    #content-related p,
+    #content-related li,
+    #changelist-filter h3,
+    #changelist-filter li,
+    #changelist-filter a {
+      color: #334155 !important;
+    }
+    #changelist-filter li.selected a {
+      color: #0369A1 !important;
+      font-weight: 800 !important;
+    }
+
+    /* Tabla Changelist legible con scroll horizontal limpio sin cortar badges ni SKU */
+    #changelist .results {
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 6px !important;
+      background: #FFFFFF !important;
+    }
+    #changelist #result_list {
+      width: 100%;
+      min-width: 560px;
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+    }
+    #changelist #result_list thead th {
+      background: #F8FAFC !important;
+      color: #1E293B !important;
+      border-bottom: 2px solid #CBD5E1 !important;
+    }
+    #changelist #result_list thead th a:link,
+    #changelist #result_list thead th a:visited {
+      color: #1E293B !important;
+    }
+    #changelist #result_list tbody tr {
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+    }
+    #changelist #result_list tbody tr:nth-child(even) {
+      background: #F8FAFC !important;
+    }
+    #changelist #result_list tbody th a:link,
+    #changelist #result_list tbody th a:visited,
+    #changelist #result_list tbody td a:link,
+    #changelist #result_list tbody td a:visited {
+      color: #0369A1 !important;
+      font-weight: 700;
+    }
+    #changelist #result_list th,
+    #changelist #result_list td {
+      padding: 10px 8px !important;
+      vertical-align: middle !important;
+      font-size: 13px !important;
+      color: #0F172A !important;
+    }
+    #changelist #result_list td code,
+    #changelist #result_list td span[style*="border-radius"] {
+      white-space: nowrap !important;
+      display: inline-block;
+    }
+    #changelist #result_list th.field-nombre_col,
+    #changelist #result_list td.field-nombre_col,
+    #changelist #result_list th.field-producto_col,
+    #changelist #result_list td.field-producto_col {
+      min-width: 170px;
+      max-width: 240px;
+      white-space: normal !important;
+    }
+
+    /* Barra de acciones en bloque (evita desborde lateral del combobox en móvil) */
+    #changelist .actions {
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 6px !important;
+      padding: 10px 12px !important;
+      margin-bottom: 12px !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+      align-items: center !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    #changelist .actions label {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+      gap: 6px 8px;
+      flex: 1 1 100% !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      font-weight: 700 !important;
+      color: #0F172A !important;
+    }
+    #changelist .actions select {
+      flex: 1 1 100% !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      height: 36px !important;
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+      border: 1px solid #94A3B8 !important;
+    }
+    #changelist .actions .button {
+      margin: 0 !important;
+      min-height: 36px !important;
+      height: 36px !important;
+      width: auto !important;
+      padding: 0 18px !important;
+      font-weight: 700;
+      background: #F1F5F9 !important;
+      color: #1E293B !important;
+      border: 1px solid #94A3B8 !important;
+    }
+    #changelist .actions span.action-counter {
+      flex: 1 0 100%;
+      margin: 2px 0 0 0 !important;
+      font-size: 12px !important;
+      color: #475569 !important;
+    }
+
+    /* Botones object-tools en pantallas pequeñas */
+    .object-tools li {
+      flex: 1 1 150px;
+    }
+    .object-tools li a {
+      width: 100%;
+    }
+
+    /* Paneles personalizados de Pedido, Variante y POS */
+    .emuna-panel-header {
+      padding: 12px 14px;
+    }
+    .emuna-panel-body {
+      padding: 12px 14px;
+    }
+    .emuna-form-card {
+      padding: 12px;
+      flex: 1 1 100% !important;
+    }
+    .emuna-panel .emuna-btn,
+    .emuna-panel form button[type="submit"],
+    .emuna-input-corto {
+      width: 100% !important;
+    }
+    .emuna-panel form > div {
+      flex: 1 1 100% !important;
+      width: 100%;
+    }
+    .emuna-panel .emuna-header-actions {
+      width: 100%;
+    }
+    .emuna-panel .emuna-header-actions a {
+      flex: 1 1 100%;
+      text-align: center;
+      justify-content: center;
+    }
+
+    /* Catálogo POS en celular: convertir cada variante en tarjeta táctil sin scroll lateral */
+    #tabla-variantes-pos {
+      display: block !important;
+      width: 100% !important;
+      background: transparent !important;
+    }
+    #tabla-variantes-pos thead {
+      display: none !important;
+    }
+    #tabla-variantes-pos tbody {
+      display: block !important;
+      width: 100% !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 8px 10px !important;
+      background: #FFFFFF !important;
+      color: #0F172A !important;
+      border: 1px solid #CBD5E1 !important;
+      border-radius: 6px !important;
+      padding: 12px !important;
+      margin-bottom: 10px !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td {
+      border: none !important;
+      padding: 0 !important;
+      background: transparent !important;
+      display: block !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td:nth-child(1) {
+      flex: 1 1 70% !important;
+      text-align: left !important;
+      font-size: 13px !important;
+      line-height: 1.35 !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td:nth-child(2) {
+      flex: 0 0 auto !important;
+      text-align: right !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td:nth-child(3) {
+      flex: 0 0 auto !important;
+      text-align: left !important;
+      font-size: 11px !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td:nth-child(5) {
+      flex: 1 1 auto !important;
+      text-align: right !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td:nth-child(4) {
+      flex: 1 1 100% !important;
+      text-align: left !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding-top: 2px !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td:nth-child(4) > div {
+      margin-top: 0 !important;
+      white-space: normal !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 4px !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td:nth-child(6) {
+      flex: 1 1 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      background: #F8FAFC !important;
+      border: 1px solid #E2E8F0 !important;
+      border-radius: 4px !important;
+      padding: 7px 10px !important;
+      margin-top: 2px !important;
+    }
+    #tabla-variantes-pos tbody tr.fila-variante td:nth-child(6)::before {
+      content: "CANTIDAD A VENDER:";
+      font-size: 11px;
+      font-weight: 800;
+      color: #475569;
+      letter-spacing: 0.03em;
+    }
+    #tabla-variantes-pos .pos-qty-btn {
+      width: 36px !important;
+      height: 36px !important;
+      font-size: 17px !important;
+    }
+    #tabla-variantes-pos .pos-qty-input {
+      width: 60px !important;
+      height: 36px !important;
+    }
+    #tabla-variantes-pos tbody tr:not(.fila-variante) {
+      display: block !important;
+      width: 100% !important;
+      background: #FFFFFF !important;
+      color: #475569 !important;
+    }
+    #tabla-variantes-pos tbody tr:not(.fila-variante) td {
+      display: block !important;
+      width: 100% !important;
+    }
+
+    /* Buscador Changelist compacto: icono + campo + botón */
+    #changelist-search > div label {
+      display: none !important;
+    }
+    #toolbar form #searchbar {
+      flex: 1 1 160px !important;
+    }
+
+    /* Submit row inferior de formularios Django */
+    .submit-row input,
+    .submit-row a.deletelink,
+    .submit-row a.closelink {
+      width: 100%;
+      min-height: 40px;
+      line-height: 1.3;
+    }
+  }
+</style>
+
+<script>
+  // Soporte táctil para íconos toltip.png y resaltado del botón activo en barra móvil
+  document.addEventListener('DOMContentLoaded', function() {
+    const ruta = window.location.pathname;
+    const esPos = ruta.indexOf('venta-presencial') !== -1;
+    document.querySelectorAll('.emuna-mobile-quicknav a').forEach(function(enlace) {
+      const href = enlace.getAttribute('href') || '';
+      const esInicio = href === '/gestion/';
+      if (
+        (esInicio && ruta === '/gestion/') ||
+        (!esInicio && !esPos && ruta.indexOf(href) === 0)
+      ) {
+        enlace.classList.add('emuna-qnav-activo');
+      }
+    });
+
+    let visor = document.getElementById('emuna-touch-tooltip');
+    if (!visor) {
+      visor = document.createElement('div');
+      visor.id = 'emuna-touch-tooltip';
+      visor.setAttribute('role', 'tooltip');
+      document.body.appendChild(visor);
+    }
+
+    function ocultarVisor() {
+      visor.style.display = 'none';
+      visor.dataset.texto = '';
+    }
+
+    document.addEventListener('click', function(ev) {
+      const icono = ev.target.closest('img[src*="toltip.png"], img.help-tooltip');
+      if (!icono) {
+        if (!ev.target.closest('#emuna-touch-tooltip')) {
+          ocultarVisor();
+        }
+        return;
+      }
+
+      const texto = (icono.getAttribute('title') || icono.dataset.tooltip || '').trim();
+      if (!texto) return;
+
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (visor.style.display === 'block' && visor.dataset.texto === texto) {
+        ocultarVisor();
+        return;
+      }
+
+      visor.textContent = texto;
+      visor.dataset.texto = texto;
+      visor.style.display = 'block';
+
+      const rect = icono.getBoundingClientRect();
+      const vw = window.innerWidth || document.documentElement.clientWidth;
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const wBox = visor.offsetWidth || 260;
+      const hBox = visor.offsetHeight || 60;
+
+      let left = Math.max(12, Math.min(rect.left, vw - wBox - 12));
+      let top = rect.bottom + 8;
+      if (top + hBox > vh - 12) {
+        top = Math.max(12, rect.top - hBox - 8);
+      }
+
+      visor.style.left = left + 'px';
+      visor.style.top = top + 'px';
+    });
+
+    window.addEventListener('scroll', ocultarVisor, { passive: true });
+    window.addEventListener('resize', ocultarVisor);
+  });
+</script>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block header %}
+  {{ block.super }}
+  {% if has_permission and not is_popup %}
+    <nav class="emuna-mobile-quicknav" aria-label="Navegación rápida móvil">
+      <a href="{% url 'admin:index' %}">🏠 Inicio</a>
+      <a href="{% url 'admin:pedidos_pedido_changelist' %}">📦 Pedidos</a>
+      <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}" class="emuna-qnav-pos">⚡ POS</a>
+      <a href="{% url 'admin:catalogo_producto_changelist' %}">👕 Productos</a>
+      <a href="{% url 'admin:catalogo_variante_changelist' %}">📏 Stock</a>
+      <a href="{% url 'admin:catalogo_movimientostock_changelist' %}">📜 Kardex</a>
+    </nav>
+  {% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
