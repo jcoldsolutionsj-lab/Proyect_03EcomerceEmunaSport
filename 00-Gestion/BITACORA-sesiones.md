@@ -12,7 +12,7 @@ Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entr
   - Se integró el acceso directo `📊 Tablero` en la barra móvil `.emuna-mobile-quicknav` y los botones ejecutivos `.emuna-index-shortcuts` en `/gestion/` (`templates/admin/base_site.html`), además de proteger `VarianteAdmin.stock_semaforo` y `umbral_col` en `apps/catalogo/admin.py` frente a variantes con umbral global `None`.
   - Verificación integral: pruebas automatizadas en `tests/test_tablero.py` (**32 pruebas pasando al 100%** en `pytest` y **0 errores** en `ruff check 04-Desarrollo`), más capturas en Edge headless (`360x740` sin desborde horizontal y `1280x800`).
 - **Decidido:** mantener el tablero en la rama `feature/fase-4-tablero-alertas` listo para su revisión final con Jonathan antes del merge hacia `develop`.
-- **Queda:** confirmación de Jonathan para fusionar `feature/fase-4-tablero-alertas` en `develop` e iniciar la **Fase 5: Preparación despliegue y API**.
+- **Queda:** confirmación de Jonathan para fusionar `feature/fase-4-tablero-alertas` en `develop` e iniciar la **Fase 5: Piloto en demo y observaciones**.
 
 ## 2026-11-12 (Cierre Fase 3) – Rediseño móvil integral en `/gestion/`, pulido Java/JSP, POS mayorista y merge a `develop`
 - **Hecho:**

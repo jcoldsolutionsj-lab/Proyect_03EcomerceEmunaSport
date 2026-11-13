@@ -3,7 +3,7 @@
 > La IA lee este archivo al empezar cada sesión y lo actualiza al terminar. Mantenerlo corto.
 
 **Última actualización:** 2026-11-13
-**Fase actual:** **Fase 4 completada y validada en `feature/fase-4-tablero-alertas`** (`32 passed` en `pytest`, 0 errores en `ruff`, verificación visual móvil `360x740` y escritorio `1280x800` aprobada). Se implementó el Tablero Operativo y Alertas (`/gestion/tablero/`) con métricas Web vs. POS por período, cola en tiempo real, 4 paneles de alerta/ranking con semáforos e íconos `toltip.png`, exportación CSV segura con BOM UTF-8 anti-inyección de fórmulas y accesos directos desde `/gestion/` y la barra rápida móvil. Lista para confirmar merge hacia `develop` e iniciar la **Fase 5: Preparación despliegue y API**.
+**Fase actual:** **Fase 4 completada y validada en `feature/fase-4-tablero-alertas`** (`32 passed` en `pytest`, 0 errores en `ruff`, verificación visual móvil `360x740` y escritorio `1280x800` aprobada). Se implementó el Tablero Operativo y Alertas (`/gestion/tablero/`) con métricas Web vs. POS por período, cola en tiempo real, 4 paneles de alerta/ranking con semáforos e íconos `toltip.png`, exportación CSV segura con BOM UTF-8 anti-inyección de fórmulas y accesos directos desde `/gestion/` y la barra rápida móvil. Lista para confirmar merge hacia `develop` e iniciar la **Fase 5: Piloto en demo y observaciones**.
 
 ## Dónde quedamos
 - Documentos **01 al 15** completos y alineados; copia intacta de los originales en `01-Relevamiento/fuentes/documentos-originales/`.
@@ -44,11 +44,11 @@
   - **Pruebas:** `tests/test_tablero.py` (3 escenarios completos alcanzando **32 pruebas pasando al 100%**).
 
 ## En curso
-- Confirmación de Jonathan para fusionar `feature/fase-4-tablero-alertas` en `develop` e iniciar la **Fase 5 – Preparación despliegue y API**.
+- Confirmación de Jonathan para fusionar `feature/fase-4-tablero-alertas` en `develop` e iniciar la **Fase 5 – Piloto en demo y observaciones**.
 
 ## Siguiente paso
 1. Con la confirmación de Jonathan, fusionar (`--no-ff`) `feature/fase-4-tablero-alertas` en `develop` y subir a `origin`.
-2. Iniciar la **Fase 5: Preparación despliegue y API** (configuración PostgreSQL/Render, endpoints REST/Swagger, CORS/whitenoise y pruebas k6).
+2. Iniciar la **Fase 5: Piloto en demo y observaciones** (configuración PostgreSQL/Render, endpoints REST/Swagger, CORS/whitenoise y pruebas k6).
 
 ## Bloqueos y pendientes con Richard
 Ver los 7 puntos de negocio en `00-Gestion/11-decisiones-cambios.md`.
