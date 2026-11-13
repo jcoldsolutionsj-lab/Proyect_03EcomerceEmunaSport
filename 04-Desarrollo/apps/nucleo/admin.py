@@ -2,15 +2,40 @@
 from typing import Any
 
 from django.contrib import admin
+from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import Group, User
 from django.http import HttpRequest
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
+from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from apps.nucleo.admin_helpers import encabezado_con_tooltip
 
 from .models import ConfiguracionTienda, MetodoPago
 
+admin.site.unregister(User)
+admin.site.unregister(Group)
+
+
+@admin.register(User)
+class UsuarioAdmin(BaseUserAdmin, UnfoldModelAdmin):
+    """Panel Flat de gestión de usuarios usando formularios nativos de django-unfold."""
+
+    form = UserChangeForm
+    add_form = UserCreationForm
+    change_password_form = AdminPasswordChangeForm
+    list_per_page = 15
+
+
+@admin.register(Group)
+class GrupoAdmin(BaseGroupAdmin, UnfoldModelAdmin):
+    """Panel Flat de gestión de grupos y permisos (Dueño, Staff)."""
+
+    list_per_page = 15
+
 
 @admin.register(ConfiguracionTienda)
-class ConfiguracionTiendaAdmin(admin.ModelAdmin):
+class ConfiguracionTiendaAdmin(UnfoldModelAdmin):
     """Panel de administración para el registro único de Configuración de la Tienda."""
 
     list_display = (
@@ -138,7 +163,7 @@ class ConfiguracionTiendaAdmin(admin.ModelAdmin):
 
 
 @admin.register(MetodoPago)
-class MetodoPagoAdmin(admin.ModelAdmin):
+class MetodoPagoAdmin(UnfoldModelAdmin):
     """Panel de administración para gestionar métodos de pago (Yape, Plin, Efectivo)."""
 
     list_display = (

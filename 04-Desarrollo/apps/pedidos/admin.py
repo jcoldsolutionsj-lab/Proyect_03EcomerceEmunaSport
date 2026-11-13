@@ -13,6 +13,9 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from django.views.decorators.http import require_POST
 from simple_history.admin import SimpleHistoryAdmin
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
+from unfold.admin import StackedInline as UnfoldStackedInline
+from unfold.admin import TabularInline as UnfoldTabularInline
 
 from apps.catalogo.models import ReglaPrecio, Variante
 from apps.nucleo.admin_helpers import encabezado_con_tooltip
@@ -40,7 +43,7 @@ from .servicios import (
 )
 
 
-class ItemPedidoInline(admin.TabularInline):
+class ItemPedidoInline(UnfoldTabularInline):
     """Muestra las líneas de camisetas compradas dentro de la ficha del pedido."""
 
     model = ItemPedido
@@ -82,7 +85,7 @@ class ItemPedidoInline(admin.TabularInline):
         return False
 
 
-class EnvioInline(admin.StackedInline):
+class EnvioInline(UnfoldStackedInline):
     """Muestra el despacho en agencia (Shalom/Olva) dentro de la ficha del pedido."""
 
     model = Envio
@@ -135,7 +138,7 @@ class EnvioInline(admin.StackedInline):
     enlace_boleta.short_description = "Comprobante Privado"
 
 
-class RegistroEstadoPedidoInline(admin.TabularInline):
+class RegistroEstadoPedidoInline(UnfoldTabularInline):
     """Muestra la bitácora inmutable de cambios de estado del pedido."""
 
     model = RegistroEstadoPedido
@@ -172,7 +175,7 @@ class RegistroEstadoPedidoInline(admin.TabularInline):
 
 
 @admin.register(Envio)
-class EnvioAdmin(admin.ModelAdmin):
+class EnvioAdmin(UnfoldModelAdmin):
     """Administración y seguimiento de despachos por agencias de transporte (Shalom / Olva)."""
 
     list_display = (
@@ -189,7 +192,7 @@ class EnvioAdmin(admin.ModelAdmin):
     list_filter = ("agencia", "quien_paga", "cobrado", "fecha_despacho")
     search_fields = ("numero_orden_agencia", "pedido__codigo", "pedido__cliente_nombre", "agencia")
     list_per_page = 15
-    readonly_fields = ("fecha_creacion", "fecha_actualizacion", "ver_boleta_link")
+    readonly_fields = ("fecha_creacion", "fecha_actualizacion", "ver_boleta_ficha")
 
     @admin.display(
         description=encabezado_con_tooltip("Pedido", "Código del pedido vinculado a este envío."),
@@ -351,9 +354,25 @@ class EnvioAdmin(admin.ModelAdmin):
             )
         return "Sin archivo"
 
+    @admin.display(description="Boleta privada")
+    def ver_boleta_ficha(self, obj: Envio) -> str:
+        """Muestra la boleta privada sin HTML en la etiqueta dentro del formulario de edición.
+
+        Qué hace:      Envuelve ver_boleta_link con un ícono tooltip junto al botón en lugar del label.
+        Va hacia:      Renderiza botón seguro en la ficha individual de Envio sin escapar etiquetas HTML.
+        Depende de:    EnvioAdmin.ver_boleta_link.
+        Cuándo usarla: En readonly_fields de EnvioAdmin para mantener el formulario limpio en Unfold.
+        Si no opera:   Retorna 'Sin archivo' si el envío aún no tiene fotografía adjunta.
+        """
+        contenido = self.ver_boleta_link(obj)
+        return format_html(
+            '{} <img src="/static/toltip.png" alt="Ayuda" title="Archivo de guía adjunto. Solo accesible con sesión de Richard o staff (403 al público)." class="emuna-icon-tip" />',
+            contenido,
+        )
+
 
 @admin.register(Pedido)
-class PedidoAdmin(SimpleHistoryAdmin):
+class PedidoAdmin(UnfoldModelAdmin, SimpleHistoryAdmin):
     """Administración de pedidos web y ventas presenciales para Richard y Jonathan."""
 
     change_list_template = "admin/pedidos/pedido/change_list.html"
@@ -387,7 +406,7 @@ class PedidoAdmin(SimpleHistoryAdmin):
         "fecha_cierre",
         "fecha_creacion",
         "fecha_actualizacion",
-        "notificacion_whatsapp",
+        "notificacion_whatsapp_ficha",
     )
     inlines = [ItemPedidoInline, EnvioInline, RegistroEstadoPedidoInline]
     actions = [
@@ -676,6 +695,24 @@ class PedidoAdmin(SimpleHistoryAdmin):
             enlace,
             color,
             texto,
+        )
+
+    @admin.display(description="Avisar por WhatsApp")
+    def notificacion_whatsapp_ficha(self, obj: Pedido) -> str:
+        """Renderiza el acceso a WhatsApp limpio en el formulario readonly de Pedido.
+
+        Qué hace:      Reutiliza notificacion_whatsapp y coloca el ícono de ayuda al lado del botón.
+        Va hacia:      Evita que el label readonly escape <img> como texto plano en Unfold.
+        Depende de:    PedidoAdmin.notificacion_whatsapp.
+        Cuándo usarla: En readonly_fields de PedidoAdmin dentro de change_form.
+        Si no opera:   Retorna enlace directo de WhatsApp sin romper maquetación móvil o escritorio.
+        """
+        if not obj or not obj.pk:
+            return "Disponible tras guardar"
+        boton = self.notificacion_whatsapp(obj)
+        return format_html(
+            '{} <img src="/static/toltip.png" alt="Ayuda" title="Abre WhatsApp con el mensaje prellenado según el estado (cotización, guía+clave o coordinación)." class="emuna-icon-tip" />',
+            boton,
         )
 
 

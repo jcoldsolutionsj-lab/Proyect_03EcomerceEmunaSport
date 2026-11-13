@@ -2,6 +2,16 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-13 (Panel Flat Design con `django-unfold`) – Merge Fase 4 a `develop` y rediseño integral de `/gestion/`
+- **Hecho:**
+  - Se fusionó `feature/fase-4-tablero-alertas` en `develop` (`--no-ff`, commit `48ce0b9`) y se creó la rama `feature/panel-flat-design-unfold`.
+  - Se integró `django-unfold==0.110.1` en `requirements/base.txt`, `config/settings/base.py` y `apps/nucleo/unfold_config.py` manteniendo la web pública (`/`, catálogo, carrito, checkout y comprobantes) 100% intacta.
+  - Se construyó la capa Flat Design en `static/css/emuna_flat_unfold.css` (sin sombras, bordes `1px`, radio `4px`, tema claro bloqueado, `zoom: 0.85` desktop y `zoom: 1` móvil, botones `#submit-row` opacos sin solapamiento, insignias semáforo de una sola línea y aviso táctil de desplazamiento en tablas).
+  - Se migraron los `ModelAdmin` e inlines de `nucleo`, `catalogo` y `pedidos` (`UnfoldModelAdmin`, `UnfoldTabularInline`, `UnfoldStackedInline`), corrigiendo la representación de tooltips en campos `readonly` de `PedidoAdmin`/`EnvioAdmin`, incorporando 4 KPIs en vivo en `/gestion/`, corrigiendo `app_index.html` y asegurando `.emuna-mobile-quicknav` + `#emuna-touch-tooltip` dentro de `{% block header %}` de `base_site.html`.
+  - Se validó con `collectstatic --noinput` (`259` archivos), `ruff check 04-Desarrollo` (**0 errores**), `pytest 04-Desarrollo/tests/` (**32/32 passing**) y 17 capturas Playwright (`360x740` y `1280x800`, `overflowX: false` en todas).
+- **Decidido:** aislar todo el cambio en la rama `feature/panel-flat-design-unfold` respaldada en GitHub para que Jonathan la revise por la mañana antes de integrarla a `develop`.
+- **Queda:** revisión de Jonathan sobre `feature/panel-flat-design-unfold`, merge a `develop` y arranque de la **Fase 5: Piloto en demo y observaciones**.
+
 ## 2026-11-13 (Fase 4) – Tablero operativo de ventas, alertas con semáforos y exportación CSV segura
 - **Hecho:**
   - Se creó el módulo completo de analítica operativa en `apps/tablero/`:

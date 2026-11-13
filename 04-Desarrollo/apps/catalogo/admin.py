@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404
 from django.urls import path, reverse
 from django.utils.html import format_html
 from django.views.decorators.http import require_POST
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
+from unfold.admin import TabularInline as UnfoldTabularInline
 
 from apps.nucleo.admin_helpers import encabezado_con_tooltip
 from apps.nucleo.excepciones import ErrorDominioEmuna
@@ -15,7 +17,7 @@ from apps.nucleo.excepciones import ErrorDominioEmuna
 from .models import Categoria, ImagenProducto, MovimientoStock, Producto, ReglaPrecio, Variante
 
 
-class ImagenProductoInline(admin.TabularInline):
+class ImagenProductoInline(UnfoldTabularInline):
     """Permite gestionar las fotos del producto en la misma pantalla del producto."""
 
     model = ImagenProducto
@@ -42,7 +44,7 @@ class ImagenProductoInline(admin.TabularInline):
     )
 
 
-class VarianteInline(admin.TabularInline):
+class VarianteInline(UnfoldTabularInline):
     """Permite gestionar las tallas (S, M, L, XL) y ver su stock dentro del producto."""
 
     model = Variante
@@ -62,7 +64,7 @@ class VarianteInline(admin.TabularInline):
     fields = ("talla", "sku", "cantidad_stock", "umbral_stock_bajo", "activa", "color", "modelo")
 
 
-class ReglaPrecioInline(admin.TabularInline):
+class ReglaPrecioInline(UnfoldTabularInline):
     """Permite configurar los tramos de precio por mayor dentro de cada producto."""
 
     model = ReglaPrecio
@@ -79,7 +81,7 @@ class ReglaPrecioInline(admin.TabularInline):
 
 
 @admin.register(Categoria)
-class CategoriaAdmin(admin.ModelAdmin):
+class CategoriaAdmin(UnfoldModelAdmin):
     """Administración de categorías del catálogo."""
 
     list_display = ("nombre_col", "slug_col", "orden_col", "activa_col", "actualizacion_col")
@@ -177,7 +179,7 @@ class CategoriaAdmin(admin.ModelAdmin):
 
 
 @admin.register(Producto)
-class ProductoAdmin(admin.ModelAdmin):
+class ProductoAdmin(UnfoldModelAdmin):
     """Administración integral de productos con tallas, fotos y precios por mayor."""
 
     list_display = (
@@ -318,7 +320,7 @@ class ProductoAdmin(admin.ModelAdmin):
 
 
 @admin.register(Variante)
-class VarianteAdmin(admin.ModelAdmin):
+class VarianteAdmin(UnfoldModelAdmin):
     """Vista directa de variantes por talla y control auditado de stock."""
 
     change_form_template = "admin/catalogo/variante/change_form.html"
@@ -531,7 +533,7 @@ class VarianteAdmin(admin.ModelAdmin):
 
 
 @admin.register(MovimientoStock)
-class MovimientoStockAdmin(admin.ModelAdmin):
+class MovimientoStockAdmin(UnfoldModelAdmin):
     """Auditoría inmutable de todas las entradas y salidas de stock (TBL_TMOVIMIENTO_STOCK)."""
 
     list_display = (

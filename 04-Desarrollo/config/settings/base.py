@@ -3,6 +3,8 @@ from pathlib import Path
 
 import environ
 
+from apps.nucleo.unfold_config import UNFOLD_CONFIG_EMUNA
+
 # BASE_DIR apunta a 04-Desarrollo/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # REPO_DIR apunta a la raíz del proyecto EcomerceEmunaSport/
@@ -53,8 +55,11 @@ SECRET_KEY = env(
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
-# Aplicaciones instaladas (nuestras 6 apps en español)
+# Aplicaciones instaladas (Unfold antes de contrib.admin para diseño Flat en /gestion/)
 DJANGO_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.simple_history",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -207,3 +212,6 @@ TURNSTILE_SECRET_KEY = env("TURNSTILE_SECRET_KEY")
 
 # Permitir nombres de índices de hasta 63 caracteres según 12-estandar-base-datos.md (PostgreSQL/SQLite)
 SILENCED_SYSTEM_CHECKS = ["models.E034"]
+
+# Tema Flat Design corporativo del panel /gestion/ (no afecta la tienda pública)
+UNFOLD = UNFOLD_CONFIG_EMUNA

@@ -2,10 +2,12 @@
 {% load i18n admin_urls %}
 
 {% block object-tools-items %}
-  <li>
-    <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}" class="addlink" style="background: #15803D; color: #FFFFFF; font-weight: bold; border: 1px solid #166534; padding: 6px 12px; border-radius: 4px; text-decoration: none;">
-      ⚡ Registrar Venta Presencial (POS)
+  <div class="flex flex-row items-center gap-2">
+    <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}"
+       class="inline-flex items-center gap-1.5 h-[38px] px-3 rounded-default bg-primary-600 text-white font-bold text-xs sm:text-sm border border-primary-700 hover:bg-primary-700 whitespace-nowrap no-underline">
+      <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
+      <span>Venta POS</span>
     </a>
-  </li>
-  {{ block.super }}
+    {{ block.super }}
+  </div>
 {% endblock %}

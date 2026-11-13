@@ -1,5 +1,6 @@
 """Pruebas integrales de la Fase 3: Gestión del pedido, stock atómico y panel administrativo."""
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -802,7 +803,8 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
         assert resp_adm.status_code == 200
         cuerpo = resp_adm.content.decode("utf-8")
         assert "/static/toltip.png" in cuerpo
-        assert "zoom: 0.85" in cuerpo
+        assert "emuna_flat_unfold.css" in cuerpo
+        assert "unfold/css/styles.css" in cuerpo
         if "movimientostock" in ruta_admin:
             assert "Salida -1" in cuerpo
 
@@ -856,7 +858,19 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
     assert "emuna-mobile-quicknav" in cuerpo_prod
     assert "emuna-inline-scroll" in cuerpo_prod
     assert "pos-desglose-wrap" in cuerpo_pos
-    assert "@media (max-width: 1024px)" in cuerpo_pos
+    assert "emuna_flat_unfold.css" in cuerpo_pos
+    assert "@media (max-width: 767px)" in cuerpo_pos
+
+    # Hoja Flat Design compartida de /gestion/ existe y declara zoom 0.85 + breakpoints móviles
+    from django.contrib.staticfiles import finders
+
+    ruta_css_flat = finders.find("css/emuna_flat_unfold.css")
+    assert ruta_css_flat is not None
+    contenido_css_flat = Path(ruta_css_flat).read_text(encoding="utf-8")
+    assert "zoom: 0.85;" in contenido_css_flat
+    assert "box-shadow: none !important;" in contenido_css_flat
+    assert "@media (max-width: 1024px)" in contenido_css_flat
+    assert "@media (max-width: 767px)" in contenido_css_flat
 
     for ruta_gestion in (
         reverse("admin:index"),
@@ -873,14 +887,19 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
         html_g = resp_g.content.decode("utf-8")
         assert '<nav class="emuna-mobile-quicknav"' in html_g
         assert "emuna-touch-tooltip" in html_g
-        assert "clear: both !important" in html_g
-        assert "#tabla-variantes-pos" in html_g
-        assert "@media (max-width: 767px)" in html_g
+        assert "emuna_flat_unfold.css" in html_g
+        assert "unfold/css/styles.css" in html_g
+        assert "&lt;img src=" not in html_g
+        if ruta_gestion == reverse("admin:index"):
+            assert "Accesos rápidos de venta diaria" in html_g
+            assert "Ventas confirmadas hoy" in html_g
 
-    # Login de /gestion/ sin usuario autenticado omite quicknav y mantiene soporte móvil
+    # Login de /gestion/ sin usuario autenticado omite quicknav y carga Unfold Flat Design en español
     cliente_anon = Client()
     resp_login = cliente_anon.get(reverse("admin:login"))
     assert resp_login.status_code == 200
     html_login = resp_login.content.decode("utf-8")
     assert '<nav class="emuna-mobile-quicknav"' not in html_login
-    assert ".login #container" in html_login
+    assert "emuna_flat_unfold.css" in html_login
+    assert "login-form" in html_login
+    assert "Bienvenido a" in html_login

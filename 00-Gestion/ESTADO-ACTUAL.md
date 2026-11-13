@@ -3,7 +3,7 @@
 > La IA lee este archivo al empezar cada sesión y lo actualiza al terminar. Mantenerlo corto.
 
 **Última actualización:** 2026-11-13
-**Fase actual:** **Fase 4 completada y validada en `feature/fase-4-tablero-alertas`** (`32 passed` en `pytest`, 0 errores en `ruff`, verificación visual móvil `360x740` y escritorio `1280x800` aprobada). Se implementó el Tablero Operativo y Alertas (`/gestion/tablero/`) con métricas Web vs. POS por período, cola en tiempo real, 4 paneles de alerta/ranking con semáforos e íconos `toltip.png`, exportación CSV segura con BOM UTF-8 anti-inyección de fórmulas y accesos directos desde `/gestion/` y la barra rápida móvil. Lista para confirmar merge hacia `develop` e iniciar la **Fase 5: Piloto en demo y observaciones**.
+**Fase actual:** **Fase 4 fusionada en `develop` (`48ce0b9`) + Rediseño Flat Design exclusivo para `/gestion/` completado en `feature/panel-flat-design-unfold`** (`32 passed` en `pytest`, **0 errores** en `ruff`, verificación visual Playwright móvil `360x740` y escritorio `1280x800` aprobada en las 17 vistas del panel). La tienda web pública quedó intacta. Lista para revisar y fusionar `feature/panel-flat-design-unfold` en `develop` antes de iniciar la **Fase 5: Piloto en demo y observaciones**.
 
 ## Dónde quedamos
 - Documentos **01 al 15** completos y alineados; copia intacta de los originales en `01-Relevamiento/fuentes/documentos-originales/`.
@@ -36,19 +36,26 @@
   - **Pruebas integrales:** `tests/test_gestion_pedidos.py` con 9 escenarios clave (matriz de transiciones, Flujos A/B/C, rollback por stock insuficiente, restitución por cancelación, inmutabilidad de movimientos, seguridad de boletas y vista POS admin).
   - Script k6 `escenarios-base.js` actualizado con el modo `concurrencia_stock` listo para ejecutar contra PostgreSQL en Render (Fase 5).
 
-- **Fase 4 implementada en `feature/fase-4-tablero-alertas` (pendiente merge a `develop`):**
+- **Fase 4 completada y fusionada en `develop` (`48ce0b9`):**
   - **Métricas y selectores (`apps/tablero/selectores.py`):** cálculo de ingresos confirmados (`PAGADO`/`ENVIADO`/`ENTREGADO`), desglose Web vs. POS presencial, unidades vendidas, ticket promedio, filtros rápidos (`hoy`, `7dias`, `mes`, `todo`, rango personalizado `desde`/`hasta`), evolución diaria con barra proporcional, cola operativa en vivo, ranking Top 10 más vendidos y productos activos sin rotación en los últimos `dias_sin_ventas` días.
   - **Alertas críticas y semáforos:** detección de tallas agotadas (`[ROJO]`) y stock bajo (`[ÁMBAR]`) respetando `Variante.umbral_stock_bajo` individual o el umbral global de `ConfiguracionTienda` mediante `Coalesce`, además de pedidos pendientes (`NUEVO`/`COTIZADO`) con más de `horas_pedido_pendiente` horas y enlace directo por WhatsApp. Resguardo adicional en `VarianteAdmin.stock_semaforo` y `umbral_col` ante umbrales `None`.
   - **Exportación CSV segura (`apps/tablero/servicios.py`):** descarga con BOM UTF-8 (`utf-8-sig` compatible con Excel) para ventas del período y alertas de stock, neutralizando inyección de fórmulas (`=`, `+`, `-`, `@`, tab, CR) mediante `_sanitizar_celda_csv` y encabezados `Cache-Control: no-store`.
   - **UI Enterprise Java/JSP y móvil (`templates/tablero/resumen_tablero.html`, `templates/admin/base_site.html`):** ruta privada `/gestion/tablero/` protegida exclusivamente para usuarios activos `staff`/`superuser`/`Dueño` (`302`/`403`), accesos directos en `/gestion/` y barra rápida móvil, diseño verificado en `360x740` (sin desborde horizontal, tablas con scroll interno) y `1280x800`.
   - **Pruebas:** `tests/test_tablero.py` (3 escenarios completos alcanzando **32 pruebas pasando al 100%**).
 
+- **Rediseño Flat Design del Panel `/gestion/` con `django-unfold==0.110.1` (`feature/panel-flat-design-unfold`):**
+  - Migración estética e interfaz responsiva exclusiva dentro de `/gestion/` (sin modificar la tienda pública web `/`): `config/settings/base.py`, `apps/nucleo/unfold_config.py`, `requirements/base.txt` y hoja plana compartida `static/css/emuna_flat_unfold.css` (cero sombras, bordes definidos `1px`, radio `4px`, modo claro forzado, `zoom: 0.85` en escritorio y `zoom: 1` en móvil `<= 1024px`).
+  - Navegación lateral operativa con insignias en tiempo real para alertas del tablero y cola de pedidos pendientes, portada `/gestion/` con 4 tarjetas KPI ejecutivas en vivo (`DASHBOARD_CALLBACK`) y acceso rápido a Tablero y POS.
+  - Consistencia total de tooltips `toltip.png` en listados e inlines (`templates/unfold/helpers/inline_heading.html`, `templates/unfold/edit_inline/*`), botones táctiles en móvil (`.emuna-mobile-quicknav` + `#emuna-touch-tooltip` en cabecera) y traducciones al español para login y buscadores de Unfold.
+  - Pruebas integrales aprobadas (`ruff check 04-Desarrollo` sin errores, `32/32` en `pytest` y 17 capturas Edge headless móvil/escritorio sin desborde horizontal).
+
 ## En curso
-- Confirmación de Jonathan para fusionar `feature/fase-4-tablero-alertas` en `develop` e iniciar la **Fase 5 – Piloto en demo y observaciones**.
+- Revisión final por Jonathan del nuevo panel Flat Design en `feature/panel-flat-design-unfold` para autorizar su merge a `develop`.
 
 ## Siguiente paso
-1. Con la confirmación de Jonathan, fusionar (`--no-ff`) `feature/fase-4-tablero-alertas` en `develop` y subir a `origin`.
-2. Iniciar la **Fase 5: Piloto en demo y observaciones** (configuración PostgreSQL/Render, endpoints REST/Swagger, CORS/whitenoise y pruebas k6).
+1. Con el visto bueno de Jonathan, fusionar (`--no-ff`) `feature/panel-flat-design-unfold` en `develop` y subir a `origin`.
+2. Recordar instalar/actualizar dependencias (`pip install -r 04-Desarrollo/requirements/base.txt`) o usar la `.venv` actualizada con `django-unfold==0.110.1`.
+3. Iniciar la **Fase 5: Piloto en demo y observaciones** (configuración PostgreSQL/Render, endpoints REST/Swagger, CORS/whitenoise y pruebas k6).
 
 ## Bloqueos y pendientes con Richard
 Ver los 7 puntos de negocio en `00-Gestion/11-decisiones-cambios.md`.

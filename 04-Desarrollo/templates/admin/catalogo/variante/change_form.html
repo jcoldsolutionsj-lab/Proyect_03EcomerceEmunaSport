@@ -1,10 +1,10 @@
 {% extends "admin/change_form.html" %}
 {% load i18n admin_urls %}
 
-{% block object-tools %}
+{% block form_before %}
   {{ block.super }}
   {% if change and original %}
-  <div id="panel-stock-variante" class="emuna-panel">
+  <div id="panel-stock-variante" class="emuna-panel mb-6">
     <div class="emuna-panel-header">
       <div style="min-width: 0; flex: 1 1 280px;">
         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #94A3B8; font-weight: 800;">
@@ -34,7 +34,7 @@
           </label>
           <input type="text" id="id_var_motivo" name="motivo" required maxlength="200" placeholder="Ej. Reposición de lote del taller central" style="width: 100%; height: 38px; box-sizing: border-box; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A;">
         </div>
-        <button type="submit" class="emuna-btn" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+        <button type="submit" class="emuna-btn" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534;">
           ➕ Registrar Movimiento de Stock
         </button>
       </form>
