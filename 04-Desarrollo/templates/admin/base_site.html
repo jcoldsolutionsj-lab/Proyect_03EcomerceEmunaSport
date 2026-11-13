@@ -930,6 +930,10 @@
       flex: 1 1 160px !important;
     }
 
+    .emuna-index-shortcuts a {
+      width: 100%;
+    }
+
     /* Submit row inferior de formularios Django */
     .submit-row input,
     .submit-row a.deletelink,
@@ -1028,12 +1032,27 @@
   {% if has_permission and not is_popup %}
     <nav class="emuna-mobile-quicknav" aria-label="Navegación rápida móvil">
       <a href="{% url 'admin:index' %}">🏠 Inicio</a>
+      <a href="{% url 'tablero:resumen' %}">📊 Tablero</a>
       <a href="{% url 'admin:pedidos_pedido_changelist' %}">📦 Pedidos</a>
       <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}" class="emuna-qnav-pos">⚡ POS</a>
       <a href="{% url 'admin:catalogo_producto_changelist' %}">👕 Productos</a>
       <a href="{% url 'admin:catalogo_variante_changelist' %}">📏 Stock</a>
       <a href="{% url 'admin:catalogo_movimientostock_changelist' %}">📜 Kardex</a>
     </nav>
+  {% endif %}
+{% endblock %}
+
+{% block content_title %}
+  {{ block.super }}
+  {% if has_permission and not is_popup and request.resolver_match and request.resolver_match.url_name == 'index' and request.resolver_match.namespace == 'admin' %}
+    <div class="emuna-index-shortcuts" style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px 0;">
+      <a href="{% url 'tablero:resumen' %}" class="emuna-btn" style="background:#1E293B;color:#FFFFFF;border:1px solid #0F172A;text-decoration:none;">
+        📊 Abrir Tablero de Ventas y Alertas
+      </a>
+      <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}" class="emuna-btn" style="background:#15803D;color:#FFFFFF;border:1px solid #166534;text-decoration:none;">
+        ⚡ Registrar Venta Presencial (POS)
+      </a>
+    </div>
   {% endif %}
 {% endblock %}
 

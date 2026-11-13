@@ -400,7 +400,14 @@ class VarianteAdmin(admin.ModelAdmin):
                 '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">{}</span>',
                 "🔴 [ROJO] Agotado (0)",
             )
-        if obj.cantidad_stock <= obj.umbral_stock_bajo:
+        from apps.nucleo.selectores import obtener_configuracion_tienda
+
+        umbral_efectivo = (
+            obj.umbral_stock_bajo
+            if obj.umbral_stock_bajo is not None
+            else obtener_configuracion_tienda().umbral_stock_bajo
+        )
+        if obj.cantidad_stock <= umbral_efectivo:
             return format_html(
                 '<span style="color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟡 [ÁMBAR] Bajo ({})</span>',
                 obj.cantidad_stock,
@@ -426,7 +433,7 @@ class VarianteAdmin(admin.ModelAdmin):
         Cuándo usarla: En el listado de variantes.
         Si no opera:   Retorna 0.
         """
-        return obj.umbral_stock_bajo
+        return obj.umbral_stock_bajo if obj.umbral_stock_bajo is not None else "Global"
 
     @admin.display(
         description=encabezado_con_tooltip(

@@ -32,6 +32,7 @@ def vista_estado_salud(request: HttpRequest) -> JsonResponse:
 
 
 urlpatterns = [
+    path(f"{settings.ADMIN_URL}tablero/", include("apps.tablero.urls", namespace="tablero")),
     path(settings.ADMIN_URL, admin.site.urls),
     path("salud/", vista_estado_salud, name="estado_salud"),
     path("robots.txt", vista_robots_txt, name="robots_txt"),
