@@ -50,11 +50,98 @@ class ReglaPrecioInline(admin.TabularInline):
 class CategoriaAdmin(admin.ModelAdmin):
     """Administración de categorías del catálogo."""
 
-    list_display = ("nombre", "slug", "orden", "activa", "fecha_actualizacion")
+    list_display = ("nombre_col", "slug_col", "orden_col", "activa_col", "actualizacion_col")
     list_filter = ("activa",)
     search_fields = ("nombre", "slug")
     prepopulated_fields = {"slug": ("nombre",)}
+    list_per_page = 15
     ordering = ("orden", "nombre")
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Categoría", "Nombre de la línea o colección deportiva visible en la tienda."
+        ),
+        ordering="nombre",
+    )
+    def nombre_col(self, obj: Categoria) -> str:
+        """Retorna el nombre de la categoría con tooltip explicativo.
+
+        Qué hace:      Devuelve obj.nombre.
+        Va hacia:      Columna Categoría en CategoriaAdmin.
+        Depende de:    obj.nombre.
+        Cuándo usarla: En el listado de categorías del panel administrativo.
+        Si no opera:   Retorna cadena vacía.
+        """
+        return obj.nombre
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Slug URL", "Identificador limpio usado en la dirección web de la categoría."
+        ),
+        ordering="slug",
+    )
+    def slug_col(self, obj: Categoria) -> str:
+        """Retorna el slug en código monoespaciado con tooltip.
+
+        Qué hace:      Renderiza obj.slug.
+        Va hacia:      Columna Slug URL en CategoriaAdmin.
+        Depende de:    obj.slug.
+        Cuándo usarla: En el listado de categorías.
+        Si no opera:   Retorna cadena vacía.
+        """
+        return format_html("<code>{}</code>", obj.slug)
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Orden", "Prioridad en el menú del catálogo (menor número aparece primero)."
+        ),
+        ordering="orden",
+    )
+    def orden_col(self, obj: Categoria) -> int:
+        """Retorna el orden de visualización con tooltip.
+
+        Qué hace:      Devuelve obj.orden.
+        Va hacia:      Columna Orden en CategoriaAdmin.
+        Depende de:    obj.orden.
+        Cuándo usarla: En el listado de categorías.
+        Si no opera:   Retorna 0.
+        """
+        return obj.orden
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Activa", "Controla si la categoría y sus camisetas se muestran al público."
+        ),
+        ordering="activa",
+        boolean=True,
+    )
+    def activa_col(self, obj: Categoria) -> bool:
+        """Retorna si la categoría está activa con tooltip.
+
+        Qué hace:      Devuelve obj.activa.
+        Va hacia:      Columna Activa en CategoriaAdmin.
+        Depende de:    obj.activa.
+        Cuándo usarla: En el listado de categorías.
+        Si no opera:   Retorna False.
+        """
+        return obj.activa
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Actualizada", "Fecha y hora de la última modificación de esta categoría."
+        ),
+        ordering="fecha_actualizacion",
+    )
+    def actualizacion_col(self, obj: Categoria) -> Any:
+        """Retorna la fecha de última actualización con tooltip.
+
+        Qué hace:      Devuelve obj.fecha_actualizacion.
+        Va hacia:      Columna Actualizada en CategoriaAdmin.
+        Depende de:    obj.fecha_actualizacion.
+        Cuándo usarla: En el listado de categorías.
+        Si no opera:   Retorna None.
+        """
+        return obj.fecha_actualizacion
 
 
 @admin.register(Producto)
@@ -62,18 +149,140 @@ class ProductoAdmin(admin.ModelAdmin):
     """Administración integral de productos con tallas, fotos y precios por mayor."""
 
     list_display = (
-        "nombre",
-        "sku",
-        "categoria",
-        "precio_unidad",
-        "precio_anterior",
-        "activo",
-        "destacado",
+        "nombre_col",
+        "sku_col",
+        "categoria_col",
+        "precio_unidad_col",
+        "precio_anterior_col",
+        "activo_col",
+        "destacado_col",
     )
     list_filter = ("activo", "destacado", "categoria")
-    search_fields = ("nombre", "sku", "descripcion")
+    search_fields = ("nombre", "sku", "descripcion", "categoria__nombre")
     prepopulated_fields = {"slug": ("nombre",)}
+    list_per_page = 15
     inlines = [VarianteInline, ReglaPrecioInline, ImagenProductoInline]
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Camiseta / Producto", "Nombre comercial de la camiseta mostrado en la tienda web."
+        ),
+        ordering="nombre",
+    )
+    def nombre_col(self, obj: Producto) -> str:
+        """Retorna el nombre del producto con tooltip explicativo.
+
+        Qué hace:      Devuelve obj.nombre.
+        Va hacia:      Columna Camiseta / Producto en ProductoAdmin.
+        Depende de:    obj.nombre.
+        Cuándo usarla: En el listado de productos del panel administrativo.
+        Si no opera:   Retorna cadena vacía.
+        """
+        return obj.nombre
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "SKU Base", "Código maestro interno del modelo antes de desglosar por tallas."
+        ),
+        ordering="sku",
+    )
+    def sku_col(self, obj: Producto) -> str:
+        """Retorna el SKU base del producto con tooltip.
+
+        Qué hace:      Renderiza obj.sku en monoespaciado.
+        Va hacia:      Columna SKU Base en ProductoAdmin.
+        Depende de:    obj.sku.
+        Cuándo usarla: En el listado de productos.
+        Si no opera:   Retorna cadena vacía.
+        """
+        return format_html("<code>{}</code>", obj.sku)
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Categoría", "Colección a la que pertenece la camiseta (Selecciones, Clubes, etc.)."
+        ),
+        ordering="categoria__nombre",
+    )
+    def categoria_col(self, obj: Producto) -> str:
+        """Retorna el nombre de la categoría del producto con tooltip.
+
+        Qué hace:      Devuelve obj.categoria.nombre.
+        Va hacia:      Columna Categoría en ProductoAdmin.
+        Depende de:    obj.categoria.
+        Cuándo usarla: En el listado de productos.
+        Si no opera:   Retorna guion si no tiene categoría.
+        """
+        return obj.categoria.nombre if obj.categoria else "—"
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Precio Unidad", "Precio estándar por 1 a 2 unidades (antes de descuento por mayor)."
+        ),
+        ordering="precio_unidad",
+    )
+    def precio_unidad_col(self, obj: Producto) -> str:
+        """Retorna el precio unitario formateado en soles con tooltip.
+
+        Qué hace:      Formatea S/ {precio_unidad}.
+        Va hacia:      Columna Precio Unidad en ProductoAdmin.
+        Depende de:    obj.precio_unidad.
+        Cuándo usarla: En el listado de productos.
+        Si no opera:   Retorna S/ 0.00.
+        """
+        return f"S/ {obj.precio_unidad:.2f}"
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Precio Antes", "Precio tachado referencial para destacar promociones."
+        ),
+        ordering="precio_anterior",
+    )
+    def precio_anterior_col(self, obj: Producto) -> str:
+        """Retorna el precio anterior referencial o guion si no tiene oferta.
+
+        Qué hace:      Formatea S/ {precio_anterior} o '—'.
+        Va hacia:      Columna Precio Antes en ProductoAdmin.
+        Depende de:    obj.precio_anterior.
+        Cuándo usarla: En el listado de productos.
+        Si no opera:   Retorna '—'.
+        """
+        return f"S/ {obj.precio_anterior:.2f}" if obj.precio_anterior else "—"
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Activo", "Si está desmarcado, el producto queda oculto de la tienda web."
+        ),
+        ordering="activo",
+        boolean=True,
+    )
+    def activo_col(self, obj: Producto) -> bool:
+        """Retorna si el producto está activo para venta pública.
+
+        Qué hace:      Devuelve obj.activo.
+        Va hacia:      Columna Activo en ProductoAdmin.
+        Depende de:    obj.activo.
+        Cuándo usarla: En el listado de productos.
+        Si no opera:   Retorna False.
+        """
+        return obj.activo
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Destacado", "Si está marcado, aparece priorizado en la portada de la web."
+        ),
+        ordering="destacado",
+        boolean=True,
+    )
+    def destacado_col(self, obj: Producto) -> bool:
+        """Retorna si el producto está marcado como destacado.
+
+        Qué hace:      Devuelve obj.destacado.
+        Va hacia:      Columna Destacado en ProductoAdmin.
+        Depende de:    obj.destacado.
+        Cuándo usarla: En el listado de productos.
+        Si no opera:   Retorna False.
+        """
+        return obj.destacado
 
 
 @admin.register(Variante)
@@ -90,7 +299,8 @@ class VarianteAdmin(admin.ModelAdmin):
         "activa_col",
     )
     list_filter = ("talla", "activa", "producto__categoria")
-    search_fields = ("sku", "producto__nombre", "talla")
+    search_fields = ("sku", "producto__nombre", "talla", "color", "producto__categoria__nombre")
+    list_per_page = 15
 
     @admin.display(
         description=encabezado_con_tooltip("Producto", "Camiseta a la que pertenece esta talla."),
@@ -155,16 +365,16 @@ class VarianteAdmin(admin.ModelAdmin):
         """
         if obj.cantidad_stock <= 0:
             return format_html(
-                '<span style="color:#DC2626;background:#FEE2E2;padding:2px 8px;border-radius:999px;font-weight:800;font-size:12px;">{}</span>',
-                "🔴 Agotado (0)",
+                '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">{}</span>',
+                "🔴 [ROJO] Agotado (0)",
             )
         if obj.cantidad_stock <= obj.umbral_stock_bajo:
             return format_html(
-                '<span style="color:#B45309;background:#FEF3C7;padding:2px 8px;border-radius:999px;font-weight:800;font-size:12px;">🟡 Bajo ({})</span>',
+                '<span style="color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟡 [ÁMBAR] Bajo ({})</span>',
                 obj.cantidad_stock,
             )
         return format_html(
-            '<span style="color:#059669;background:#D1FAE5;padding:2px 8px;border-radius:999px;font-weight:800;font-size:12px;">🟢 {} und.</span>',
+            '<span style="color:#166534;background:#DCFCE7;border:1px solid #22C55E;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟢 [VERDE] {} und.</span>',
             obj.cantidad_stock,
         )
 
@@ -298,9 +508,11 @@ class MovimientoStockAdmin(admin.ModelAdmin):
     search_fields = (
         "variante__sku",
         "variante__producto__nombre",
+        "variante__talla",
         "motivo",
         "pedido__codigo",
     )
+    list_per_page = 15
     readonly_fields = (
         "variante",
         "tipo",
@@ -398,11 +610,11 @@ class MovimientoStockAdmin(admin.ModelAdmin):
         """
         if obj.cantidad > 0:
             return format_html(
-                '<span style="color:#059669;background:#D1FAE5;padding:2px 8px;border-radius:999px;font-weight:800;font-size:12px;">🟢 Entrada +{}</span>',
+                '<span style="color:#166534;background:#DCFCE7;border:1px solid #22C55E;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟢 [VERDE] Entrada +{}</span>',
                 obj.cantidad,
             )
         return format_html(
-            '<span style="color:#DC2626;background:#FEE2E2;padding:2px 8px;border-radius:999px;font-weight:800;font-size:12px;">🔴 Salida {}</span>',
+            '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🔴 [ROJO] Salida {}</span>',
             obj.cantidad,
         )
 

@@ -1,0 +1,83 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  /* Reducción global de escala (-15% de zoom) para densidad empresarial tipo Java JSP */
+  html {
+    zoom: 0.85;
+  }
+
+  /* Estética corporativa seria en cabecera, tablas, filtros y paginación */
+  #header {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border-bottom: 3px solid #15803D !important;
+  }
+  #site-name a:link, #site-name a:visited {
+    color: #FFFFFF !important;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+  div.breadcrumbs {
+    background: #334155 !important;
+    color: #CBD5E1 !important;
+    border-bottom: 1px solid #1E293B;
+  }
+  div.breadcrumbs a {
+    color: #FFFFFF !important;
+    font-weight: 600;
+  }
+  .module h2, .module caption, .inline-group h2 {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+  }
+
+  /* Garantizar que ningún combo box (<select>) recorte verticalmente los textos */
+  select, .actions select {
+    min-height: 34px;
+    line-height: 1.4 !important;
+    padding: 4px 10px !important;
+    box-sizing: border-box;
+  }
+
+  /* Paginación visible estilo corporativo */
+  .paginator {
+    background: #F8FAFC !important;
+    border-top: 1px solid #CBD5E1 !important;
+    padding: 10px 12px !important;
+    font-weight: 600;
+  }
+  .paginator a:link, .paginator a:visited {
+    background: #FFFFFF !important;
+    color: #1E293B !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 4px !important;
+    padding: 4px 9px !important;
+    margin: 0 2px;
+  }
+  .paginator a:hover {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+  }
+  .paginator .this-page {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border: 1px solid #0F172A !important;
+    border-radius: 4px !important;
+    padding: 4px 9px !important;
+  }
+</style>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

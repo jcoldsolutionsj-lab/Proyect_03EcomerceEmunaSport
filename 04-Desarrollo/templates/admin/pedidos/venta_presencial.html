@@ -86,7 +86,7 @@
       </div>
     </div>
 
-    <!-- 2. Seleccionar Camisetas y Tallas con Búsqueda Indexada y Paginación -->
+    <!-- 2. Seleccionar Camisetas y Tallas con Buscador Único por Palabras y Paginación -->
     <div class="module" style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; padding: 20px; margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
       
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px; margin-bottom: 16px;">
@@ -99,36 +99,54 @@
           </span>
         </div>
 
-        <!-- Barra de Búsqueda Indexada por Palabras -->
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-          <div style="display: flex; gap: 6px;">
-            <input type="text" id="input-busqueda-servidor" placeholder="🔍 Buscar (ej. Argentina Messi L)..." value="{{ busqueda|default:'' }}" style="height: 36px; padding: 6px 12px; border: 1px solid #94A3B8; border-radius: 4px; font-size: 13px; width: 260px; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
-            <button type="button" onclick="ejecutarBusquedaServidor()" style="background: #1E293B; color: #FFFFFF; border: none; height: 36px; padding: 0 14px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
-              Buscar
+        <!-- Buscador Único Indexado por Palabras (Filtra al escribir y consulta toda la BD con Buscar/Enter) -->
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+          <input type="text"
+                 id="input-busqueda-servidor"
+                 oninput="filtrarTablaEnVivo(this.value)"
+                 placeholder="🔍 Buscar por palabras (ej. Argentina Messi L)..."
+                 value="{{ busqueda|default:'' }}"
+                 style="height: 36px; padding: 6px 12px; border: 1px solid #94A3B8; border-radius: 4px; font-size: 13px; width: 320px; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
+          <button type="button" onclick="ejecutarBusquedaServidor()" style="background: #1E293B; color: #FFFFFF; border: none; height: 36px; padding: 0 16px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
+            Buscar
+          </button>
+          {% if busqueda %}
+            <button type="button" onclick="limpiarBusquedaServidor()" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; height: 36px; padding: 0 12px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
+              ✕ Limpiar
             </button>
-            {% if busqueda %}
-              <button type="button" onclick="limpiarBusquedaServidor()" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; height: 36px; padding: 0 10px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
-                ✕ Limpiar
-              </button>
-            {% endif %}
-          </div>
-
-          <!-- Filtro instantáneo local al escribir -->
-          <input type="text" id="filtro-rapido-local" oninput="filtrarTablaEnVivo(this.value)" placeholder="⚡ Filtrar en pantalla..." style="height: 36px; padding: 6px 10px; border: 1px solid #CBD5E1; border-radius: 4px; font-size: 12px; width: 170px; background: #F8FAFC; color: #0F172A; box-sizing: border-box;">
+          {% endif %}
         </div>
       </div>
       
-      <!-- Tabla de Camisetas -->
+      <!-- Tabla de Camisetas con Tooltips Formales en Todas las Columnas -->
       <div style="overflow-x: auto; border: 1px solid #E2E8F0; border-radius: 4px;">
         <table id="tabla-variantes-pos" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
           <thead>
             <tr style="background: #F8FAFC; border-bottom: 2px solid #CBD5E1; color: #334155;">
-              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;">Camiseta</th>
-              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center;">Talla</th>
-              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;">SKU</th>
-              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: right;">Precio Unit.</th>
-              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center;">Stock Disp. (Semáforo)</th>
-              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center; width: 160px; background: #F1F5F9;">Cantidad a Vender</th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;">
+                Camiseta
+                <img src="/static/toltip.png" alt="Ayuda" title="Nombre comercial del modelo de camiseta y color disponible." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center;">
+                Talla
+                <img src="/static/toltip.png" alt="Ayuda" title="Talla física de la prenda (S, M, L, XL) que saldrá del almacén." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;">
+                SKU
+                <img src="/static/toltip.png" alt="Ayuda" title="Código único interno que identifica este modelo y talla exacta." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: right;">
+                Precio Unit.
+                <img src="/static/toltip.png" alt="Ayuda" title="Precio unitario referencial de catálogo por camiseta." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center;">
+                Stock Disp. (Semáforo)
+                <img src="/static/toltip.png" alt="Ayuda" title="Unidades físicas disponibles en almacén. Verde: stock normal; Ámbar: pocas unidades; Rojo: agotado." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center; width: 165px; background: #F1F5F9;">
+                Cantidad a Vender
+                <img src="/static/toltip.png" alt="Ayuda" title="Ingresa cuántas unidades de esta camiseta y talla se lleva el cliente en esta venta." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -224,7 +242,7 @@
 
     </div>
 
-    <!-- 3. CUADRO TOTALIZADOR / RESUMEN EN TIEMPO REAL (Lo solicitado por Jonathan) -->
+    <!-- 3. CUADRO TOTALIZADOR / RESUMEN EN TIEMPO REAL -->
     <div class="module" id="modulo-totalizador-venta" style="background: #FFFFFF; border: 1px solid #CBD5E1; border-top: 4px solid #15803D; border-radius: 6px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px; margin-bottom: 14px;">
         <div>
@@ -259,12 +277,30 @@
         <table id="tabla-desglose-resumen" style="width: 100%; border-collapse: collapse; display: none; font-size: 13px;">
           <thead>
             <tr style="border-bottom: 2px solid #CBD5E1; color: #334155; text-align: left; background: #F1F5F9;">
-              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase;">Camiseta / Talla</th>
-              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: center;">SKU</th>
-              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: center;">Cantidad</th>
-              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: right;">P. Unitario</th>
-              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: right;">Subtotal</th>
-              <th style="padding: 8px 10px; text-align: center; width: 50px;"></th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase;">
+                Camiseta / Talla
+                <img src="/static/toltip.png" alt="Ayuda" title="Modelo y talla seleccionada para esta venta presencial." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: center;">
+                SKU
+                <img src="/static/toltip.png" alt="Ayuda" title="Código único del inventario que será descontado." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: center;">
+                Cantidad
+                <img src="/static/toltip.png" alt="Ayuda" title="Número total de unidades de esta camiseta en la venta." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: right;">
+                P. Unitario
+                <img src="/static/toltip.png" alt="Ayuda" title="Precio unitario referencial en soles." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: right;">
+                Subtotal
+                <img src="/static/toltip.png" alt="Ayuda" title="Resultado de multiplicar cantidad por precio unitario." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: center; width: 65px;">
+                Quitar
+                <img src="/static/toltip.png" alt="Ayuda" title="Elimina esta camiseta de la venta actual." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:2px;cursor:help;display:inline-block;" />
+              </th>
             </tr>
           </thead>
           <tbody id="tbody-desglose-resumen">
@@ -295,13 +331,11 @@
   </form>
 </div>
 
-<!-- Lógica JavaScript de Totalizador, Persistencia de Páginas y Búsqueda -->
+<!-- Lógica JavaScript de Totalizador, Persistencia de Páginas y Buscador Único -->
 <script>
-  // Estructura en memoria: { [varianteId]: { id, nombre, talla, sku, precio, cantidad, maxStock } }
   const STORAGE_KEY = 'emuna_pos_carrito_v1';
   let carritoPOS = {};
 
-  // Cargar estado inicial desde sessionStorage (para que no se pierda al paginar o buscar)
   function cargarCarritoDesdeStorage() {
     try {
       const guardado = sessionStorage.getItem(STORAGE_KEY);
@@ -322,7 +356,6 @@
     }
   }
 
-  // Sincronizar inputs de la página actual con los datos del carrito
   function sincronizarInputsPagina() {
     document.querySelectorAll('input[name^="cant_"]').forEach(inp => {
       const id = inp.dataset.id;
@@ -332,11 +365,9 @@
     });
   }
 
-  // Ajustar cantidad con los botones + y -
   function ajustarCantidad(id, delta) {
     const inp = document.getElementById('cant_' + id);
     if (!inp) {
-      // Si la variante no está en la página actual pero está en el carrito
       if (carritoPOS[id]) {
         carritoPOS[id].cantidad = Math.max(0, carritoPOS[id].cantidad + delta);
         if (carritoPOS[id].cantidad === 0) {
@@ -355,7 +386,6 @@
     onInputCantidad(id);
   }
 
-  // Evento cuando el usuario escribe o cambia el input
   function onInputCantidad(id) {
     const inp = document.getElementById('cant_' + id);
     if (!inp) return;
@@ -388,7 +418,6 @@
     actualizarVistaTotalizador();
   }
 
-  // Eliminar un producto directamente desde el desglose del totalizador
   function quitarDelResumen(id) {
     delete carritoPOS[id];
     guardarCarritoEnStorage();
@@ -399,7 +428,6 @@
     actualizarVistaTotalizador();
   }
 
-  // Limpiar todo
   function limpiarTodoElCarrito() {
     carritoPOS = {};
     guardarCarritoEnStorage();
@@ -409,7 +437,6 @@
     actualizarVistaTotalizador();
   }
 
-  // Actualizar el DOM del Totalizador en Tiempo Real
   function actualizarVistaTotalizador() {
     let totalPrendas = 0;
     let totalMonto = 0;
@@ -435,7 +462,6 @@
         const subtotal = item.precio * item.cantidad;
         totalMonto += subtotal;
 
-        // Fila en tabla de resumen
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #E2E8F0';
         tr.innerHTML = `
@@ -460,8 +486,6 @@
         `;
         tbody.appendChild(tr);
 
-        // Si este item NO está en la página actual como input visible, creamos un hidden input
-        // para que viaje en el POST sin perderse al paginar o buscar
         const inputVisible = document.getElementById('cant_' + item.id);
         if (!inputVisible) {
           const hInput = document.createElement('input');
@@ -473,14 +497,12 @@
       });
     }
 
-    // Actualizar KPIs numéricos
     document.getElementById('kpi-total-prendas').innerText = totalPrendas;
     document.getElementById('kpi-total-soles').innerText = 'S/ ' + totalMonto.toFixed(2);
     document.getElementById('btn-total-prendas-texto').innerText = totalPrendas + ' unid.';
     document.getElementById('btn-total-soles-texto').innerText = 'S/ ' + totalMonto.toFixed(2);
   }
 
-  // Filtrado instantáneo en vivo al escribir en la pantalla actual
   function filtrarTablaEnVivo(termino) {
     const t = (termino || '').toLowerCase().trim();
     const palabras = t.split(/\s+/).filter(Boolean);
@@ -499,7 +521,6 @@
     });
   }
 
-  // Búsqueda en servidor (indexa sobre toda la base de datos)
   function ejecutarBusquedaServidor() {
     const q = document.getElementById('input-busqueda-servidor').value.trim();
     const url = new URL(window.location.href);
@@ -519,7 +540,6 @@
     window.location.href = url.toString();
   }
 
-  // Permitir presionar Enter en el input de búsqueda del servidor
   document.getElementById('input-busqueda-servidor')?.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -527,12 +547,10 @@
     }
   });
 
-  // Al enviar el formulario de venta presencial, limpiar el sessionStorage para que la siguiente venta inicie en 0
   document.getElementById('form-venta-presencial')?.addEventListener('submit', function() {
     sessionStorage.removeItem(STORAGE_KEY);
   });
 
-  // Inicialización al cargar la página
   document.addEventListener('DOMContentLoaded', function() {
     cargarCarritoDesdeStorage();
     sincronizarInputsPagina();

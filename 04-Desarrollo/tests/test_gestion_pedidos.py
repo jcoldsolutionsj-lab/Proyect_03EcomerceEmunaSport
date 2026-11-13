@@ -781,9 +781,18 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
     assert "OLV-998811" in resp_env_html
     assert "7391" not in resp_env_html
 
-    # 4. Admin changelist con tooltips ⓘ y colores cargan 200 OK para richard
+    # 4. Todos los módulos admin tienen paginación, buscador, zoom 0.85 e íconos toltip.png
+    from django.contrib import admin as django_admin
+
+    for modelo, model_admin in django_admin.site._registry.items():
+        if modelo._meta.app_label in ("nucleo", "catalogo", "pedidos"):
+            assert model_admin.list_per_page <= 20, f"{modelo} sin paginación compacta"
+            assert len(model_admin.search_fields) >= 1, f"{modelo} sin buscador configurado"
+
     http_client.force_login(richard)
     for ruta_admin in (
+        "admin:catalogo_categoria_changelist",
+        "admin:catalogo_producto_changelist",
         "admin:catalogo_movimientostock_changelist",
         "admin:catalogo_variante_changelist",
         "admin:pedidos_pedido_changelist",
@@ -793,5 +802,14 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
         assert resp_adm.status_code == 200
         cuerpo = resp_adm.content.decode("utf-8")
         assert "/static/toltip.png" in cuerpo
+        assert "zoom: 0.85" in cuerpo
         if "movimientostock" in ruta_admin:
             assert "Salida -1" in cuerpo
+
+    # 5. POS de venta presencial tiene 1 solo buscador y tooltips en todas las columnas
+    resp_pos = http_client.get(reverse("admin:pedidos_pedido_venta_presencial"))
+    assert resp_pos.status_code == 200
+    cuerpo_pos = resp_pos.content.decode("utf-8")
+    assert "input-busqueda-servidor" in cuerpo_pos
+    assert "filtro-rapido-local" not in cuerpo_pos
+    assert "/static/toltip.png" in cuerpo_pos

@@ -161,7 +161,8 @@ class EnvioAdmin(admin.ModelAdmin):
         "ver_boleta_link",
     )
     list_filter = ("agencia", "quien_paga", "cobrado", "fecha_despacho")
-    search_fields = ("numero_orden_agencia", "pedido__codigo", "pedido__cliente_nombre")
+    search_fields = ("numero_orden_agencia", "pedido__codigo", "pedido__cliente_nombre", "agencia")
+    list_per_page = 15
     readonly_fields = ("fecha_creacion", "fecha_actualizacion", "ver_boleta_link")
 
     @admin.display(
@@ -319,7 +320,7 @@ class EnvioAdmin(admin.ModelAdmin):
         if obj.pk and obj.imagen_boleta:
             url = reverse("pedidos:ver_boleta_privada", args=[obj.pk])
             return format_html(
-                '<a href="{}" target="_blank" style="background:#0F172A;color:#10B981;font-weight:bold;padding:4px 8px;border-radius:4px;text-decoration:none;">📄 Ver boleta</a>',
+                '<a href="{}" target="_blank" style="background:#1E293B;color:#FFFFFF;border:1px solid #0F172A;font-weight:bold;padding:4px 8px;border-radius:4px;text-decoration:none;font-size:12px;">📄 Ver boleta</a>',
                 url,
             )
         return "Sin archivo"
@@ -345,7 +346,8 @@ class PedidoAdmin(SimpleHistoryAdmin):
         "fecha_col",
     )
     list_filter = ("estado", "tipo_entrega", "origen", "agencia", "fecha_creacion")
-    search_fields = ("codigo", "cliente_nombre", "cliente_telefono", "cliente_dni")
+    search_fields = ("codigo", "cliente_nombre", "cliente_telefono", "cliente_dni", "estado", "tipo_entrega")
+    list_per_page = 15
     readonly_fields = (
         "codigo",
         "estado",
@@ -468,19 +470,21 @@ class PedidoAdmin(SimpleHistoryAdmin):
         Si no opera:   Retorna texto plano del estado.
         """
         estilos = {
-            EstadoPedido.NUEVO: ("#1D4ED8", "#DBEAFE"),
-            EstadoPedido.COTIZADO: ("#B45309", "#FEF3C7"),
-            EstadoPedido.PAGADO: ("#6D28D9", "#EDE9FE"),
-            EstadoPedido.ENVIADO: ("#0369A1", "#E0F2FE"),
-            EstadoPedido.ENTREGADO: ("#047857", "#D1FAE5"),
-            EstadoPedido.CANCELADO: ("#B91C1C", "#FEE2E2"),
-            EstadoPedido.RECHAZADO: ("#991B1B", "#FEE2E2"),
+            EstadoPedido.NUEVO: ("#334155", "#F1F5F9", "#94A3B8", "⚪ [GRIS]"),
+            EstadoPedido.COTIZADO: ("#92400E", "#FEF3C7", "#F59E0B", "🟡 [ÁMBAR]"),
+            EstadoPedido.PAGADO: ("#166534", "#DCFCE7", "#22C55E", "🟢 [VERDE]"),
+            EstadoPedido.ENVIADO: ("#1E40AF", "#DBEAFE", "#3B82F6", "🔵 [AZUL]"),
+            EstadoPedido.ENTREGADO: ("#14532D", "#DCFCE7", "#16A34A", "🟢 [VERDE]"),
+            EstadoPedido.CANCELADO: ("#991B1B", "#FEE2E2", "#EF4444", "🔴 [ROJO]"),
+            EstadoPedido.RECHAZADO: ("#991B1B", "#FEE2E2", "#EF4444", "🔴 [ROJO]"),
         }
-        fg, bg = estilos.get(obj.estado, ("#334155", "#F1F5F9"))
+        fg, bg, bdr, prefijo = estilos.get(obj.estado, ("#334155", "#F1F5F9", "#94A3B8", ""))
         return format_html(
-            '<span style="color:{};background:{};padding:2px 8px;border-radius:999px;font-weight:800;font-size:11px;white-space:nowrap;">{}</span>',
+            '<span style="color:{};background:{};border:1px solid {};padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;white-space:nowrap;">{} {}</span>',
             fg,
             bg,
+            bdr,
+            prefijo,
             obj.get_estado_display(),
         )
 
@@ -619,7 +623,7 @@ class PedidoAdmin(SimpleHistoryAdmin):
         if obj.estado == EstadoPedido.COTIZADO:
             tipo = "COTIZADO"
             texto = "💬 Avisar Cotización"
-            color = "#10B981"
+            color = "#15803D"
         elif obj.estado == EstadoPedido.ENVIADO:
             tipo = "ENVIADO"
             texto = "🚚 Enviar Guía"
