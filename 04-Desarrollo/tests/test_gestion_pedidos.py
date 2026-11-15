@@ -872,6 +872,9 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
     assert "@media (max-width: 1024px)" in contenido_css_flat
     assert "position: sticky;" in contenido_css_flat
     assert ".emuna-mobile-sticky-bar" in contenido_css_flat
+    assert ".emuna-table-scroll," in contenido_css_flat
+    assert "touch-action: pan-x pan-y;" in contenido_css_flat
+    assert "min-width: 680px;" in contenido_css_flat
     assert "@media (max-width: 767px)" in contenido_css_flat
 
     for ruta_gestion in (

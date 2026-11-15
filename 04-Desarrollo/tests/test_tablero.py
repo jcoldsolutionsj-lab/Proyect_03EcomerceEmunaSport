@@ -347,6 +347,9 @@ def test_vistas_tablero_permisos_ui_movil_y_csv_seguro(escenario_tablero: dict) 
     assert "toltip.png" in html_tab
     assert '<nav class="emuna-mobile-quicknav"' in html_tab
     assert "@media (max-width: 767px)" in html_tab
+    assert "grid-template-columns: minmax(0, 1fr);" in html_tab
+    assert "emuna-table-scroll" in html_tab
+    assert "emuna-swipe-hint" in html_tab
     assert "EMU-CRIT01-S" in html_tab
 
     # CSV de ventas: BOM UTF-8, sin caché, descarga y sanitización de fórmula '=HYPERLINK...'
