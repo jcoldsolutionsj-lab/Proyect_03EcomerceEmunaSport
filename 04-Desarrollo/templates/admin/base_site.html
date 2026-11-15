@@ -25,6 +25,74 @@
       {% endif %}
     </div>
     {% if has_permission and not is_popup %}
+    <script>
+      (function () {
+        if (typeof window.theme !== 'function' || window.__emunaThemePatched) return;
+        window.__emunaThemePatched = true;
+        var originalTheme = window.theme;
+
+        function leerSidebarGuardado() {
+          try {
+            return localStorage.getItem('sidebarOpen');
+          } catch (err) {
+            return null;
+          }
+        }
+
+        function guardarSidebar(abierto) {
+          try {
+            localStorage.setItem('sidebarOpen', abierto ? '1' : '0');
+          } catch (err) {
+            /* Almacenamiento local no disponible */
+          }
+        }
+
+        function estadoInicialSidebar() {
+          if (window.innerWidth < 1280) {
+            return false;
+          }
+          var guardado = leerSidebarGuardado();
+          return guardado === null ? true : guardado !== '0';
+        }
+
+        window.theme = function (defaultTheme) {
+          var data = originalTheme(defaultTheme);
+          var ultimoAncho = window.innerWidth;
+          var esEscritorioPrevio = ultimoAncho >= 1280;
+
+          // Inicializar como booleano alineado al breakpoint xl (1280px) de Unfold.
+          data.sidebarOpen = estadoInicialSidebar();
+
+          data.sidebarToggle = function () {
+            this.sidebarOpen = !Boolean(this.sidebarOpen);
+            if (window.innerWidth >= 1280) {
+              guardarSidebar(this.sidebarOpen);
+            }
+          };
+
+          if (data.themeBindings && typeof data.themeBindings['x-resize.window'] === 'function') {
+            data.themeBindings['x-resize.window'] = function () {
+              var anchoActual = window.innerWidth;
+              // Ignorar cambios exclusivos de altura provocados por ResizeObserver al abrir/cerrar el menú.
+              if (anchoActual === ultimoAncho) {
+                return;
+              }
+              ultimoAncho = anchoActual;
+              var esEscritorioActual = anchoActual >= 1280;
+              if (esEscritorioActual === esEscritorioPrevio) {
+                return;
+              }
+              esEscritorioPrevio = esEscritorioActual;
+              this.sidebarOpen = esEscritorioActual
+                ? (leerSidebarGuardado() === '0' ? false : true)
+                : false;
+            };
+          }
+
+          return data;
+        };
+      })();
+    </script>
     <div id="emuna-touch-tooltip" class="emuna-touch-tooltip" role="status" aria-live="polite"></div>
     <script>
       (function () {

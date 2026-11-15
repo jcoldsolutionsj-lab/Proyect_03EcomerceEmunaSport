@@ -873,6 +873,7 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
     assert "position: sticky;" in contenido_css_flat
     assert ".emuna-mobile-sticky-bar" in contenido_css_flat
     assert ".emuna-table-scroll," in contenido_css_flat
+    assert "#header-inner span.cursor-pointer > span.material-symbols-outlined" in contenido_css_flat
     assert "touch-action: pan-x pan-y;" in contenido_css_flat
     assert "min-width: 680px;" in contenido_css_flat
     assert "@media (max-width: 767px)" in contenido_css_flat
@@ -892,6 +893,8 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
         assert resp_g.status_code == 200
         html_g = resp_g.content.decode("utf-8")
         assert '<div class="emuna-mobile-sticky-bar">' in html_g
+        assert "__emunaThemePatched" in html_g
+        assert "window.innerWidth < 1280" in html_g
         assert '<nav class="emuna-mobile-quicknav"' in html_g
         assert "emuna-touch-tooltip" in html_g
         assert "emuna_flat_unfold.css" in html_g

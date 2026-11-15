@@ -95,6 +95,16 @@ h2 img[src*="toltip.png"] {
   scrollbar-width: thin;
 }
 
+/* Área de clic cómoda para el botón de alternar menú lateral (dock_to_right) */
+#header-inner span.cursor-pointer > span.material-symbols-outlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  margin: -6px;
+  border-radius: 4px;
+}
+
 /* Barra rápida táctil exclusiva para celular/tablet */
 .emuna-mobile-quicknav {
   display: none;
