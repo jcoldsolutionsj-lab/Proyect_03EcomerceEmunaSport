@@ -13,6 +13,7 @@ from .selectores import (
     listar_categorias_activas,
     listar_productos_catalogo,
     obtener_producto_detalle_por_slug,
+    obtener_vitrina_mas_vendidas_portada,
 )
 
 TALLAS_FILTRO = ["S", "M", "L", "XL"]
@@ -40,6 +41,7 @@ def vista_inicio_catalogo(request: HttpRequest) -> HttpResponse:
         solo_con_stock=solo_con_stock,
     )
     destacados = list(listar_productos_catalogo(solo_destacados=True)[:MAX_PRODUCTOS_DESTACADOS])
+    vitrina_portada = obtener_vitrina_mas_vendidas_portada(destacados=destacados)
     config = obtener_configuracion_tienda()
 
     texto_wa = quote(
@@ -51,6 +53,7 @@ def vista_inicio_catalogo(request: HttpRequest) -> HttpResponse:
         "categorias": categorias,
         "productos": productos,
         "destacados": destacados,
+        "vitrina_portada": vitrina_portada,
         "categoria_activa": categoria_slug,
         "talla_activa": talla_activa,
         "tallas_filtro": TALLAS_FILTRO,

@@ -284,3 +284,135 @@ def test_limite_ocho_destacados_admin_y_rotacion_portada(client, admin_user) -> 
     req = client.get(reverse("admin:catalogo_producto_change", args=[primero.pk])).wsgi_request
     form_octavo_cls = admin_inst.get_form(req, obj=primero, change=True)
     assert "8 de 8" in str(form_octavo_cls.base_fields["destacado"].help_text)
+
+
+@pytest.mark.django_db
+def test_vitrina_mas_vendidas_portada_periodos_y_fotos(client, monkeypatch) -> None:
+    """Verifica el ranking real Hoy/Semana/Mes, deduplicación, respaldo y fotos reales en portada.
+
+    Qué hace:      Prueba ventas nulas (respaldo), pedidos cancelados ignorados, ganadores distintos y duplicados.
+    Va hacia:      Valida obtener_vitrina_mas_vendidas_portada() y la transición suave de 4000ms en inicio.html.
+    Depende de:    Pedido, ItemPedido, cargar_demo y obtener_vitrina_mas_vendidas_portada().
+    Cuándo usarla: En cada ejecución de pytest para validar la vitrina superior de portada.
+    Si no opera:   Falla si repite camisetas, cuenta pedidos cancelados o muestra textos/fotos fijos ajenos.
+    """
+    from datetime import date, datetime
+
+    from django.utils import timezone
+
+    from apps.catalogo.selectores import obtener_vitrina_mas_vendidas_portada
+    from apps.pedidos.models import EstadoPedido, ItemPedido, OrigenPedido, Pedido, TipoEntrega
+
+    call_command("cargar_demo")
+
+    fecha_fija = date(2026, 11, 20)
+    monkeypatch.setattr(timezone, "localdate", lambda: fecha_fija)
+    tz = timezone.get_current_timezone()
+
+    def _crear_venta(
+        *, codigo: str, prod_slug: str, estado: str, fecha_local: datetime, cantidad: int
+    ) -> None:
+        prod = Producto.objects.get(slug=prod_slug)
+        var = prod.variantes.first()
+        assert var is not None
+        ped = Pedido.objects.create(
+            codigo=codigo,
+            origen=OrigenPedido.PRESENCIAL,
+            tipo_entrega=TipoEntrega.RECOJO,
+            estado=estado,
+            subtotal=prod.precio_unidad * cantidad,
+            costo_envio=Decimal("0.00"),
+            total=prod.precio_unidad * cantidad,
+        )
+        aware_dt = timezone.make_aware(fecha_local, tz)
+        Pedido.objects.filter(pk=ped.pk).update(fecha_creacion=aware_dt, fecha_pagado=aware_dt)
+        ItemPedido.objects.create(
+            pedido=ped,
+            variante=var,
+            nombre_producto=prod.nombre,
+            sku=var.sku,
+            talla=var.talla,
+            color=var.color,
+            precio_unidad=prod.precio_unidad,
+            cantidad=cantidad,
+            subtotal=prod.precio_unidad * cantidad,
+        )
+
+    # 1. Sin ventas confirmadas: solo pedidos NUEVO/CANCELADO -> usa 1 respaldo destacado honesto
+    _crear_venta(
+        codigo="EMU-CANCEL",
+        prod_slug="camiseta-retro-negra-dorada-10",
+        estado=EstadoPedido.CANCELADO,
+        fecha_local=datetime(2026, 11, 20, 10, 0),
+        cantidad=20,
+    )
+    _crear_venta(
+        codigo="EMU-NUEVO",
+        prod_slug="camiseta-retro-negra-dorada-10",
+        estado=EstadoPedido.NUEVO,
+        fecha_local=datetime(2026, 11, 20, 11, 0),
+        cantidad=15,
+    )
+    respaldo = obtener_vitrina_mas_vendidas_portada(
+        destacados=list(listar_productos_catalogo(solo_destacados=True)[:1])
+    )
+    assert len(respaldo) == 1
+    assert respaldo[0]["es_respaldo"] is True
+    assert respaldo[0]["etiqueta_badge"] == "⭐ Destacada Emuná Sport"
+    assert "ESPALDA MESSI #10" not in client.get(reverse("catalogo:inicio")).content.decode("utf-8")
+
+    # 2. Tres ganadores reales distintos: Hoy=Argentina (5 fotos), Semana=Brasil (1 foto), Mes=Negra&Oro (1 foto)
+    _crear_venta(
+        codigo="EMU-HOY-ARG",
+        prod_slug="argentina-x-messi-10",
+        estado=EstadoPedido.ENTREGADO,
+        fecha_local=datetime(2026, 11, 20, 12, 0),
+        cantidad=2,
+    )
+    _crear_venta(
+        codigo="EMU-SEM-BRA",
+        prod_slug="camiseta-brasil-verdeamarela-10",
+        estado=EstadoPedido.PAGADO,
+        fecha_local=datetime(2026, 11, 17, 15, 0),
+        cantidad=5,
+    )
+    _crear_venta(
+        codigo="EMU-MES-BLK",
+        prod_slug="camiseta-retro-negra-dorada-10",
+        estado=EstadoPedido.PAGADO,
+        fecha_local=datetime(2026, 11, 5, 16, 0),
+        cantidad=9,
+    )
+
+    vitrina = obtener_vitrina_mas_vendidas_portada()
+    assert [v["etiqueta_pill"] for v in vitrina] == ["Hoy", "Semana", "Mes"]
+    assert [v["producto"].slug for v in vitrina] == [
+        "argentina-x-messi-10",
+        "camiseta-brasil-verdeamarela-10",
+        "camiseta-retro-negra-dorada-10",
+    ]
+    assert vitrina[0]["imagen_2"] is not None
+    assert vitrina[1]["imagen_2"] is None
+
+    html = client.get(reverse("catalogo:inicio")).content.decode("utf-8")
+    assert "4000" in html
+    assert "duration-500 ease-in-out" in html
+    assert "🔥 Más vendida de hoy" in html
+    assert "🔥 Más vendida de la semana" in html
+    assert "🔥 Más vendida del mes" in html
+    assert "argentina_2_detalle.webp" in html
+    assert "max-w-[360px]" in html
+
+    # 3. Sin duplicar camiseta: si Argentina también supera en Semana (6 uds hoy), fusiona Hoy y Semana
+    _crear_venta(
+        codigo="EMU-HOY-ARG2",
+        prod_slug="argentina-x-messi-10",
+        estado=EstadoPedido.PAGADO,
+        fecha_local=datetime(2026, 11, 20, 14, 0),
+        cantidad=4,
+    )
+    vitrina_fusionada = obtener_vitrina_mas_vendidas_portada()
+    slugs_fusionados = [v["producto"].slug for v in vitrina_fusionada]
+    assert len(slugs_fusionados) == len(set(slugs_fusionados)) == 2
+    assert vitrina_fusionada[0]["etiqueta_pill"] == "Hoy · Semana"
+    assert vitrina_fusionada[1]["etiqueta_pill"] == "Mes"
