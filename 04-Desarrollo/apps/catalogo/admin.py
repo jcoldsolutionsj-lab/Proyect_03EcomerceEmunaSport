@@ -3,7 +3,7 @@ from typing import Any
 
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
-from django.http import HttpRequest, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import path, reverse
 from django.utils.html import format_html
@@ -388,20 +388,23 @@ class VarianteAdmin(UnfoldModelAdmin):
         ),
         ordering="cantidad_stock",
     )
-    def stock_semaforo(self, obj: Variante) -> str:
-        """Muestra el stock actual con semáforo de color según umbral mínimo.
+    def _resolver_estado_semaforo_variante(self, obj: Variante) -> dict[str, Any]:
+        """Calcula colores y etiquetas de semáforo según stock actual y umbral efectivo.
 
-        Qué hace:      Pinta rojo si está agotado (0), amarillo si es bajo y verde si está normal.
-        Va hacia:      Columna Stock Actual en VarianteAdmin.
-        Depende de:    obj.cantidad_stock y obj.umbral_stock_bajo.
-        Cuándo usarla: Para detectar rápido tallas críticas o agotadas desde el panel.
-        Si no opera:   Muestra el número entero como respaldo.
+        Qué hace:      Determina si la variante está agotada (rojo), en stock bajo (ámbar) o normal (verde).
+        Va hacia:      Retorna diccionario con estilos y textos para listado y cabecera de ficha.
+        Depende de:    obj.cantidad_stock, obj.umbral_stock_bajo y obtener_configuracion_tienda().
+        Cuándo usarla: Compartido entre stock_semaforo() y change_view() para no duplicar lógica.
+        Si no opera:   Si el stock es 0 siempre prioriza estado rojo agotado.
         """
         if obj.cantidad_stock <= 0:
-            return format_html(
-                '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">{}</span>',
-                "🔴 [ROJO] Agotado (0)",
-            )
+            return {
+                "fg": "#991B1B",
+                "bg": "#FEE2E2",
+                "border": "#EF4444",
+                "etiqueta_lista": "🔴 [ROJO] Agotado (0)",
+                "etiqueta_ficha": "🔴 [ROJO] Agotado: 0 und.",
+            }
         from apps.nucleo.selectores import obtener_configuracion_tienda
 
         umbral_efectivo = (
@@ -410,14 +413,59 @@ class VarianteAdmin(UnfoldModelAdmin):
             else obtener_configuracion_tienda().umbral_stock_bajo
         )
         if obj.cantidad_stock <= umbral_efectivo:
-            return format_html(
-                '<span style="color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟡 [ÁMBAR] Bajo ({})</span>',
-                obj.cantidad_stock,
-            )
+            return {
+                "fg": "#92400E",
+                "bg": "#FEF3C7",
+                "border": "#F59E0B",
+                "etiqueta_lista": f"🟡 [ÁMBAR] Bajo ({obj.cantidad_stock})",
+                "etiqueta_ficha": f"🟡 [ÁMBAR] Stock bajo: {obj.cantidad_stock} und. (mín. {umbral_efectivo})",
+            }
+        return {
+            "fg": "#166534",
+            "bg": "#DCFCE7",
+            "border": "#22C55E",
+            "etiqueta_lista": f"🟢 [VERDE] {obj.cantidad_stock} und.",
+            "etiqueta_ficha": f"🟢 [VERDE] Stock actual: {obj.cantidad_stock} und.",
+        }
+
+    def stock_semaforo(self, obj: Variante) -> str:
+        """Muestra el stock actual con semáforo de color según umbral mínimo.
+
+        Qué hace:      Pinta rojo si está agotado (0), amarillo si es bajo y verde si está normal.
+        Va hacia:      Columna Stock Actual en VarianteAdmin.
+        Depende de:    VarianteAdmin._resolver_estado_semaforo_variante().
+        Cuándo usarla: Para detectar rápido tallas críticas o agotadas desde el panel.
+        Si no opera:   Muestra el número entero como respaldo.
+        """
+        datos = self._resolver_estado_semaforo_variante(obj)
         return format_html(
-            '<span style="color:#166534;background:#DCFCE7;border:1px solid #22C55E;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟢 [VERDE] {} und.</span>',
-            obj.cantidad_stock,
+            '<span style="color:{};background:{};border:1px solid {};padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">{}</span>',
+            datos["fg"],
+            datos["bg"],
+            datos["border"],
+            datos["etiqueta_lista"],
         )
+
+    def change_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Inyecta el semáforo real de stock para la cabecera del formulario de Variante.
+
+        Qué hace:      Calcula semaforo_variante con el mismo umbral del listado y tablero.
+        Va hacia:      Renderiza el badge superior en templates/admin/catalogo/variante/change_form.html.
+        Depende de:    _resolver_estado_semaforo_variante() y super().change_view().
+        Cuándo usarla: Al editar una variante de talla existente en /gestion/.
+        Si no opera:   Delega sin alteraciones a UnfoldModelAdmin.change_view().
+        """
+        contexto = dict(extra_context or {})
+        variante = self.get_object(request, object_id)
+        if variante is not None:
+            contexto["semaforo_variante"] = self._resolver_estado_semaforo_variante(variante)
+        return super().change_view(request, object_id, form_url, extra_context=contexto)
 
     @admin.display(
         description=encabezado_con_tooltip(

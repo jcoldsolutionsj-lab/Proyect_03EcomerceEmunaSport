@@ -12,9 +12,15 @@
         </div>
         <h2 style="margin: 4px 0 0 0; font-size: 18px; font-weight: 800; color: #FFFFFF; background: transparent; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; word-break: break-word;">
           <span>{{ original.producto.nombre }} · Talla {{ original.talla }}</span>
-          <span style="display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 800;">
-            🟢 [VERDE] Stock actual: {{ original.cantidad_stock }} und.
-          </span>
+          {% if semaforo_variante %}
+            <span style="display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; background: {{ semaforo_variante.bg }}; color: {{ semaforo_variante.fg }}; border: 1px solid {{ semaforo_variante.border }}; font-weight: 800;">
+              {{ semaforo_variante.etiqueta_ficha }}
+            </span>
+          {% else %}
+            <span style="display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-weight: 800;">
+              🟢 [VERDE] Stock actual: {{ original.cantidad_stock }} und.
+            </span>
+          {% endif %}
         </h2>
       </div>
     </div>

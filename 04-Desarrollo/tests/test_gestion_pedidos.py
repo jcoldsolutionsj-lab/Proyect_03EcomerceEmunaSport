@@ -903,3 +903,20 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
     assert "emuna_flat_unfold.css" in html_login
     assert "login-form" in html_login
     assert "Bienvenido a" in html_login
+
+    # 8. Cabecera semáforo real en variante agotada, limpiar búsqueda (?q=) y filas por página visibles
+    resp_q = http_client.get(reverse("admin:catalogo_variante_changelist") + "?q=EMU")
+    assert resp_q.status_code == 200
+    html_q = resp_q.content.decode("utf-8")
+    assert "✕ Ver todos" in html_q
+    assert "Limpiar búsqueda y ver todos" in html_q
+    assert "filas/pág." in html_q
+    assert "filas por página" in html_q
+
+    var_s.cantidad_stock = 0
+    var_s.save(update_fields=["cantidad_stock"])
+    resp_var_cero = http_client.get(reverse("admin:catalogo_variante_change", args=[var_s.pk]))
+    assert resp_var_cero.status_code == 200
+    html_var_cero = resp_var_cero.content.decode("utf-8")
+    assert "🔴 [ROJO] Agotado: 0 und." in html_var_cero
+    assert "🟢 [VERDE] Stock actual: 0 und." not in html_var_cero
