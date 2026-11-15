@@ -311,23 +311,76 @@
   </div>
 </section>
 
-<!-- SECCIÓN 2: DESTACADOS DE LA SEMANA (Estructura 'NEW THIS WEEK' de Captura 1) -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 border-b border-silver">
-  <div class="flex items-end justify-between mb-8">
+<!-- SECCIÓN 2: DESTACADOS DE LA SEMANA (Máximo 8 modelos, rotan cada 3 s en bloques de 4) -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 border-b border-silver"
+         x-data="{
+           bloque: 0,
+           totalBloques: {% if destacados|length > 4 %}2{% else %}1{% endif %},
+           pausado: false,
+           temporizador: null,
+           iniciar() {
+             if (this.totalBloques <= 1 || this.temporizador) return;
+             this.temporizador = setInterval(() => {
+               if (!this.pausado) {
+                 this.bloque = (this.bloque + 1) % this.totalBloques;
+               }
+             }, 3000);
+           },
+           irABloque(idx) {
+             this.bloque = (idx + this.totalBloques) % this.totalBloques;
+           }
+         }"
+         x-init="iniciar()"
+         @mouseenter="pausado = true"
+         @mouseleave="pausado = false"
+         @touchstart.passive="pausado = true">
+  <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
     <div>
       <h2 class="font-display italic font-extrabold text-4xl sm:text-5xl uppercase tracking-tight leading-none">
         DESTACADOS DE LA SEMANA
         <sup class="text-neonDark font-sans font-extrabold text-base ml-1">({{ destacados|length }})</sup>
       </h2>
     </div>
-    <a href="#catalogo-completo" class="text-xs font-bold uppercase tracking-wider text-ink hover:text-neonDark underline">
-      Ver Todos
-    </a>
+    <div class="flex items-center gap-3">
+      {% if destacados|length > 4 %}
+      <div class="flex items-center gap-1.5" aria-label="Controles de destacados">
+        <button type="button"
+                @click="irABloque(bloque - 1)"
+                aria-label="Bloque anterior de destacados"
+                class="w-7 h-7 border border-silver bg-white hover:bg-ink hover:text-white text-ink text-xs font-bold flex items-center justify-center transicion-tactil">
+          ‹
+        </button>
+        <button type="button"
+                @click="irABloque(0)"
+                aria-label="Primeros 4 destacados"
+                :class="bloque === 0 ? 'bg-ink border-ink w-5' : 'bg-silver border-silver w-2'"
+                class="h-2 border transition-all"></button>
+        <button type="button"
+                @click="irABloque(1)"
+                aria-label="Siguientes destacados"
+                :class="bloque === 1 ? 'bg-ink border-ink w-5' : 'bg-silver border-silver w-2'"
+                class="h-2 border transition-all"></button>
+        <button type="button"
+                @click="irABloque(bloque + 1)"
+                aria-label="Siguiente bloque de destacados"
+                class="w-7 h-7 border border-silver bg-white hover:bg-ink hover:text-white text-ink text-xs font-bold flex items-center justify-center transicion-tactil">
+          ›
+        </button>
+      </div>
+      {% endif %}
+      <a href="#catalogo-completo" class="text-xs font-bold uppercase tracking-wider text-ink hover:text-neonDark underline">
+        Ver Todos
+      </a>
+    </div>
   </div>
 
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
     {% for prod in destacados %}
-    <article class="group flex flex-col">
+    <article class="group flex flex-col"
+             {% if destacados|length > 4 %}
+             x-show="bloque === {% if forloop.counter0 < 4 %}0{% else %}1{% endif %}"
+             {% if forloop.counter0 >= 4 %}x-cloak{% endif %}
+             {% endif %}>
       <a href="{{ prod.get_absolute_url }}"
          class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden mb-3 block">
         {% with img=prod.imagenes.all.0 %}

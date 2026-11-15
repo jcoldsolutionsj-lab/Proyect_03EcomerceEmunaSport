@@ -9,6 +9,7 @@ from apps.nucleo.selectores import obtener_configuracion_tienda
 from apps.nucleo.validadores import limpiar_texto_seguro
 
 from .selectores import (
+    MAX_PRODUCTOS_DESTACADOS,
     listar_categorias_activas,
     listar_productos_catalogo,
     obtener_producto_detalle_por_slug,
@@ -38,7 +39,7 @@ def vista_inicio_catalogo(request: HttpRequest) -> HttpResponse:
         busqueda=busqueda or None,
         solo_con_stock=solo_con_stock,
     )
-    destacados = listar_productos_catalogo(solo_destacados=True)[:4]
+    destacados = list(listar_productos_catalogo(solo_destacados=True)[:MAX_PRODUCTOS_DESTACADOS])
     config = obtener_configuracion_tienda()
 
     texto_wa = quote(

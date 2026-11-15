@@ -215,3 +215,72 @@ def test_stock_negativo_bloqueado_en_variante() -> None:
             sku="EMU-NEG-XXL",
             cantidad_stock=-1,
         )
+
+
+@pytest.mark.django_db
+def test_limite_ocho_destacados_admin_y_rotacion_portada(client, admin_user) -> None:
+    """Verifica que la vitrina muestre hasta 8 destacados (rotando en bloques de 4) y el admin bloquee el 9.º.
+
+    Qué hace:      Marca los 8 productos demo como destacados, valida la portada con rotación 3s y prueba crear el 9.º.
+    Va hacia:      Garantiza el tope de MAX_PRODUCTOS_DESTACADOS=8 y el mensaje claro en /gestion/ sin desmarcar otros.
+    Depende de:    ProductoAdminForm, ProductoAdmin.get_form, vista_inicio_catalogo e inicio.html.
+    Cuándo usarla: En la suite de pruebas de catálogo y usabilidad admin.
+    Si no opera:   Falla si la portada corta en 4, falta el temporizador de 3000ms o deja guardar un 9.º destacado.
+    """
+    from django.contrib.admin.sites import AdminSite
+
+    from apps.catalogo.admin import ProductoAdmin, ProductoAdminForm
+
+    call_command("cargar_demo")
+    Producto.objects.update(destacado=True)
+    assert Producto.objects.filter(destacado=True).count() == 8
+
+    # 1. En portada aparecen los 8 destacados con rotación cada 3000ms
+    resp_web = client.get(reverse("catalogo:inicio"))
+    assert resp_web.status_code == 200
+    html_web = resp_web.content.decode("utf-8")
+    assert "(8)" in html_web
+    assert "3000" in html_web
+    assert "Controles de destacados" in html_web
+
+    # 2. En /gestion/ un 9.º producto sin destacar muestra aviso de límite alcanzado y bloquea guardarlo como destacado
+    cat = Categoria.objects.first()
+    noveno = Producto.objects.create(
+        categoria=cat,
+        nombre="Camiseta Novena Prueba",
+        slug="camiseta-novena-prueba",
+        sku="EMU-NOV09",
+        precio_unidad=Decimal("55.00"),
+        activo=True,
+        destacado=False,
+    )
+    client.force_login(admin_user)
+    resp_change = client.get(reverse("admin:catalogo_producto_change", args=[noveno.pk]))
+    assert resp_change.status_code == 200
+    assert "Límite alcanzado (8/8)" in resp_change.content.decode("utf-8")
+
+    form_noveno = ProductoAdminForm(
+        data={
+            "categoria": cat.pk,
+            "nombre": noveno.nombre,
+            "slug": noveno.slug,
+            "sku": noveno.sku,
+            "descripcion": "",
+            "marca": "",
+            "precio_unidad": "55.00",
+            "precio_anterior": "",
+            "activo": True,
+            "destacado": True,
+        },
+        instance=noveno,
+    )
+    assert not form_noveno.is_valid()
+    assert "destacado" in form_noveno.errors
+    assert "límite de 8" in form_noveno.errors["destacado"][0]
+
+    # El 8.º ya existente sí puede editarse normalmente manteniendo destacado=True
+    primero = Producto.objects.filter(destacado=True).first()
+    admin_inst = ProductoAdmin(Producto, AdminSite())
+    req = client.get(reverse("admin:catalogo_producto_change", args=[primero.pk])).wsgi_request
+    form_octavo_cls = admin_inst.get_form(req, obj=primero, change=True)
+    assert "8 de 8" in str(form_octavo_cls.base_fields["destacado"].help_text)

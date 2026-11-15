@@ -1,6 +1,7 @@
 """Configuración del panel administrativo para el catálogo de camisetas y auditoría de stock."""
 from typing import Any
 
+from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
@@ -15,6 +16,7 @@ from apps.nucleo.admin_helpers import encabezado_con_tooltip
 from apps.nucleo.excepciones import ErrorDominioEmuna
 
 from .models import Categoria, ImagenProducto, MovimientoStock, Producto, ReglaPrecio, Variante
+from .selectores import MAX_PRODUCTOS_DESTACADOS
 
 
 class ImagenProductoInline(UnfoldTabularInline):
@@ -178,10 +180,41 @@ class CategoriaAdmin(UnfoldModelAdmin):
         return obj.fecha_actualizacion
 
 
+class ProductoAdminForm(forms.ModelForm):
+    """Formulario administrativo de Producto con límite de destacados en vitrina."""
+
+    class Meta:
+        model = Producto
+        fields = "__all__"
+
+    def clean(self) -> dict[str, Any]:
+        """Evita superar MAX_PRODUCTOS_DESTACADOS productos marcados como destacados.
+
+        Qué hace:      Cuenta los productos destacados existentes excluyendo el actual y bloquea el 9.º.
+        Va hacia:      Retorna cleaned_data o agrega ValidationError legible sobre el campo 'destacado'.
+        Depende de:    Producto, MAX_PRODUCTOS_DESTACADOS y django.forms.ModelForm.clean().
+        Cuándo usarla: Al guardar o crear un Producto desde el panel /gestion/.
+        Si no opera:   Si faltara validar permitiría más de 8 destacados en base de datos.
+        """
+        cleaned_data = super().clean()
+        if cleaned_data.get("destacado"):
+            qs = Producto.objects.filter(destacado=True)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.count() >= MAX_PRODUCTOS_DESTACADOS:
+                self.add_error(
+                    "destacado",
+                    f"Ya superaste el límite de {MAX_PRODUCTOS_DESTACADOS} productos destacados en inicio. "
+                    "Debes desmarcar primero uno de los 8 actuales antes de activar este modelo.",
+                )
+        return cleaned_data
+
+
 @admin.register(Producto)
 class ProductoAdmin(UnfoldModelAdmin):
     """Administración integral de productos con tallas, fotos y precios por mayor."""
 
+    form = ProductoAdminForm
     list_display = (
         "nombre_col",
         "sku_col",
@@ -196,6 +229,51 @@ class ProductoAdmin(UnfoldModelAdmin):
     prepopulated_fields = {"slug": ("nombre",)}
     list_per_page = 15
     inlines = [VarianteInline, ReglaPrecioInline, ImagenProductoInline]
+
+    def get_form(
+        self,
+        request: HttpRequest,
+        obj: Producto | None = None,
+        change: bool = False,
+        **kwargs: Any,
+    ) -> Any:
+        """Agrega aviso en vivo junto al interruptor 'Destacado en inicio' sobre el tope de 8.
+
+        Qué hace:      Calcula cuántos destacados existen y actualiza help_text de 'destacado'.
+        Va hacia:      Muestra estado o alerta de límite alcanzado justo debajo del switch en /gestion/.
+        Depende de:    Producto.objects.filter(destacado=True) y MAX_PRODUCTOS_DESTACADOS.
+        Cuándo usarla: Al abrir el formulario de alta o edición de un Producto.
+        Si no opera:   Retorna el formulario estándar sin mensaje dinámico.
+        """
+        form = super().get_form(request, obj=obj, change=change, **kwargs)
+        if "destacado" in form.base_fields:
+            total_destacados = Producto.objects.filter(destacado=True).count()
+            url_destacados = reverse("admin:catalogo_producto_changelist") + "?destacado__exact=1"
+            ya_esta_destacado = bool(obj and obj.pk and obj.destacado)
+            if total_destacados >= MAX_PRODUCTOS_DESTACADOS and not ya_esta_destacado:
+                form.base_fields["destacado"].help_text = format_html(
+                    '<span style="display:inline-block;padding:6px 10px;border-radius:4px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;font-weight:700;">'
+                    '⚠️ Límite alcanzado ({}/{}): ya hay {} camisetas destacadas. Desmarca una antes de activar esta '
+                    '(<a href="{}" style="color:#B91C1C;text-decoration:underline;">Ver los {} destacados</a>).'
+                    "</span>",
+                    total_destacados,
+                    MAX_PRODUCTOS_DESTACADOS,
+                    MAX_PRODUCTOS_DESTACADOS,
+                    url_destacados,
+                    MAX_PRODUCTOS_DESTACADOS,
+                )
+            else:
+                form.base_fields["destacado"].help_text = format_html(
+                    '<span style="color:#475569;font-weight:600;">'
+                    "Espacios usados en vitrina de inicio: <strong>{} de {}</strong> "
+                    '(<a href="{}" style="color:#15803D;text-decoration:underline;font-weight:700;">Ver destacados</a>). '
+                    "Si hay más de 4, rotan cada 3 segundos."
+                    "</span>",
+                    total_destacados,
+                    MAX_PRODUCTOS_DESTACADOS,
+                    url_destacados,
+                )
+        return form
 
     @admin.display(
         description=encabezado_con_tooltip(

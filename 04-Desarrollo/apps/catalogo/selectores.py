@@ -9,6 +9,8 @@ from apps.nucleo.validadores import limpiar_texto_seguro
 
 from .models import Categoria, ImagenProducto, Producto, ReglaPrecio, Variante
 
+MAX_PRODUCTOS_DESTACADOS = 8
+
 
 def listar_categorias_activas() -> QuerySet[Categoria]:
     """Devuelve todas las categorías activas ordenadas por su posición en el catálogo.
