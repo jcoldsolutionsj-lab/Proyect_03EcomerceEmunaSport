@@ -211,6 +211,28 @@ h2 img[src*="toltip.png"] {
     zoom: 1;
   }
 
+  html,
+  body,
+  #page,
+  #main {
+    overflow-x: clip !important;
+  }
+
+  /* Mantener fijos en móvil tanto la cabecera (menú + título) como el quicknav al hacer scroll */
+  .emuna-mobile-sticky-bar {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    width: 100%;
+    background-color: #FFFFFF;
+    margin-bottom: 12px;
+  }
+
+  .emuna-mobile-sticky-bar > div:first-child {
+    margin-bottom: 0 !important;
+  }
+
   .emuna-mobile-quicknav {
     display: flex;
   }

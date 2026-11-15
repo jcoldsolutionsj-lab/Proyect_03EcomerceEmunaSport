@@ -870,10 +870,13 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
     assert "zoom: 0.85;" in contenido_css_flat
     assert "box-shadow: none !important;" in contenido_css_flat
     assert "@media (max-width: 1024px)" in contenido_css_flat
+    assert "position: sticky;" in contenido_css_flat
+    assert ".emuna-mobile-sticky-bar" in contenido_css_flat
     assert "@media (max-width: 767px)" in contenido_css_flat
 
     for ruta_gestion in (
         reverse("admin:index"),
+        reverse("tablero:resumen"),
         reverse("admin:app_list", kwargs={"app_label": "catalogo"}),
         reverse("admin:app_list", kwargs={"app_label": "pedidos"}),
         reverse("admin:catalogo_categoria_changelist"),
@@ -885,6 +888,7 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
         resp_g = http_client.get(ruta_gestion)
         assert resp_g.status_code == 200
         html_g = resp_g.content.decode("utf-8")
+        assert '<div class="emuna-mobile-sticky-bar">' in html_g
         assert '<nav class="emuna-mobile-quicknav"' in html_g
         assert "emuna-touch-tooltip" in html_g
         assert "emuna_flat_unfold.css" in html_g

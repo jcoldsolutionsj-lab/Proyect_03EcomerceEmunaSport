@@ -10,17 +10,21 @@
 {% block nav-global %}{% endblock %}
 
 {% block header %}
-    {{ block.super }}
+    <div class="emuna-mobile-sticky-bar">
+      {{ block.super }}
+      {% if has_permission and not is_popup %}
+      <nav class="emuna-mobile-quicknav" aria-label="Navegación rápida móvil">
+        <a href="{% url 'admin:index' %}" {% if request.resolver_match.url_name == 'index' and request.resolver_match.namespace == 'admin' %}class="qn-activo"{% endif %}>🏠 Inicio</a>
+        <a href="{% url 'tablero:resumen' %}" {% if request.resolver_match.namespace == 'tablero' %}class="qn-activo"{% endif %}>📊 Tablero</a>
+        <a href="{% url 'admin:pedidos_pedido_changelist' %}" {% if 'pedidos_pedido' in request.resolver_match.url_name and 'venta_presencial' not in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📦 Pedidos</a>
+        <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}" class="qn-pos">⚡ POS</a>
+        <a href="{% url 'admin:catalogo_producto_changelist' %}" {% if 'catalogo_producto' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>👕 Productos</a>
+        <a href="{% url 'admin:catalogo_variante_changelist' %}" {% if 'catalogo_variante' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📏 Tallas</a>
+        <a href="{% url 'admin:catalogo_movimientostock_changelist' %}" {% if 'movimientostock' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📋 Kárdex</a>
+      </nav>
+      {% endif %}
+    </div>
     {% if has_permission and not is_popup %}
-    <nav class="emuna-mobile-quicknav" aria-label="Navegación rápida móvil">
-      <a href="{% url 'admin:index' %}" {% if request.resolver_match.url_name == 'index' and request.resolver_match.namespace == 'admin' %}class="qn-activo"{% endif %}>🏠 Inicio</a>
-      <a href="{% url 'tablero:resumen' %}" {% if request.resolver_match.namespace == 'tablero' %}class="qn-activo"{% endif %}>📊 Tablero</a>
-      <a href="{% url 'admin:pedidos_pedido_changelist' %}" {% if 'pedidos_pedido' in request.resolver_match.url_name and 'venta_presencial' not in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📦 Pedidos</a>
-      <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}" class="qn-pos">⚡ POS</a>
-      <a href="{% url 'admin:catalogo_producto_changelist' %}" {% if 'catalogo_producto' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>👕 Productos</a>
-      <a href="{% url 'admin:catalogo_variante_changelist' %}" {% if 'catalogo_variante' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📏 Tallas</a>
-      <a href="{% url 'admin:catalogo_movimientostock_changelist' %}" {% if 'movimientostock' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📋 Kárdex</a>
-    </nav>
     <div id="emuna-touch-tooltip" class="emuna-touch-tooltip" role="status" aria-live="polite"></div>
     <script>
       (function () {
