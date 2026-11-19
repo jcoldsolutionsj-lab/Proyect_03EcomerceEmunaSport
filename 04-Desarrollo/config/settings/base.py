@@ -124,13 +124,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Base de datos por defecto (SQLite en local; PostgreSQL por DATABASE_URL en demo/prod)
+# Base de datos por defecto (SQLite si no hay DATABASE_URL; PostgreSQL con conexiones reutilizables si existe)
 DATABASES = {
     "default": env.db(
         "DATABASE_URL",
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
     )
 }
+if DATABASES["default"].get("ENGINE") == "django.db.backends.postgresql":
+    DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
+    DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -201,7 +204,15 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
-# Variables de negocio y pre-lanzamiento
+# Variables de negocio, Cloudflare R2 y pre-lanzamiento
+USE_S3_STORAGE = env.bool("USE_S3_STORAGE", default=False)
+R2_ACCOUNT_ID = env("R2_ACCOUNT_ID", default="")
+R2_ACCESS_KEY_ID = env("R2_ACCESS_KEY_ID", default="")
+R2_SECRET_ACCESS_KEY = env("R2_SECRET_ACCESS_KEY", default="")
+R2_BUCKET_PUBLIC = env("R2_BUCKET_PUBLIC", default="")
+R2_BUCKET_PRIVATE = env("R2_BUCKET_PRIVATE", default="")
+R2_PUBLIC_URL = env("R2_PUBLIC_URL", default="")
+
 ADMIN_URL = env("ADMIN_URL")
 SITE_URL = env("SITE_URL")
 GA4_MEASUREMENT_ID = env("GA4_MEASUREMENT_ID")

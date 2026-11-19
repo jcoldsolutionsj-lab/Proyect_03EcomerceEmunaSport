@@ -57,7 +57,7 @@
         <div class="flex gap-4 items-center">
           <a href="{% url 'catalogo:detalle_producto' slug=item.slug_producto %}"
              class="w-20 sm:w-24 aspect-[4/5] bg-neutral-100 border border-silver shrink-0 overflow-hidden">
-            <img src="{% static item.ruta_miniatura %}"
+            <img src="{{ item.url_miniatura }}"
                  alt="{{ item.nombre_producto }}"
                  class="w-full h-full object-cover">
           </a>

@@ -11,7 +11,7 @@
            temporizadorTeclado: null,
            slides: [
              {
-               video: '{% static 'banners-inicio/banner_1.mp4' %}',
+               video: '{{ URL_BANNER_1 }}',
                etiqueta: '⚡ TEMPORADA 2026 · ESTILO DEPORTIVO',
                titulo: 'NUEVA COLECCIÓN EDICIÓN JUGADOR',
                fraseTeclado: 'Punto de encuentro en Lima (envío S/ 0.00 y pago con Yape al recibir) o despacho por Shalom y Olva.',
@@ -19,15 +19,15 @@
                botonUrl: '#catalogo-completo'
              },
              {
-               video: '{% static 'banners-inicio/banner_3.mp4' %}',
+               video: '{{ URL_BANNER_3 }}',
                etiqueta: '🔥 OFERTA ESTRELLA · AHORRAS S/ 14.90',
                titulo: 'ARGENTINA X MESSI #10 CAMPEÓN',
                fraseTeclado: 'Llévala hoy a S/ 55.00 (Antes S/ 69.90) o combina tallas S, M, L y XL desde S/ 45.00 c/u por mayor.',
                botonTexto: 'Ver Camiseta Argentina #10',
-               botonUrl: '/productos/argentina-x-messi-10/'
+               botonUrl: '{{ url_producto_estrella|default:"#catalogo-completo" }}'
              },
              {
-               video: '{% static 'banners-inicio/banner_2.mp4' %}',
+               video: '{{ URL_BANNER_2 }}',
                etiqueta: '🇵🇪 COMPRA SEGURA Y DIRECTA EN PERÚ',
                titulo: 'VENTA POR UNIDAD Y POR MAYOR',
                fraseTeclado: 'Precios automáticos desde 3 y 6 prendas. Recibe tu comprobante PDF y coordina directo con Richard.',
@@ -126,11 +126,11 @@
                  @loadedmetadata="$el.playbackRate = 0.72"
                  @play="$el.playbackRate = 0.72"
                  @ended="siguienteSlide()"
-                 poster="{% static 'productos-demo/argentina-messi/webp/argentina_1_detalle.webp' %}"
+                 poster="{{ URL_CALIDAD_1 }}"
                  class="w-full h-full object-contain sm:object-cover bg-black">
-            <source :src="slides[indiceActual].video" src="{% static 'banners-inicio/banner_1.mp4' %}" type="video/mp4">
-            <!-- Referencias estáticas para precarga de los 3 videos del carrusel -->
-            <track kind="captions" data-video-2="{% static 'banners-inicio/banner_2.mp4' %}" data-video-3="{% static 'banners-inicio/banner_3.mp4' %}">
+            <source :src="slides[indiceActual].video" src="{{ URL_BANNER_1 }}" type="video/mp4">
+            <!-- Referencias para precarga de los 3 videos del carrusel -->
+            <track kind="captions" data-video-2="{{ URL_BANNER_2 }}" data-video-3="{{ URL_BANNER_3 }}">
           </video>
 
           <!-- Flechas Anterior / Siguiente discretas -->
@@ -316,7 +316,7 @@
           <a href="{{ slide.producto.get_absolute_url }}"
              :tabindex="activo === {{ forloop.counter0 }} ? 0 : -1"
              class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
-            <img src="{% static slide.imagen_1.ruta_detalle %}"
+            <img src="{{ slide.imagen_1.url_detalle }}"
                  alt="{{ slide.imagen_1.alt_seo }}"
                  {% if forloop.first %}fetchpriority="high"{% else %}decoding="async"{% endif %}
                  class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
@@ -350,7 +350,7 @@
           <a href="{{ slide.producto.get_absolute_url }}"
              :tabindex="activo === {{ forloop.counter0 }} ? 0 : -1"
              class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
-            <img src="{% static slide.imagen_2.ruta_detalle %}"
+            <img src="{{ slide.imagen_2.url_detalle }}"
                  alt="{{ slide.imagen_2.alt_seo }}"
                  decoding="async"
                  class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
@@ -383,7 +383,7 @@
           <a href="{{ slide.producto.get_absolute_url }}"
              :tabindex="activo === {{ forloop.counter0 }} ? 0 : -1"
              class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
-            <img src="{% static slide.imagen_1.ruta_detalle %}"
+            <img src="{{ slide.imagen_1.url_detalle }}"
                  alt="{{ slide.imagen_1.alt_seo }}"
                  {% if forloop.first %}fetchpriority="high"{% else %}decoding="async"{% endif %}
                  class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
@@ -511,7 +511,7 @@
          class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden mb-3 block">
         {% with img=prod.imagenes.all.0 %}
         {% if img %}
-        <img src="{% static img.ruta_miniatura %}"
+        <img src="{{ img.url_miniatura }}"
              alt="{{ img.alt_seo }}"
              loading="lazy"
              decoding="async"
@@ -663,7 +663,7 @@
              class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden mb-3 block">
             {% with img=prod.imagenes.all.0 %}
             {% if img %}
-            <img src="{% static img.ruta_miniatura %}"
+            <img src="{{ img.url_miniatura }}"
                  alt="{{ img.alt_seo }}"
                  loading="lazy"
                  decoding="async"
@@ -755,22 +755,22 @@
 
   <div class="grid grid-cols-2 md:grid-cols-4 gap-5 items-start">
     <div class="aspect-[4/5] border border-silver overflow-hidden group">
-      <img src="{% static 'productos-demo/argentina-messi/webp/argentina_2_detalle.webp' %}"
+      <img src="{{ URL_CALIDAD_2 }}"
             alt="Detalle de manga y parche dorado en camiseta Emuná Sport"
             loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
     </div>
     <div class="aspect-[4/5] border border-silver overflow-hidden md:mt-8 group">
-      <img src="{% static 'productos-demo/argentina-messi/webp/argentina_3_detalle.webp' %}"
+      <img src="{{ URL_CALIDAD_3 }}"
             alt="Corte atlético versión jugador y escudo 3 estrellas"
             loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
     </div>
     <div class="aspect-[4/5] border border-silver overflow-hidden group">
-      <img src="{% static 'productos-demo/argentina-messi/webp/argentina_4_detalle.webp' %}"
+      <img src="{{ URL_CALIDAD_4 }}"
             alt="Zoom de tela técnica microperforada y escudo bordado"
             loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
     </div>
     <div class="aspect-[4/5] border border-silver overflow-hidden md:mt-8 group">
-      <img src="{% static 'productos-demo/argentina-messi/webp/argentina_5_detalle.webp' %}"
+      <img src="{{ URL_CALIDAD_5 }}"
             alt="Estampado oficial MESSI 10 microperforado en espalda"
             loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
     </div>

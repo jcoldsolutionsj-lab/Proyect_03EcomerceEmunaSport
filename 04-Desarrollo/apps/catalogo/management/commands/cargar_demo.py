@@ -1,11 +1,22 @@
 """Comando cargar_demo para poblar el catálogo con Argentina x Messi y camisetas de ejemplo."""
 from decimal import Decimal
+from pathlib import Path
 
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from apps.catalogo.models import Categoria, ImagenProducto, Producto, ReglaPrecio, Variante
+from apps.catalogo.models import (
+    Categoria,
+    Equipo,
+    ImagenProducto,
+    Producto,
+    ReglaPrecio,
+    TipoEquipacion,
+    TipoEquipo,
+    Variante,
+)
 
 
 class Command(BaseCommand):
@@ -39,11 +50,50 @@ class Command(BaseCommand):
             )
             mapa_categorias[slug] = cat
 
+        # Resolver carpeta demo disponible (prioriza ARGENTINA 2026 - 2027 si ya fue reorganizada)
+        assets_prod = Path(settings.REPO_DIR) / "03-Diseno-Tecnico" / "assets" / "productos-demo"
+        carpeta_arg = (
+            "ARGENTINA 2026 - 2027"
+            if (assets_prod / "ARGENTINA 2026 - 2027").exists()
+            else "argentina-messi"
+        )
+        prefijo_orig = (
+            f"productos-demo/{carpeta_arg}"
+            if carpeta_arg == "ARGENTINA 2026 - 2027"
+            else "productos-demo/argentina-messi/originales"
+        )
+
+        # Equipos / colecciones normalizados para filtros rápidos y futura IA
+        datos_equipos = [
+            ("Argentina", "argentina", TipoEquipo.SELECCION, "albiceleste, messi, escaloneta, campeon", 1),
+            ("Perú", "peru", TipoEquipo.SELECCION, "blanquiroja, seleccion peruana, bicolor", 2),
+            ("Brasil", "brasil", TipoEquipo.SELECCION, "verdeamarela, canarinha, pentacampeon", 3),
+            ("Clubes Europeos", "clubes-europeos", TipoEquipo.CLUB, "europa, gala, nocturna, real, paris", 4),
+            ("Emuná Sport", "emuna-sport", TipoEquipo.ORIGINAL, "emuna, rayo, neon, entrenamiento", 5),
+        ]
+        mapa_equipos: dict[str, Equipo] = {}
+        for nombre_eq, slug_eq, tipo_eq, alias_eq, orden_eq in datos_equipos:
+            eq, _ = Equipo.objects.update_or_create(
+                slug=slug_eq,
+                defaults={
+                    "nombre": nombre_eq,
+                    "tipo": tipo_eq,
+                    "alias_busqueda": alias_eq,
+                    "orden": orden_eq,
+                    "activo": True,
+                },
+            )
+            mapa_equipos[slug_eq] = eq
+
         # 1. Producto Estrella Real: ARGENTINA X MESSI 🇦🇷 (con las 5 fotos WebP reales)
         argentina, _ = Producto.objects.update_or_create(
             slug="argentina-x-messi-10",
             defaults={
                 "categoria": mapa_categorias["selecciones"],
+                "equipo": mapa_equipos["argentina"],
+                "equipacion": TipoEquipacion.LOCAL,
+                "temporada": "2026-2027",
+                "palabras_clave": "argentina, messi, 10, tres estrellas, jugador",
                 "nombre": "ARGENTINA X MESSI #10 – Edición Campeón 3 Estrellas",
                 "sku": "EMU-ARG10",
                 "descripcion": (
@@ -70,9 +120,9 @@ class Command(BaseCommand):
                 producto=argentina,
                 orden=idx,
                 defaults={
-                    "ruta_original": f"productos-demo/argentina-messi/originales/argentina_{idx}.jpg",
-                    "ruta_miniatura": f"productos-demo/argentina-messi/webp/argentina_{idx}_miniatura.webp",
-                    "ruta_detalle": f"productos-demo/argentina-messi/webp/argentina_{idx}_detalle.webp",
+                    "ruta_original": f"{prefijo_orig}/argentina_{idx}.jpg",
+                    "ruta_miniatura": f"productos-demo/{carpeta_arg}/webp/argentina_{idx}_miniatura.webp",
+                    "ruta_detalle": f"productos-demo/{carpeta_arg}/webp/argentina_{idx}_detalle.webp",
                     "texto_alternativo": textos_alt_argentina[idx - 1],
                     "es_principal": idx == 1,
                 },
@@ -211,9 +261,9 @@ class Command(BaseCommand):
                 producto=prod,
                 orden=1,
                 defaults={
-                    "ruta_original": f"productos-demo/argentina-messi/originales/argentina_{idx_foto}.jpg",
-                    "ruta_miniatura": f"productos-demo/argentina-messi/webp/argentina_{idx_foto}_miniatura.webp",
-                    "ruta_detalle": f"productos-demo/argentina-messi/webp/argentina_{idx_foto}_detalle.webp",
+                    "ruta_original": f"{prefijo_orig}/argentina_{idx_foto}.jpg",
+                    "ruta_miniatura": f"productos-demo/{carpeta_arg}/webp/argentina_{idx_foto}_miniatura.webp",
+                    "ruta_detalle": f"productos-demo/{carpeta_arg}/webp/argentina_{idx_foto}_detalle.webp",
                     "texto_alternativo": f"{prod.nombre} – Vista principal",
                     "es_principal": True,
                 },

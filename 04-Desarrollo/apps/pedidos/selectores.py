@@ -127,6 +127,11 @@ def obtener_carrito_detallado(sesion: SessionBase | dict[str, Any]) -> dict[str,
             if imagenes_prod
             else "logo_emuna_transparente.png"
         )
+        url_miniatura = (
+            imagenes_prod[0].url_miniatura
+            if imagenes_prod
+            else "/static/logo_emuna_transparente.png"
+        )
 
         items_detallados.append(
             {
@@ -147,6 +152,7 @@ def obtener_carrito_detallado(sesion: SessionBase | dict[str, Any]) -> dict[str,
                 "subtotal": subtotal_linea,
                 "ahorro_linea": ahorro_linea,
                 "ruta_miniatura": miniatura,
+                "url_miniatura": url_miniatura,
             }
         )
 

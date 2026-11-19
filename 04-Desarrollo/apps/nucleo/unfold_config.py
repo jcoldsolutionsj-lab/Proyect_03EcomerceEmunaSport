@@ -378,6 +378,11 @@ UNFOLD_CONFIG_EMUNA: dict[str, Any] = {
                         "icon": "category",
                         "link": reverse_lazy("admin:catalogo_categoria_changelist"),
                     },
+                    {
+                        "title": "Equipos / Selecciones",
+                        "icon": "shield",
+                        "link": reverse_lazy("admin:catalogo_equipo_changelist"),
+                    },
                 ],
             },
             {

@@ -6,7 +6,7 @@
 {% block og_type %}product{% endblock %}
 {% block og_titulo %}{{ producto.nombre }} – S/ {{ producto.precio_unidad }} | Emuná Sport{% endblock %}
 {% block og_descripcion %}{{ producto.descripcion|default:producto.nombre }} · Tallas S, M, L y XL · Precios especiales por mayor.{% endblock %}
-{% block og_imagen %}{% if imagen_principal %}{{ SITE_URL }}{% static imagen_principal.ruta_detalle %}{% else %}{{ SITE_URL }}{% static 'logo_emuna_transparente.png' %}{% endif %}{% endblock %}
+{% block og_imagen %}{% if imagen_principal %}{{ imagen_principal.url_og_absoluta }}{% else %}{{ SITE_URL }}{% static 'logo_emuna_transparente.png' %}{% endif %}{% endblock %}
 
 {% block datos_estructurados_extra %}
 <script type="application/ld+json">
@@ -43,7 +43,7 @@
 {% block contenido %}
 <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 sm:pb-12"
          x-data="{
-           fotoActiva: '{% if imagen_principal %}{% static imagen_principal.ruta_detalle %}{% endif %}',
+           fotoActiva: '{% if imagen_principal %}{{ imagen_principal.url_detalle }}{% endif %}',
            altActivo: '{{ imagen_principal.alt_seo|escapejs }}',
            zoomActivo: false,
            modalZoomAbierto: false,
@@ -130,11 +130,11 @@
       <div class="sm:col-span-2 grid grid-cols-5 sm:grid-cols-1 gap-2.5">
         {% for img in imagenes %}
         <button type="button"
-                @click="fotoActiva = '{% static img.ruta_detalle %}'; altActivo = '{{ img.alt_seo|escapejs }}'"
+                @click="fotoActiva = '{{ img.url_detalle }}'; altActivo = '{{ img.alt_seo|escapejs }}'"
                 class="aspect-[4/5] border overflow-hidden bg-neutral-100 transicion-tactil focus:outline-none"
-                :class="fotoActiva === '{% static img.ruta_detalle %}' ? 'border-2 border-ink ring-2 ring-neon' : 'border-silver opacity-75 hover:opacity-100'"
+                :class="fotoActiva === '{{ img.url_detalle }}' ? 'border-2 border-ink ring-2 ring-neon' : 'border-silver opacity-75 hover:opacity-100'"
                 aria-label="Ver vista {{ img.orden }} de {{ producto.nombre }}">
-          <img src="{% static img.ruta_miniatura %}"
+          <img src="{{ img.url_miniatura }}"
                alt="{{ img.alt_seo }}"
                class="w-full h-full object-cover">
         </button>

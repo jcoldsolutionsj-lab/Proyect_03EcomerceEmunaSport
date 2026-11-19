@@ -7,9 +7,10 @@ Convenciones: claves primarias `id` (en base `PPP_NID`); `fecha_creacion` y `fec
 - **ConfiguracionTienda** (único): `nombre`, `numero_whatsapp`, `texto_pie`, `umbral_stock_bajo`, `mostrar_marcas` (bool, apagado), `dias_sin_ventas`, `horas_pedido_pendiente`. Se edita en el admin.
 - **MetodoPago**: `tipo` (`YAPE`, `PLIN`, `EFECTIVO`), `titular`, `numero_cuenta` (copiable), `imagen_qr`, `activo`, `orden`.
 
-### `catalogo` (`TBL_RCATEGORIA`, `TBL_RPRODUCTO`, `TBL_RIMAGEN_PRODUCTO`, `TBL_RVARIANTE`, `TBL_RREGLA_PRECIO`)
+### `catalogo` (`TBL_RCATEGORIA`, `TBL_REQUIPO`, `TBL_RPRODUCTO`, `TBL_RIMAGEN_PRODUCTO`, `TBL_RVARIANTE`, `TBL_RREGLA_PRECIO`)
 - **Categoria**: `nombre`, `slug`, `orden`, `activa`.
-- **Producto**: `nombre`, `slug`, `sku` único, `descripcion`, `categoria`, `marca` (texto, opcional), `precio_unidad` (precio actual de venta, ej. `S/ 55.00`), `precio_anterior` (opcional, precio regular tachado antes de oferta, ej. `S/ 69.90`), `activo`, `destacado`.
+- **Equipo**: `nombre`, `slug`, `tipo` (`SELECCION`, `CLUB`, `ORIGINAL`), `alias_busqueda` (apodos/sinónimos separados por coma para buscador e IA), `orden`, `activo`.
+- **Producto**: `nombre`, `slug`, `sku` único, `descripcion`, `categoria`, `equipo` (FK opcional a `Equipo`), `equipacion` (`LOCAL`, `ALTERNA`, `ESPECIAL`, `RETRO`, `ENTRENAMIENTO`), `temporada` (ej. `2026-2027`), `palabras_clave` (sinónimos), `marca` (texto, opcional), `precio_unidad` (precio actual de venta, ej. `S/ 55.00`), `precio_anterior` (opcional, precio regular tachado antes de oferta, ej. `S/ 69.90`), `activo`, `destacado`.
 - **ImagenProducto**: `producto`, `ruta_original` (privado), versiones generadas (`ruta_miniatura` ~400 px y `ruta_detalle` ~900 px en WebP), `texto_alternativo` (opcional; si es vacío se genera automáticamente con el nombre del producto para SEO y accesibilidad), `orden`, `es_principal`.
 - **Variante**: `producto`, `talla` (obligatoria), `color` (opcional), `modelo` (opcional), `sku` único, `cantidad_stock` (entero ≥ 0), `umbral_stock_bajo` (opcional), `activa`. Única por (`producto`, `talla`, `color`, `modelo`).
 - **ReglaPrecio**: `producto`, `cantidad_minima`, `precio_unidad`. El precio base está en `Producto.precio_unidad`.
@@ -34,4 +35,4 @@ Convenciones: claves primarias `id` (en base `PPP_NID`); `fecha_creacion` y `fec
 6. Validaciones: DNI = 8 dígitos (obligatorio en `AGENCIA`); teléfono peruano = 9 dígitos que empieza con 9 (obligatorio en pedidos `WEB`); cantidad ≥ 1.
 
 ## Índices sugeridos
-`TBL_TPEDIDO(PED_CESTADO, PED_DFECHA_CREACION)`, `TBL_TPEDIDO(PED_CCODIGO)`, `TBL_RVARIANTE(PRO_NID)`, `TBL_TMOVIMIENTO_STOCK(VAR_NID, MOV_DFECHA_CREACION)`.
+`TBL_REQUIPO(EQU_OACTIVO, EQU_NORDEN, EQU_CNOMBRE)`, `TBL_RPRODUCTO(CAT_NID, EQU_NID, PRO_ODESTACADO) WHERE PRO_OACTIVO = true`, `TBL_RVARIANTE(PRO_NID)`, `TBL_RVARIANTE(VAR_CTALLA, PRO_NID) WHERE VAR_OACTIVA = true AND VAR_NCANTIDAD_STOCK > 0`, `TBL_TPEDIDO(PED_CESTADO, PED_DFECHA_CREACION)`, `TBL_TPEDIDO(PED_CCLIENTE_TELEFONO)`, `TBL_TPEDIDO(PED_CORIGEN, PED_CESTADO, PED_DFECHA_CREACION)`, `TBL_TPEDIDO(PED_CCODIGO)`, `TBL_TMOVIMIENTO_STOCK(VAR_NID, MOV_DFECHA_CREACION)` y en PostgreSQL índices `GIN` (`pg_trgm`) sobre `PRO_CNOMBRE`, `PRO_CPALABRAS_CLAVE`, `EQU_CNOMBRE` y `EQU_CALIAS_BUSQUEDA`.

@@ -15,7 +15,15 @@ from unfold.admin import TabularInline as UnfoldTabularInline
 from apps.nucleo.admin_helpers import encabezado_con_tooltip
 from apps.nucleo.excepciones import ErrorDominioEmuna
 
-from .models import Categoria, ImagenProducto, MovimientoStock, Producto, ReglaPrecio, Variante
+from .models import (
+    Categoria,
+    Equipo,
+    ImagenProducto,
+    MovimientoStock,
+    Producto,
+    ReglaPrecio,
+    Variante,
+)
 from .selectores import MAX_PRODUCTOS_DESTACADOS
 
 
@@ -210,25 +218,153 @@ class ProductoAdminForm(forms.ModelForm):
         return cleaned_data
 
 
+@admin.register(Equipo)
+class EquipoAdmin(UnfoldModelAdmin):
+    """Administración de selecciones, clubes y sinónimos de búsqueda para tienda e IA."""
+
+    list_display = ("nombre_col", "tipo_col", "alias_col", "orden_col", "activo_col")
+    list_filter = ("activo", "tipo")
+    search_fields = ("nombre", "slug", "alias_busqueda")
+    prepopulated_fields = {"slug": ("nombre",)}
+    list_per_page = 15
+    ordering = ("orden", "nombre")
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Equipo / Selección / Club",
+            "Entidad normalizada (ej. Argentina, Barcelona, Portugal) para filtros rápidos e IA.",
+        ),
+        ordering="nombre",
+    )
+    def nombre_col(self, obj: Equipo) -> str:
+        """Retorna el nombre del equipo con tooltip explicativo.
+
+        Qué hace:      Devuelve obj.nombre.
+        Va hacia:      Columna principal en EquipoAdmin.
+        Depende de:    obj.nombre.
+        Cuándo usarla: En el listado de equipos del panel administrativo.
+        Si no opera:   Retorna cadena vacía.
+        """
+        return obj.nombre
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Tipo", "Clasifica si es Selección nacional, Club internacional o Línea propia."
+        ),
+        ordering="tipo",
+    )
+    def tipo_col(self, obj: Equipo) -> str:
+        """Retorna la etiqueta legible del tipo de equipo.
+
+        Qué hace:      Devuelve obj.get_tipo_display().
+        Va hacia:      Columna Tipo en EquipoAdmin.
+        Depende de:    obj.tipo y TipoEquipo.
+        Cuándo usarla: En el listado de equipos del panel administrativo.
+        Si no opera:   Retorna el código crudo si no existe etiqueta.
+        """
+        return obj.get_tipo_display()
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Alias / Sinónimos",
+            "Términos separados por coma (ej. cr7, lusa) para encontrar el equipo al instante.",
+        ),
+        ordering="alias_busqueda",
+    )
+    def alias_col(self, obj: Equipo) -> str:
+        """Retorna los alias de búsqueda configurados para el equipo.
+
+        Qué hace:      Devuelve obj.alias_busqueda o guion si está vacío.
+        Va hacia:      Columna Alias / Sinónimos en EquipoAdmin.
+        Depende de:    obj.alias_busqueda.
+        Cuándo usarla: En el listado de equipos del panel administrativo.
+        Si no opera:   Retorna '—' cuando no hay alias cargados.
+        """
+        return obj.alias_busqueda or "—"
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Orden", "Prioridad en selectores y filtros (menor número aparece primero)."
+        ),
+        ordering="orden",
+    )
+    def orden_col(self, obj: Equipo) -> int:
+        """Retorna el orden de visualización del equipo.
+
+        Qué hace:      Devuelve obj.orden.
+        Va hacia:      Columna Orden en EquipoAdmin.
+        Depende de:    obj.orden.
+        Cuándo usarla: En el listado de equipos.
+        Si no opera:   Retorna 0.
+        """
+        return obj.orden
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Activo", "Indica si el equipo participa en búsquedas y catálogo público."
+        ),
+        ordering="activo",
+        boolean=True,
+    )
+    def activo_col(self, obj: Equipo) -> bool:
+        """Retorna si el equipo está activo.
+
+        Qué hace:      Devuelve obj.activo.
+        Va hacia:      Columna Activo en EquipoAdmin.
+        Depende de:    obj.activo.
+        Cuándo usarla: En el listado de equipos.
+        Si no opera:   Retorna False.
+        """
+        return obj.activo
+
+
 @admin.register(Producto)
 class ProductoAdmin(UnfoldModelAdmin):
     """Administración integral de productos con tallas, fotos y precios por mayor."""
 
     form = ProductoAdminForm
+    list_select_related = ("categoria", "equipo")
     list_display = (
         "nombre_col",
         "sku_col",
         "categoria_col",
+        "equipo_col",
         "precio_unidad_col",
         "precio_anterior_col",
         "activo_col",
         "destacado_col",
     )
-    list_filter = ("activo", "destacado", "categoria")
-    search_fields = ("nombre", "sku", "descripcion", "categoria__nombre")
+    list_filter = ("activo", "destacado", "categoria", "equipo", "equipacion")
+    search_fields = (
+        "nombre",
+        "sku",
+        "descripcion",
+        "palabras_clave",
+        "temporada",
+        "categoria__nombre",
+        "equipo__nombre",
+        "equipo__alias_busqueda",
+    )
     prepopulated_fields = {"slug": ("nombre",)}
     list_per_page = 15
     inlines = [VarianteInline, ReglaPrecioInline, ImagenProductoInline]
+
+    @admin.display(
+        description=encabezado_con_tooltip(
+            "Equipo", "Selección, club o línea normalizada asociada para búsqueda rápida."
+        ),
+        ordering="equipo__nombre",
+    )
+    def equipo_col(self, obj: Producto) -> str:
+        """Retorna el nombre del equipo asociado al producto o guion si no aplica.
+
+        Qué hace:      Devuelve obj.equipo.nombre si existe relación con Equipo.
+        Va hacia:      Columna Equipo en ProductoAdmin.
+        Depende de:    obj.equipo.
+        Cuándo usarla: En el listado de productos del panel administrativo.
+        Si no opera:   Retorna '—' cuando el producto no tiene equipo vinculado.
+        """
+        return obj.equipo.nombre if obj.equipo else "—"
 
     def get_form(
         self,

@@ -16,6 +16,7 @@ Aplica `../12-estandar-base-datos.md` al modelo lógico de `../04-modelo-de-dato
 | `TBL_RCONFIGURACION_TIENDA` | CTI | `ConfiguracionTienda` | nucleo | Referencia |
 | `TBL_RMETODO_PAGO` | MPA | `MetodoPago` | nucleo | Referencia |
 | `TBL_RCATEGORIA` | CAT | `Categoria` | catalogo | Referencia |
+| `TBL_REQUIPO` | EQU | `Equipo` | catalogo | Referencia |
 | `TBL_RPRODUCTO` | PRO | `Producto` | catalogo | Referencia |
 | `TBL_RIMAGEN_PRODUCTO` | IMA | `ImagenProducto` | catalogo | Referencia |
 | `TBL_RVARIANTE` | VAR | `Variante` | catalogo | Referencia |
@@ -81,15 +82,35 @@ Tablas de Django que **no** se renombran: `auth_user`, `auth_group`, `auth_permi
 | `CAT_DFECHA_ACTUALIZACION` | `fecha_actualizacion` | timestamptz | No |  | Fecha de última actualización |
 
 
+### `TBL_REQUIPO` (EQU) – Equipos, selecciones, clubes y líneas con alias para búsqueda e IA.
+
+| Columna | Campo Django | Tipo | Nulo | Clave | Descripción |
+|---|---|---|---|---|---|
+| `EQU_NID` | `id` | bigint | No | PK | Identificador |
+| `EQU_CNOMBRE` | `nombre` | varchar(80) | No | UK | Nombre del equipo o línea |
+| `EQU_CSLUG` | `slug` | varchar(100) | No | UK | Texto para la URL |
+| `EQU_CTIPO` | `tipo` | varchar(20) | No |  | SELECCION, CLUB o ORIGINAL |
+| `EQU_CALIAS_BUSQUEDA` | `alias_busqueda` | varchar(200) | No |  | Alias / apodos separados por coma |
+| `EQU_NORDEN` | `orden` | integer | No |  | Orden de aparición |
+| `EQU_OACTIVO` | `activo` | boolean | No |  | Equipo activo |
+| `EQU_DFECHA_CREACION` | `fecha_creacion` | timestamptz | No |  | Fecha de creación |
+| `EQU_DFECHA_ACTUALIZACION` | `fecha_actualizacion` | timestamptz | No |  | Fecha de última actualización |
+
+- **IX** `TBL_REQUIPO_ACT_ORD_NOM_IX`: (EQU_OACTIVO, EQU_NORDEN, EQU_CNOMBRE)
+
 ### `TBL_RPRODUCTO` (PRO) – Camisetas u otros productos del catálogo.
 
 | Columna | Campo Django | Tipo | Nulo | Clave | Descripción |
 |---|---|---|---|---|---|
 | `PRO_NID` | `id` | bigint | No | PK | Identificador |
 | `CAT_NID` | `categoria` | bigint | No | FK → TBL_RCATEGORIA | Categoría |
+| `EQU_NID` | `equipo` | bigint | Sí | FK → TBL_REQUIPO | Equipo / Selección / Club |
 | `PRO_CNOMBRE` | `nombre` | varchar(150) | No |  | Nombre |
 | `PRO_CSLUG` | `slug` | varchar(170) | No | UK | Texto para la URL |
 | `PRO_CSKU` | `sku` | varchar(30) | No | UK | Código interno, ej. EMU-001 |
+| `PRO_CEQUIPACION` | `equipacion` | varchar(20) | No |  | Versión: LOCAL, ALTERNA, ESPECIAL, RETRO o ENTRENAMIENTO |
+| `PRO_CTEMPORADA` | `temporada` | varchar(20) | No |  | Temporada, ej. 2026-2027 |
+| `PRO_CPALABRAS_CLAVE` | `palabras_clave` | varchar(200) | No |  | Sinónimos de búsqueda para web y chat IA |
 | `PRO_CDESCRIPCION` | `descripcion` | text | Sí |  | Descripción |
 | `PRO_CMARCA` | `marca` | varchar(80) | Sí |  | Marca (opcional; solo se muestra si está activada) |
 | `PRO_NPRECIO_UNIDAD` | `precio_unidad` | numeric(10,2) | No |  | Precio base o de oferta actual por unidad en PEN (ej. 55.00) |
@@ -99,6 +120,7 @@ Tablas de Django que **no** se renombran: `auth_user`, `auth_group`, `auth_permi
 | `PRO_DFECHA_CREACION` | `fecha_creacion` | timestamptz | No |  | Fecha de creación |
 | `PRO_DFECHA_ACTUALIZACION` | `fecha_actualizacion` | timestamptz | No |  | Fecha de última actualización |
 
+- **IX** `TBL_RPRODUCTO_ACTIVO_CAT_EQU_IX`: (CAT_NID, EQU_NID, PRO_ODESTACADO) WHERE PRO_OACTIVO = true
 
 ### `TBL_RIMAGEN_PRODUCTO` (IMA) – Fotos del producto con sus versiones generadas.
 
@@ -133,6 +155,7 @@ Tablas de Django que **no** se renombran: `auth_user`, `auth_group`, `auth_permi
 | `VAR_DFECHA_ACTUALIZACION` | `fecha_actualizacion` | timestamptz | No |  | Fecha de última actualización |
 
 - **IX** `TBL_RVARIANTE_PRO_NID_IX`: (PRO_NID)
+- **IX** `TBL_RVARIANTE_DISP_TALLA_IX`: (VAR_CTALLA, PRO_NID) WHERE VAR_OACTIVA = true AND VAR_NCANTIDAD_STOCK > 0
 - **CK** `TBL_RVARIANTE_STOCK_CK`: VAR_NCANTIDAD_STOCK >= 0
 - **UK** `TBL_RVARIANTE_PRO_NID_VAR_CTALLA_VAR_CCOLOR_VAR_CMODELO_UK`: (PRO_NID, VAR_CTALLA, VAR_CCOLOR, VAR_CMODELO)
 - Restricción única: (PRO_NID, VAR_CTALLA, VAR_CCOLOR, VAR_CMODELO). Color y modelo van vacíos (no nulos) para que la restricción funcione en PostgreSQL.
@@ -208,6 +231,8 @@ Tablas de Django que **no** se renombran: `auth_user`, `auth_group`, `auth_permi
 | `PED_DFECHA_ACTUALIZACION` | `fecha_actualizacion` | timestamptz | No |  | Fecha de última actualización |
 
 - **IX** `TBL_TPEDIDO_PED_CESTADO_PED_DFECHA_CREACION_IX`: (PED_CESTADO, PED_DFECHA_CREACION)
+- **IX** `TBL_TPEDIDO_TEL_IX`: (PED_CCLIENTE_TELEFONO)
+- **IX** `TBL_TPEDIDO_ORI_EST_FEC_IX`: (PED_CORIGEN, PED_CESTADO, PED_DFECHA_CREACION)
 - **UK** `TBL_TPEDIDO_PED_CCODIGO_UK`: (PED_CCODIGO)
 - **CK** `TBL_TPEDIDO_TOTAL_CK`: PED_NTOTAL = PED_NSUBTOTAL + coalesce(PED_NCOSTO_ENVIO, 0)
 
@@ -341,6 +366,24 @@ Tablas de Django que **no** se renombran: `auth_user`, `auth_group`, `auth_permi
 | `VENTA` | Salida por venta al confirmar el pago (cantidad negativa) |
 | `AJUSTE` | Corrección de inventario (positiva o negativa) |
 | `DEVOLUCION` | Regreso de stock por cancelación o rechazo (cantidad positiva) |
+
+### EQU_CTIPO
+
+| Valor | Significado |
+|---|---|
+| `SELECCION` | Selección nacional |
+| `CLUB` | Club internacional |
+| `ORIGINAL` | Diseño propio Emuná Sport |
+
+### PRO_CEQUIPACION
+
+| Valor | Significado |
+|---|---|
+| `LOCAL` | Local / Titular |
+| `ALTERNA` | Alterna / Visitante |
+| `ESPECIAL` | Edición especial |
+| `RETRO` | Retro / Histórica |
+| `ENTRENAMIENTO` | Entrenamiento / Línea propia |
 
 ## Datos privados
 

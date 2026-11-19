@@ -207,18 +207,20 @@
       </p>
       {% endif %}
 
+      {% if metodo_yape.url_qr %}
       <!-- QR oficial de Richard -->
       <div class="bg-white border border-silver p-4 flex flex-col items-center justify-center text-center space-y-2">
         <span class="text-[11px] font-extrabold uppercase tracking-wider text-ink">
           QR Oficial Yape · Richard Ramos
         </span>
-        <img src="{% static metodo_yape.imagen_qr|default:'QR_yape_richardRamos.jpeg' %}"
+        <img src="{{ metodo_yape.url_qr }}"
              alt="Código QR Yape oficial de Richard Ramos"
              class="w-48 h-auto max-h-56 object-contain border-2 border-ink shadow-sm">
         <span class="text-[10px] text-silverDark">
           Escanea desde tu app Yape o copia el número celular abajo
         </span>
       </div>
+      {% endif %}
 
       <div class="bg-white border border-silver p-4 space-y-2 text-xs">
         <div class="flex items-center justify-between">

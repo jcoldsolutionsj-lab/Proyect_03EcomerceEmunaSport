@@ -1,6 +1,12 @@
 """Modelos de datos de la app núcleo: ConfiguracionTienda y MetodoPago."""
+from pathlib import Path
+
+from django.conf import settings
+from django.contrib.staticfiles import finders
+from django.contrib.staticfiles.storage import staticfiles_storage
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.templatetags.static import static
 
 from .validadores import limpiar_texto_seguro, validar_telefono_peruano
 
@@ -229,3 +235,30 @@ class MetodoPago(models.Model):
         """
         self.full_clean()
         super().save(*args, **kwargs)
+
+    @property
+    def url_qr(self) -> str:
+        """Resuelve de forma segura la URL del QR (URL externa/R2 o estático disponible).
+
+        Qué hace:      Devuelve URL directa si es http(s)/R2, o verifica si el estático existe sin fallar en producción.
+        Va hacia:      Atributo src del QR en parcial_seguimiento_pedido.html.
+        Depende de:    settings.R2_PUBLIC_URL, staticfiles_storage y finders.
+        Cuándo usarla: Al mostrar la tarjeta de pago con Yape/Plin al cliente.
+        Si no opera:   Retorna '' si el archivo estático no está publicado en Render para evitar HTTP 500.
+        """
+        ruta = str(self.imagen_qr or "QR_yape_richardRamos.jpeg").strip()
+        if not ruta:
+            return ""
+        if ruta.startswith(("http://", "https://", "/")):
+            return ruta
+        r2_pub = str(getattr(settings, "R2_PUBLIC_URL", "") or "").strip().rstrip("/")
+        if r2_pub and ruta.startswith(("webp/", "productos/", "pagos/", "qr/")):
+            return f"{r2_pub}/{ruta.lstrip('/')}"
+        try:
+            if staticfiles_storage.exists(ruta):
+                return staticfiles_storage.url(ruta)
+        except Exception:
+            pass
+        if finders.find(ruta) or (Path(settings.STATIC_ROOT) / ruta).exists():
+            return static(ruta)
+        return ""

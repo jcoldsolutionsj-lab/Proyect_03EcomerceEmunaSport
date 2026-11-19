@@ -7,6 +7,7 @@ Con los nombres físicos del estándar (`../12-estandar-base-datos.md`). Detalle
 ```mermaid
 erDiagram
   TBL_RCATEGORIA ||--o{ TBL_RPRODUCTO : "clasifica"
+  TBL_REQUIPO |o--o{ TBL_RPRODUCTO : "agrupa equipo"
   TBL_RPRODUCTO ||--o{ TBL_RIMAGEN_PRODUCTO : "tiene fotos"
   TBL_RPRODUCTO ||--o{ TBL_RVARIANTE : "tiene variantes"
   TBL_RPRODUCTO ||--o{ TBL_RREGLA_PRECIO : "tiene precios por mayor"
@@ -48,12 +49,25 @@ erDiagram
     integer CAT_NORDEN
     boolean CAT_OACTIVA
   }
+  TBL_REQUIPO {
+    bigint EQU_NID PK
+    varchar EQU_CNOMBRE UK
+    varchar EQU_CSLUG UK
+    varchar EQU_CTIPO
+    varchar EQU_CALIAS_BUSQUEDA
+    integer EQU_NORDEN
+    boolean EQU_OACTIVO
+  }
   TBL_RPRODUCTO {
     bigint PRO_NID PK
     bigint CAT_NID FK
+    bigint EQU_NID FK
     varchar PRO_CNOMBRE
     varchar PRO_CSLUG UK
     varchar PRO_CSKU UK
+    varchar PRO_CEQUIPACION
+    varchar PRO_CTEMPORADA
+    varchar PRO_CPALABRAS_CLAVE
     text PRO_CDESCRIPCION
     varchar PRO_CMARCA
     numeric PRO_NPRECIO_UNIDAD
