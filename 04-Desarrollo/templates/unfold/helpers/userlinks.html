@@ -1,0 +1,29 @@
+{% load i18n static unfold %}
+
+{% if not is_popup %}
+    <div class="emuna-header-userlinks flex flex-row items-center ml-auto" style="gap: 10px;">
+        {% if emuna_perfil_usuario %}
+            <button type="button"
+                    data-emuna-open-perfil="1"
+                    class="emuna-top-profile-btn"
+                    title="Ver detalle de mi perfil ({{ emuna_perfil_usuario.nombre_completo }})">
+                <span class="emuna-top-profile-avatar">{{ emuna_perfil_usuario.inicial }}</span>
+                <span class="emuna-top-profile-text emuna-top-profile-text-full">
+                    {% if emuna_perfil_usuario.es_superusuario %}⚡{% else %}👑{% endif %}
+                    {{ emuna_perfil_usuario.nombre_panel }}
+                </span>
+                <span class="emuna-top-profile-text emuna-top-profile-text-short">
+                    {% if emuna_perfil_usuario.es_superusuario %}⚡ Admin{% else %}👑 Dueño{% endif %}
+                </span>
+            </button>
+        {% elif environment %}
+            {% include "unfold/helpers/label.html" with text=environment.0 type=environment.1 %}
+        {% endif %}
+
+        {% action_list %}
+
+        {% if nav_global_side %}
+            {{ nav_global_side }}
+        {% endif %}
+    </div>
+{% endif %}

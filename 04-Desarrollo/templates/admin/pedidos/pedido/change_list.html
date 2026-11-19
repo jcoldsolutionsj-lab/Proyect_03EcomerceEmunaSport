@@ -1,0 +1,15 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+  <div class="emuna-object-tools-row flex flex-row items-center" style="gap: 8px;">
+    <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}"
+       class="emuna-btn-header-pos inline-flex items-center rounded-default whitespace-nowrap no-underline"
+       style="gap: 6px; height: 38px; padding: 0 12px; background: #39FF14; color: #0A0A0A; border: 2px solid #0A0A0A; font-weight: 800; font-size: 13px; box-sizing: border-box;">
+      <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
+      <span class="emuna-btn-pos-texto-full">Venta POS</span>
+      <span class="emuna-btn-pos-texto-short">POS</span>
+    </a>
+    {{ block.super }}
+  </div>
+{% endblock %}

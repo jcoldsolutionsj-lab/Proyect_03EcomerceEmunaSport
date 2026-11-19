@@ -1,0 +1,695 @@
+{% extends "admin/base.html" %}
+{% load i18n static unfold %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block extra_userlinks %}
+  {% if emuna_perfil_usuario %}
+  <button type="button"
+          data-emuna-open-perfil="1"
+          class="mx-1 px-3 py-2 text-left font-bold rounded-default hover:bg-base-100 hover:text-base-700 dark:hover:bg-base-700 dark:hover:text-base-200 flex items-center justify-between cursor-pointer">
+    <span>👤 Ver detalle de mi perfil</span>
+    <span style="font-size: 10px; background: #0A0A0A; color: #39FF14; padding: 2px 6px; border-radius: 3px; font-weight: 800;">{{ emuna_perfil_usuario.inicial }}</span>
+  </button>
+  {% endif %}
+{% endblock %}
+
+{% block header %}
+    <div id="emuna-nav-progress" aria-hidden="true">
+      <div class="emuna-nav-progress-fill"></div>
+    </div>
+    <script>
+      (function () {
+        var bar = document.getElementById('emuna-nav-progress');
+        if (!bar) return;
+        function ocultarBarra() {
+          bar.style.display = 'none';
+        }
+        window.addEventListener('pageshow', ocultarBarra);
+        document.addEventListener('click', function (ev) {
+          if (ev.defaultPrevented || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
+          var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+          if (!a) return;
+          var href = a.getAttribute('href') || '';
+          if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+          if (a.getAttribute('target') === '_blank' || a.hasAttribute('download')) return;
+          if (a.getAttribute('hx-get') || a.getAttribute('hx-post')) return;
+          bar.style.display = 'block';
+        });
+        document.addEventListener('submit', function (ev) {
+          if (ev.defaultPrevented) return;
+          var form = ev.target;
+          if (!form || form.getAttribute('hx-get') || form.getAttribute('hx-post')) return;
+          if (form.getAttribute('target') === '_blank') return;
+          bar.style.display = 'block';
+        });
+      })();
+    </script>
+    <div class="emuna-mobile-sticky-bar">
+      {{ block.super }}
+      {% if has_permission and not is_popup %}
+      <nav class="emuna-mobile-quicknav" id="emuna-mobile-quicknav" aria-label="Navegación rápida móvil">
+        <a href="{% url 'admin:index' %}" {% if request.resolver_match.url_name == 'index' and request.resolver_match.namespace == 'admin' %}class="qn-activo"{% endif %}>🏠 Inicio</a>
+        <a href="{% url 'tablero:resumen' %}" {% if request.resolver_match.namespace == 'tablero' %}class="qn-activo"{% endif %}>📊 Tablero</a>
+        <a href="{% url 'admin:pedidos_pedido_changelist' %}" {% if 'pedidos_pedido' in request.resolver_match.url_name and 'venta_presencial' not in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📦 Pedidos</a>
+        <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}" class="qn-pos{% if 'venta_presencial' in request.resolver_match.url_name %} qn-activo{% endif %}">⚡ POS</a>
+        <a href="{% url 'admin:catalogo_producto_changelist' %}" {% if 'catalogo_producto' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>👕 Productos</a>
+        <a href="{% url 'admin:catalogo_variante_changelist' %}" {% if 'catalogo_variante' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📏 Tallas</a>
+        <a href="{% url 'admin:catalogo_movimientostock_changelist' %}" {% if 'movimientostock' in request.resolver_match.url_name %}class="qn-activo"{% endif %}>📋 Kárdex</a>
+      </nav>
+      <script>
+        (function () {
+          var nav = document.getElementById('emuna-mobile-quicknav');
+          if (!nav) return;
+
+          function centrarTabActivo() {
+            var activo = nav.querySelector('a.qn-activo');
+            if (!activo || !nav.clientWidth) return;
+            var navRect = nav.getBoundingClientRect();
+            var actRect = activo.getBoundingClientRect();
+            if (!navRect.width || !actRect.width) return;
+            var destino = nav.scrollLeft + (actRect.left - navRect.left) - (navRect.width - actRect.width) / 2;
+            var maxScroll = Math.max(0, nav.scrollWidth - nav.clientWidth);
+            nav.scrollLeft = Math.max(0, Math.min(maxScroll, destino));
+          }
+
+          // Centrar de inmediato al pintar y reafirmar tras cargar fuentes/estilos o volver del historial
+          centrarTabActivo();
+          if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(centrarTabActivo);
+          }
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', centrarTabActivo);
+          }
+          window.addEventListener('pageshow', centrarTabActivo);
+          window.addEventListener('resize', centrarTabActivo);
+
+          // Respuesta visual inmediata al tocar otra pestaña mientras carga la ruta
+          nav.addEventListener('click', function (ev) {
+            var link = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+            if (!link) return;
+            nav.querySelectorAll('a.qn-activo').forEach(function (a) {
+              a.classList.remove('qn-activo');
+            });
+            link.classList.add('qn-activo');
+          });
+        })();
+      </script>
+      {% endif %}
+    </div>
+    {% if has_permission and not is_popup %}
+    <script>
+      (function () {
+        if (typeof window.theme !== 'function' || window.__emunaThemePatched) return;
+        window.__emunaThemePatched = true;
+        var originalTheme = window.theme;
+
+        function leerSidebarGuardado() {
+          try {
+            return localStorage.getItem('sidebarOpen');
+          } catch (err) {
+            return null;
+          }
+        }
+
+        function guardarSidebar(abierto) {
+          try {
+            localStorage.setItem('sidebarOpen', abierto ? '1' : '0');
+          } catch (err) {
+            /* Almacenamiento local no disponible */
+          }
+        }
+
+        function estadoInicialSidebar() {
+          if (window.innerWidth < 1280) {
+            return false;
+          }
+          var guardado = leerSidebarGuardado();
+          return guardado === null ? true : guardado !== '0';
+        }
+
+        window.theme = function (defaultTheme) {
+          var data = originalTheme(defaultTheme);
+          var ultimoAncho = window.innerWidth;
+          var esEscritorioPrevio = ultimoAncho >= 1280;
+
+          // Inicializar como booleano alineado al breakpoint xl (1280px) de Unfold.
+          data.sidebarOpen = estadoInicialSidebar();
+
+          data.sidebarToggle = function () {
+            this.sidebarOpen = !Boolean(this.sidebarOpen);
+            if (window.innerWidth >= 1280) {
+              guardarSidebar(this.sidebarOpen);
+            }
+          };
+
+          if (data.themeBindings && typeof data.themeBindings['x-resize.window'] === 'function') {
+            data.themeBindings['x-resize.window'] = function () {
+              var anchoActual = window.innerWidth;
+              // Ignorar cambios exclusivos de altura provocados por ResizeObserver al abrir/cerrar el menú.
+              if (anchoActual === ultimoAncho) {
+                return;
+              }
+              ultimoAncho = anchoActual;
+              var esEscritorioActual = anchoActual >= 1280;
+              if (esEscritorioActual === esEscritorioPrevio) {
+                return;
+              }
+              esEscritorioPrevio = esEscritorioActual;
+              this.sidebarOpen = esEscritorioActual
+                ? (leerSidebarGuardado() === '0' ? false : true)
+                : false;
+            };
+          }
+
+          return data;
+        };
+      })();
+    </script>
+    <div id="emuna-touch-tooltip" class="emuna-touch-tooltip" role="status" aria-live="polite"></div>
+    <script>
+      (function () {
+        var caja = document.getElementById('emuna-touch-tooltip');
+        if (!caja) return;
+        var temporizador = null;
+
+        document.addEventListener('click', function (ev) {
+          var img = ev.target && ev.target.closest
+            ? ev.target.closest('img[src*="toltip.png"], .emuna-icon-tip, .help-tooltip')
+            : null;
+          if (!img) {
+            caja.style.display = 'none';
+            return;
+          }
+          var texto = img.getAttribute('title') || img.getAttribute('data-tip') || img.getAttribute('alt') || '';
+          texto = texto.replace(/^\(|\)$/g, '').trim();
+          if (!texto) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          caja.textContent = 'Ayuda de campo: ' + texto;
+          caja.style.display = 'block';
+          clearTimeout(temporizador);
+          temporizador = setTimeout(function () {
+            caja.style.display = 'none';
+          }, 4200);
+        });
+      })();
+    </script>
+    {% if emuna_perfil_usuario %}
+    <!-- Modal de Ficha y Detalle del Perfil del Usuario (Al hacer clic en Avatar J/R o Perfil) -->
+    <div id="emuna-user-profile-modal"
+         class="emuna-profile-modal-backdrop"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="emuna-profile-modal-title"
+         style="display: none;">
+      <div class="emuna-profile-modal-card">
+        <div class="emuna-profile-modal-header">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <div class="emuna-profile-modal-avatar">
+              {{ emuna_perfil_usuario.inicial }}
+            </div>
+            <div style="min-width: 0;">
+              <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #39FF14;">
+                {{ emuna_perfil_usuario.nombre_panel }} · Emuná Sport
+              </div>
+              <h2 id="emuna-profile-modal-title" style="margin: 2px 0 0 0; font-size: 18px; font-weight: 800; color: #FFFFFF; line-height: 1.25;">
+                {{ emuna_perfil_usuario.nombre_completo }}
+              </h2>
+              <div style="font-size: 12px; color: #C9CED3;">
+                Usuario: <strong>@{{ emuna_perfil_usuario.username }}</strong>
+              </div>
+            </div>
+          </div>
+          <button type="button"
+                  data-emuna-close-perfil="1"
+                  class="emuna-profile-modal-close"
+                  aria-label="Cerrar detalle de perfil"
+                  title="Cerrar detalle de perfil">
+            ✕
+          </button>
+        </div>
+
+        <div class="emuna-profile-modal-body">
+          <div class="emuna-profile-grid">
+            <div class="emuna-profile-item">
+              <span class="emuna-profile-label">Perfil / Rol asignado</span>
+              <strong class="emuna-profile-val" style="color: #15803D;">
+                {% if emuna_perfil_usuario.es_superusuario %}⚡{% else %}👑{% endif %} {{ emuna_perfil_usuario.rol_titulo }}
+              </strong>
+            </div>
+            <div class="emuna-profile-item">
+              <span class="emuna-profile-label">Ruta dinámica del perfil</span>
+              <code class="emuna-profile-code">{{ emuna_perfil_usuario.prefijo_url_panel }}</code>
+            </div>
+            <div class="emuna-profile-item">
+              <span class="emuna-profile-label">DNI / Identificación</span>
+              <strong class="emuna-profile-val">{{ emuna_perfil_usuario.dni }}</strong>
+            </div>
+            <div class="emuna-profile-item">
+              <span class="emuna-profile-label">Teléfono / WhatsApp Tienda</span>
+              <strong class="emuna-profile-val" style="font-family: monospace;">{{ emuna_perfil_usuario.telefono }}</strong>
+            </div>
+            <div class="emuna-profile-item">
+              <span class="emuna-profile-label">Correo electrónico</span>
+              <strong class="emuna-profile-val">{{ emuna_perfil_usuario.email }}</strong>
+            </div>
+            <div class="emuna-profile-item">
+              <span class="emuna-profile-label">Grupo de permisos</span>
+              <strong class="emuna-profile-val">{{ emuna_perfil_usuario.grupos }}</strong>
+            </div>
+            <div class="emuna-profile-item">
+              <span class="emuna-profile-label">Fecha de registro en sistema</span>
+              <strong class="emuna-profile-val">
+                {% if emuna_perfil_usuario.fecha_registro %}
+                  {{ emuna_perfil_usuario.fecha_registro|date:"d/m/Y H:i" }}
+                {% else %}
+                  Cuenta fundadora activa
+                {% endif %}
+              </strong>
+            </div>
+            <div class="emuna-profile-item">
+              <span class="emuna-profile-label">Último inicio de sesión</span>
+              <strong class="emuna-profile-val">
+                {% if emuna_perfil_usuario.ultimo_acceso %}
+                  {{ emuna_perfil_usuario.ultimo_acceso|date:"d/m/Y H:i" }}
+                {% else %}
+                  Sesión actual en curso
+                {% endif %}
+              </strong>
+            </div>
+          </div>
+
+          <div class="emuna-profile-alcance">
+            <strong>Alcance de tu perfil:</strong> {{ emuna_perfil_usuario.alcance }}
+          </div>
+        </div>
+
+        <div class="emuna-profile-modal-footer">
+          <a href="{{ emuna_perfil_usuario.prefijo_url_panel }}"
+             class="emuna-btn"
+             style="background: #0A0A0A; color: #39FF14; border: 1px solid #0A0A0A; font-size: 12px;">
+            🔗 Ir a {{ emuna_perfil_usuario.prefijo_url_panel }}
+          </a>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            {% if request.user.has_usable_password %}
+            <a href="{% url 'admin:password_change' %}"
+               class="emuna-btn"
+               style="background: #F8FAFC; color: #0F172A; border: 1px solid #CBD5E1; font-size: 12px;">
+              🔑 Cambiar contraseña
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var modal = document.getElementById('emuna-user-profile-modal');
+        if (!modal) return;
+
+        // Sincronizar la barra de direcciones del navegador con la ruta dinámica del perfil (/PanelDueño/ o /PanelAdministrativo/)
+        if (window.history && typeof window.history.replaceState === 'function') {
+          var prefijoPerfil = '{{ emuna_perfil_usuario.prefijo_url_panel|escapejs }}';
+          var rutaActual = window.location.pathname || '';
+          if (prefijoPerfil && rutaActual.indexOf('/gestion/') === 0) {
+            var nuevaRuta = prefijoPerfil + rutaActual.slice('/gestion/'.length) + window.location.search + window.location.hash;
+            window.history.replaceState(null, document.title, nuevaRuta);
+          }
+        }
+
+        function abrirModalPerfil(ev) {
+          if (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+          }
+          modal.style.display = 'flex';
+        }
+
+        function cerrarModalPerfil() {
+          modal.style.display = 'none';
+        }
+
+        document.addEventListener('click', function (ev) {
+          var disparador = ev.target && ev.target.closest
+            ? ev.target.closest('[data-emuna-open-perfil]')
+            : null;
+          if (disparador) {
+            abrirModalPerfil(ev);
+            return;
+          }
+          var cerrador = ev.target && ev.target.closest
+            ? ev.target.closest('[data-emuna-close-perfil]')
+            : null;
+          if (cerrador || ev.target === modal) {
+            cerrarModalPerfil();
+          }
+        });
+
+        document.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Escape' && modal.style.display !== 'none') {
+            cerrarModalPerfil();
+          }
+        });
+      })();
+    </script>
+    {% endif %}
+    <!-- Modal "Ver +" para visualizar todos los campos de una fila en móvil de un solo vistazo -->
+    <div id="emuna-row-detail-modal"
+         class="emuna-profile-modal-backdrop"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="emuna-row-modal-title"
+         style="display: none;">
+      <div class="emuna-profile-modal-card">
+        <div class="emuna-profile-modal-header">
+          <div style="min-width: 0;">
+            <div id="emuna-row-modal-eyebrow" style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #39FF14;">
+              Detalle del Registro
+            </div>
+            <h2 id="emuna-row-modal-title" style="margin: 3px 0 0 0; font-size: 18px; font-weight: 800; color: #FFFFFF; line-height: 1.25; word-break: break-word;">
+              Detalle
+            </h2>
+          </div>
+          <button type="button"
+                  data-emuna-close-row="1"
+                  class="emuna-profile-modal-close"
+                  aria-label="Cerrar ventana"
+                  title="Cerrar ventana">
+            ✕
+          </button>
+        </div>
+
+        <div class="emuna-profile-modal-body">
+          <div id="emuna-row-modal-grid" class="emuna-profile-grid"></div>
+        </div>
+
+        <div id="emuna-row-modal-footer" class="emuna-profile-modal-footer" style="display: none;">
+          <div id="emuna-row-modal-actions" class="emuna-row-modal-actions"></div>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var modal = document.getElementById('emuna-row-detail-modal');
+        if (!modal) return;
+        var elEyebrow = document.getElementById('emuna-row-modal-eyebrow');
+        var elTitle = document.getElementById('emuna-row-modal-title');
+        var elGrid = document.getElementById('emuna-row-modal-grid');
+        var elFooter = document.getElementById('emuna-row-modal-footer');
+        var elActions = document.getElementById('emuna-row-modal-actions');
+
+        var CONFIG_ADMIN = [
+          {
+            match: '/pedidos/pedido/',
+            exclude: 'venta-presencial',
+            eyebrow: 'Pedido · Emuná Sport',
+            keep: ['action-checkbox', 'codigo_col', 'estado_col'],
+            titleCol: 'codigo_col',
+            actions: ['codigo_col', 'notificacion_whatsapp'],
+          },
+          {
+            match: '/pedidos/envio/',
+            eyebrow: 'Envío por Agencia · Shalom / Olva',
+            keep: ['action-checkbox', 'pedido_col', 'orden_col'],
+            titleCol: 'pedido_col',
+            actions: ['pedido_col', 'ver_boleta_link'],
+          },
+          {
+            match: '/catalogo/producto/',
+            eyebrow: 'Producto / Camiseta',
+            keep: ['action-checkbox', 'nombre_col', 'precio_unidad_col'],
+            titleCol: 'nombre_col',
+            actions: ['nombre_col'],
+          },
+          {
+            match: '/catalogo/variante/',
+            eyebrow: 'Variante de Talla y Stock',
+            keep: ['action-checkbox', 'producto_col', 'stock_semaforo'],
+            titleCol: 'producto_col',
+            actions: ['producto_col'],
+          },
+          {
+            match: '/catalogo/movimientostock/',
+            eyebrow: 'Movimiento de Stock (Kárdex)',
+            keep: ['cantidad_col', 'variante_col'],
+            titleCol: 'variante_col',
+            actions: ['pedido_col'],
+          },
+        ];
+
+        function limpiarTextoEncabezado(th) {
+          var clon = th.cloneNode(true);
+          clon.querySelectorAll('img, .sortoptions, .material-symbols-outlined').forEach(function (n) {
+            n.remove();
+          });
+          var txtNode = clon.querySelector('.text') || clon;
+          return (txtNode.textContent || '').replace(/\s+/g, ' ').trim() || 'Dato';
+        }
+
+        function clonarContenidoSeguro(celda) {
+          var wrap = document.createElement('div');
+          wrap.className = 'emuna-profile-val';
+          var clon = celda.cloneNode(true);
+          clon.querySelectorAll('script, img[src*="toltip.png"], .emuna-icon-tip').forEach(function (n) {
+            n.remove();
+          });
+          while (clon.firstChild) {
+            wrap.appendChild(clon.firstChild);
+          }
+          if (!wrap.textContent.trim() && !wrap.querySelector('a, span')) {
+            wrap.textContent = '—';
+          }
+          return wrap;
+        }
+
+        function abrirModalFila(eyebrow, titulo, campos, botones) {
+          elEyebrow.textContent = eyebrow;
+          elTitle.textContent = titulo || eyebrow;
+          elGrid.innerHTML = '';
+          elActions.innerHTML = '';
+
+          campos.forEach(function (campo) {
+            var item = document.createElement('div');
+            item.className = 'emuna-profile-item';
+            var lbl = document.createElement('span');
+            lbl.className = 'emuna-profile-label';
+            lbl.textContent = campo.label;
+            item.appendChild(lbl);
+            item.appendChild(campo.nodo);
+            elGrid.appendChild(item);
+          });
+
+          botones.forEach(function (btnInfo, idx) {
+            var a = document.createElement('a');
+            a.href = btnInfo.href;
+            if (btnInfo.target) a.target = btnInfo.target;
+            if (btnInfo.rel) a.rel = btnInfo.rel;
+            a.className = 'emuna-btn';
+            a.style.fontSize = '12px';
+            if (btnInfo.esWhatsapp) {
+              a.style.background = '#15803D';
+              a.style.color = '#FFFFFF';
+              a.style.border = '1px solid #166534';
+            } else if (idx === 0) {
+              a.style.background = '#39FF14';
+              a.style.color = '#0A0A0A';
+              a.style.border = '2px solid #0A0A0A';
+            } else {
+              a.style.background = '#0A0A0A';
+              a.style.color = '#39FF14';
+              a.style.border = '1px solid #0A0A0A';
+            }
+            a.textContent = btnInfo.texto;
+            elActions.appendChild(a);
+          });
+
+          if (elFooter) {
+            elFooter.style.display = botones.length ? 'flex' : 'none';
+          }
+          modal.style.display = 'flex';
+        }
+
+        function inicializarTablaVerMas(tabla, opciones) {
+          var theadRow = tabla.querySelector('thead tr');
+          var tbodyRows = Array.from(tabla.querySelectorAll('tbody tr'));
+          if (!theadRow || tbodyRows.length === 0) return;
+
+          var headers = Array.from(theadRow.children);
+          if (!headers.length) return;
+          tabla.classList.add('emuna-mob-ready');
+
+          var labelsPorIdx = headers.map(function (th, idx) {
+            if (th.classList.contains('action-checkbox-column')) return '';
+            return limpiarTextoEncabezado(th);
+          });
+
+          headers.forEach(function (th, idx) {
+            if (opciones.esKeep(th, idx)) {
+              th.classList.add('emuna-mob-keep');
+            } else {
+              th.classList.add('emuna-mob-hide');
+            }
+          });
+
+          if (!theadRow.querySelector('.emuna-col-vermas')) {
+            var thVer = document.createElement('th');
+            thVer.className = 'emuna-col-vermas';
+            thVer.scope = 'col';
+            thVer.textContent = 'Detalle';
+            theadRow.appendChild(thVer);
+          }
+
+          tbodyRows.forEach(function (tr) {
+            var celdas = Array.from(tr.children);
+            if (celdas.length !== headers.length) return;
+
+            celdas.forEach(function (td, idx) {
+              if (opciones.esKeep(headers[idx], idx)) {
+                td.classList.add('emuna-mob-keep');
+              } else {
+                td.classList.add('emuna-mob-hide');
+              }
+            });
+
+            if (tr.querySelector('.emuna-col-vermas')) return;
+
+            var tdVer = document.createElement('td');
+            tdVer.className = 'emuna-col-vermas';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'emuna-btn-vermas';
+            btn.textContent = 'Ver +';
+
+            btn.addEventListener('click', function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+
+              var campos = [];
+              var botones = [];
+              var urlsVistas = {};
+              var titulo = opciones.eyebrow;
+
+              celdas.forEach(function (celda, idx) {
+                var th = headers[idx];
+                if (th.classList.contains('action-checkbox-column')) return;
+                var label = labelsPorIdx[idx] || 'Campo';
+
+                if (opciones.esTitleCol(th, idx)) {
+                  var txtTitulo = (celda.textContent || '').replace(/\s+/g, ' ').trim();
+                  if (txtTitulo) titulo = txtTitulo;
+                }
+
+                if (opciones.esSoloAccionCol(th, idx)) {
+                  celda.querySelectorAll('a[href]').forEach(function (a) {
+                    var href = a.getAttribute('href');
+                    if (!href || urlsVistas[href]) return;
+                    urlsVistas[href] = true;
+                    var t = (a.textContent || '').replace(/\s+/g, ' ').trim() || label;
+                    botones.push({
+                      href: href,
+                      target: a.getAttribute('target') || '',
+                      rel: a.getAttribute('rel') || '',
+                      texto: t,
+                      esWhatsapp: href.indexOf('whatsapp.com') !== -1 || t.toLowerCase().indexOf('whatsapp') !== -1,
+                    });
+                  });
+                  return;
+                }
+
+                if (opciones.esActionLinkCol(th, idx)) {
+                  celda.querySelectorAll('a[href]').forEach(function (a) {
+                    var href = a.getAttribute('href');
+                    if (!href || urlsVistas[href]) return;
+                    urlsVistas[href] = true;
+                    var esWa = href.indexOf('whatsapp.com') !== -1;
+                    botones.push({
+                      href: href,
+                      target: a.getAttribute('target') || '',
+                      rel: a.getAttribute('rel') || '',
+                      texto: esWa ? '💬 WhatsApp' : '⚙️ Abrir / Gestionar',
+                      esWhatsapp: esWa,
+                    });
+                  });
+                }
+
+                campos.push({ label: label, nodo: clonarContenidoSeguro(celda) });
+              });
+
+              abrirModalFila(opciones.eyebrow, titulo, campos, botones);
+            });
+
+            tdVer.appendChild(btn);
+            tr.appendChild(tdVer);
+          });
+        }
+
+        function claseColumnaAdmin(th) {
+          if (th.classList.contains('action-checkbox-column')) return 'action-checkbox';
+          var m = (th.className || '').match(/column-([a-zA-Z0-9_]+)/);
+          return m ? m[1] : '';
+        }
+
+        function iniciarVerMasMovil() {
+          var ruta = window.location.pathname || '';
+          var tablaAdmin = document.getElementById('result_list');
+          if (tablaAdmin) {
+            var cfg = CONFIG_ADMIN.find(function (item) {
+              return ruta.indexOf(item.match) !== -1 && (!item.exclude || ruta.indexOf(item.exclude) === -1);
+            });
+            if (cfg) {
+              inicializarTablaVerMas(tablaAdmin, {
+                eyebrow: cfg.eyebrow,
+                esKeep: function (th) { return cfg.keep.indexOf(claseColumnaAdmin(th)) !== -1; },
+                esTitleCol: function (th) { return claseColumnaAdmin(th) === cfg.titleCol; },
+                esActionLinkCol: function (th) { return cfg.actions.indexOf(claseColumnaAdmin(th)) !== -1; },
+                esSoloAccionCol: function (th) {
+                  var c = claseColumnaAdmin(th);
+                  return c === 'notificacion_whatsapp' || c === 'ver_boleta_link';
+                },
+              });
+            }
+          }
+
+          document.querySelectorAll('table[data-emuna-mob-modal]').forEach(function (tbl) {
+            var keeps = (tbl.getAttribute('data-emuna-mob-keep') || '').split(',').map(function (x) { return parseInt(x, 10); });
+            var actionIdx = parseInt(tbl.getAttribute('data-emuna-mob-actions') || '-1', 10);
+            var titleIdx = parseInt(tbl.getAttribute('data-emuna-mob-title-col') || '0', 10);
+            inicializarTablaVerMas(tbl, {
+              eyebrow: tbl.getAttribute('data-emuna-mob-modal') || 'Detalle',
+              esKeep: function (_th, idx) { return keeps.indexOf(idx) !== -1; },
+              esTitleCol: function (_th, idx) { return idx === titleIdx; },
+              esActionLinkCol: function (_th, idx) { return idx === actionIdx; },
+              esSoloAccionCol: function (_th, idx) { return idx === actionIdx; },
+            });
+          });
+        }
+
+        document.addEventListener('click', function (ev) {
+          if (ev.target === modal || (ev.target && ev.target.closest && ev.target.closest('[data-emuna-close-row]'))) {
+            modal.style.display = 'none';
+          }
+        });
+
+        document.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Escape' && modal.style.display !== 'none') {
+            modal.style.display = 'none';
+          }
+        });
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', iniciarVerMasMovil);
+        } else {
+          iniciarVerMasMovil();
+        }
+        document.body && document.body.addEventListener('htmx:afterSwap', iniciarVerMasMovil);
+      })();
+    </script>
+    {% endif %}
+{% endblock %}

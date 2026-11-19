@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block meta_titulo %}Política de Privacidad (Ley N.º 29733) | {{ tienda_config.nombre|default:"Emuná Sport" }}{% endblock %}
+
+{% block contenido %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+  <div class="border border-silver p-8 sm:p-10 bg-white space-y-6">
+    <div>
+      <span class="bg-neon text-ink text-xs font-extrabold uppercase px-2.5 py-1 border border-ink">
+        Ley N.º 29733 – Protección de Datos Personales (Perú)
+      </span>
+      <h1 class="font-display italic font-extrabold text-4xl uppercase tracking-tight mt-3">
+        Política de Privacidad y Uso de Datos
+      </h1>
+    </div>
+
+    <div class="space-y-4 text-sm text-ink/90 leading-relaxed">
+      <p>
+        En cumplimiento de la <strong>Ley N.º 29733 – Ley de Protección de Datos Personales del Perú</strong> y su reglamento, informamos de manera transparente cómo tratamos los datos que nos proporcionas al realizar un pedido en <strong>{{ tienda_config.nombre|default:"Emuná Sport" }}</strong>:
+      </p>
+
+      <h2 class="font-bold text-base uppercase tracking-wider text-ink">1. ¿Qué datos solicitamos y para qué se usan?</h2>
+      <ul class="list-disc pl-5 space-y-1.5">
+        <li><strong>Nombre completo y teléfono celular (9 dígitos):</strong> únicamente para coordinar por WhatsApp la cotización, el pago y la entrega de tu pedido.</li>
+        <li><strong>Número de DNI (8 dígitos, solo en envíos por agencia Shalom u Olva):</strong> requisito indispensable exigido por las agencias de transporte en el Perú para registrar y entregar la encomienda al destinatario.</li>
+        <li><strong>Ciudad, agencia o punto de encuentro en Lima:</strong> exclusivamente para ejecutar el despacho o la cita de entrega.</li>
+      </ul>
+
+      <h2 class="font-bold text-base uppercase tracking-wider text-ink">2. Privacidad y Seguridad Técnica</h2>
+      <p>
+        Tu DNI, teléfono y la clave de recojo de agencia son datos estrictamente privados: <strong>jamás se publican en páginas abiertas, buscadores ni enlaces compartidos</strong>, y solo son accesibles por el personal autorizado de {{ tienda_config.nombre|default:"Emuná Sport" }}.
+      </p>
+
+      <h2 class="font-bold text-base uppercase tracking-wider text-ink">3. Derechos ARCO (Acceso, Rectificación, Cancelación y Oposición)</h2>
+      <p>
+        Puedes solicitar en cualquier momento la actualización o eliminación de tus datos personales escribiendo directamente a nuestro WhatsApp oficial <strong>+51 {{ tienda_config.numero_whatsapp|default:"999888777" }}</strong>.
+      </p>
+    </div>
+
+    <div class="pt-4 border-t border-silver">
+      <a href="{% url 'catalogo:inicio' %}"
+         class="inline-flex items-center bg-neon text-ink font-extrabold text-xs uppercase tracking-wider px-6 py-3.5 border-2 border-ink">
+        ← Volver al Catálogo de Camisetas
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

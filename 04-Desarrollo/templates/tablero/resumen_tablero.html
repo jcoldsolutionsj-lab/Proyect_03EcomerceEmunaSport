@@ -1,0 +1,890 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content_title %}Tablero Operativo y Alertas{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Inicio</a>
+  &rsaquo; Tablero Operativo y Alertas
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .tablero-shell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+    color: #0F172A;
+    font-variant-numeric: tabular-nums;
+  }
+  .tablero-hero {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: #0A0A0A;
+    color: #FFFFFF;
+    border: 1px solid #0A0A0A;
+    border-bottom: 3px solid #39FF14;
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+  }
+  .tablero-hero h2 {
+    margin: 0 0 4px 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    color: #FFFFFF !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+  }
+  .tablero-hero p {
+    margin: 0;
+    color: #CBD5E1;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .tablero-export-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tablero-btn-csv {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 7px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none !important;
+    border: 1px solid #166534;
+    background: #15803D;
+    color: #FFFFFF !important;
+    white-space: nowrap;
+  }
+  .tablero-btn-csv:hover {
+    background: #166534;
+  }
+  .tablero-btn-csv-sec {
+    background: #FFFFFF;
+    color: #1E293B !important;
+    border: 1px solid #CBD5E1;
+  }
+  .tablero-btn-csv-sec:hover {
+    background: #F1F5F9;
+  }
+
+  .tablero-filtros-card {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .tablero-presets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .tablero-preset-btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid #CBD5E1;
+    background: #F8FAFC;
+    color: #1E293B !important;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none !important;
+  }
+  .tablero-preset-btn.activo {
+    background: #1E293B;
+    color: #FFFFFF !important;
+    border-color: #0F172A;
+  }
+  .tablero-rango-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .tablero-rango-form label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tablero-rango-form input[type="date"] {
+    height: 34px;
+    padding: 4px 8px;
+    border: 1px solid #94A3B8;
+    border-radius: 4px;
+    background: #FFFFFF;
+    color: #0F172A;
+    font-size: 12px;
+  }
+  .tablero-rango-form button {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 4px;
+    border: 1px solid #0F172A;
+    background: #1E293B;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .tablero-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .tablero-kpi-card {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-top: 4px solid #1E293B;
+    border-radius: 4px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tablero-kpi-card.kpi-verde { border-top-color: #15803D; }
+  .tablero-kpi-card.kpi-azul { border-top-color: #0369A1; }
+  .tablero-kpi-card.kpi-ambar { border-top-color: #D97706; }
+  .tablero-kpi-card.kpi-rojo { border-top-color: #DC2626; }
+  .tablero-kpi-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tablero-kpi-valor {
+    font-size: 26px;
+    font-weight: 900;
+    color: #0F172A;
+    line-height: 1.15;
+  }
+  .tablero-kpi-card.kpi-verde .tablero-kpi-valor { color: #15803D; }
+  .tablero-kpi-card.kpi-rojo .tablero-kpi-valor { color: #B91C1C; }
+  .tablero-kpi-sub {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.4;
+  }
+
+  .tablero-cola-bar {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .tablero-cola-titulo {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #1E293B;
+    margin-right: 6px;
+  }
+  .tablero-cola-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none !important;
+    border: 1px solid #CBD5E1;
+    background: #F8FAFC;
+    color: #1E293B !important;
+  }
+  .tablero-cola-chip strong {
+    font-size: 13px;
+  }
+
+  .tablero-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  .tablero-panel {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 18px;
+  }
+  .emuna-table-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    scrollbar-width: thin;
+  }
+  .tablero-grid-2 .tablero-panel {
+    margin-bottom: 0;
+  }
+  .tablero-panel-head {
+    background: #1E293B;
+    color: #FFFFFF;
+    padding: 11px 15px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .tablero-panel-head h3 {
+    margin: 0 !important;
+    color: #FFFFFF !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tablero-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .badge-rojo { background: #FEE2E2; color: #991B1B; border: 1px solid #EF4444; }
+  .badge-ambar { background: #FEF3C7; color: #92400E; border: 1px solid #F59E0B; }
+  .badge-verde { background: #DCFCE7; color: #166534; border: 1px solid #22C55E; }
+  .badge-azul { background: #DBEAFE; color: #1E40AF; border: 1px solid #3B82F6; }
+  .badge-gris { background: #F1F5F9; color: #334155; border: 1px solid #94A3B8; }
+
+  .tablero-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+  }
+  .tablero-table th {
+    background: #F8FAFC;
+    color: #1E293B;
+    border-bottom: 2px solid #CBD5E1;
+    padding: 9px 11px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tablero-table td {
+    padding: 9px 11px;
+    border-bottom: 1px solid #E2E8F0;
+    color: #0F172A;
+    vertical-align: middle;
+  }
+  .tablero-table tbody tr:hover {
+    background: #F8FAFC;
+  }
+  .tablero-vacio {
+    padding: 16px;
+    font-size: 13px;
+    color: #166534;
+    background: #F0FDF4;
+    border-top: 1px solid #BBF7D0;
+    font-weight: 700;
+  }
+  .tablero-vacio-neutro {
+    padding: 16px;
+    font-size: 13px;
+    color: #475569;
+    background: #F8FAFC;
+  }
+  .tablero-link-btn {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none !important;
+    background: #1E293B;
+    color: #FFFFFF !important;
+    white-space: nowrap;
+  }
+  .tablero-link-wa {
+    background: #15803D;
+  }
+  .tablero-barra-bg {
+    width: 100%;
+    min-width: 90px;
+    height: 10px;
+    background: #E2E8F0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .tablero-barra-fill {
+    height: 100%;
+    background: #15803D;
+  }
+  .emuna-icon-tip {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    vertical-align: middle;
+    cursor: help;
+    display: inline-block;
+  }
+  .tablero-panel-head .emuna-icon-tip {
+    filter: brightness(0) invert(1);
+    opacity: 0.92;
+  }
+
+  @media (max-width: 1024px) {
+    .tablero-kpi-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .tablero-grid-2 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 767px) {
+    .tablero-hero {
+      padding: 14px;
+    }
+    .tablero-export-group {
+      width: 100%;
+    }
+    .tablero-btn-csv {
+      width: 100%;
+    }
+    .tablero-kpi-grid {
+      grid-template-columns: 1fr;
+    }
+    .tablero-rango-form {
+      width: 100%;
+    }
+    .tablero-rango-form label,
+    .tablero-rango-form input[type="date"],
+    .tablero-rango-form button {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .tablero-table {
+      min-width: 540px;
+    }
+    .tablero-table th,
+    .tablero-table td {
+      padding: 7px 8px;
+    }
+  }
+</style>
+
+<div class="tablero-shell">
+  <!-- Cabecera ejecutiva + Exportaciones CSV -->
+  <div class="tablero-hero">
+    <div>
+      <h2>📊 Tablero Operativo y Alertas – Emuná Sport</h2>
+      <p>
+        Período evaluado: <strong>{{ resumen.etiqueta_periodo }}</strong>
+        ({{ resumen.fecha_desde|date:"d/m/Y" }} al {{ resumen.fecha_hasta|date:"d/m/Y" }})
+        &middot; Umbral stock bajo por defecto: <strong>{{ resumen.configuracion.umbral_stock_bajo }} und.</strong>
+      </p>
+    </div>
+    <div class="tablero-export-group">
+      <a href="{% url 'tablero:exportar_ventas_csv' %}?periodo={{ resumen.periodo_activo }}&desde={{ desde_iso }}&hasta={{ hasta_iso }}" class="tablero-btn-csv">
+        📥 Exportar Ventas (.csv)
+      </a>
+      <a href="{% url 'tablero:exportar_stock_csv' %}" class="tablero-btn-csv tablero-btn-csv-sec">
+        📥 Exportar Alertas Stock (.csv)
+      </a>
+    </div>
+  </div>
+
+  <!-- Filtros de período y rango personalizado -->
+  <div class="tablero-filtros-card">
+    <div class="tablero-presets">
+      <span style="font-size:12px;font-weight:800;color:#334155;margin-right:4px;">
+        Período rápido
+        <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Filtra ingresos, ticket promedio, ranking de más vendidos y resumen diario." class="emuna-icon-tip" />:
+      </span>
+      <a href="?periodo=hoy" class="tablero-preset-btn {% if resumen.periodo_activo == 'hoy' %}activo{% endif %}">Hoy</a>
+      <a href="?periodo=7dias" class="tablero-preset-btn {% if resumen.periodo_activo == '7dias' %}activo{% endif %}">Últimos 7 días</a>
+      <a href="?periodo=mes" class="tablero-preset-btn {% if resumen.periodo_activo == 'mes' %}activo{% endif %}">Este mes</a>
+      <a href="?periodo=todo" class="tablero-preset-btn {% if resumen.periodo_activo == 'todo' %}activo{% endif %}">Todo el historial</a>
+    </div>
+
+    <form method="get" action="{% url 'tablero:resumen' %}" class="tablero-rango-form">
+      <input type="hidden" name="periodo" value="personalizado" />
+      <label>Desde: <input type="date" name="desde" value="{{ desde_iso }}" /></label>
+      <label>Hasta: <input type="date" name="hasta" value="{{ hasta_iso }}" /></label>
+      <button type="submit">Aplicar rango</button>
+    </form>
+  </div>
+
+  <!-- Tarjetas KPI principales -->
+  <div class="tablero-kpi-grid">
+    <div class="tablero-kpi-card kpi-verde">
+      <div class="tablero-kpi-label">
+        Total Vendido (Confirmado)
+        <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Suma cobrada de pedidos con pago confirmado, enviados o entregados (excluye pendientes o cancelados)." class="emuna-icon-tip" />
+      </div>
+      <div class="tablero-kpi-valor">S/ {{ resumen.kpis.total_ventas|floatformat:2 }}</div>
+      <div class="tablero-kpi-sub">
+        Web: <strong>S/ {{ resumen.kpis.ventas_web|floatformat:2 }}</strong> ({{ resumen.kpis.pedidos_web }}) &middot;
+        POS: <strong>S/ {{ resumen.kpis.ventas_presencial|floatformat:2 }}</strong> ({{ resumen.kpis.pedidos_presencial }})
+      </div>
+    </div>
+
+    <div class="tablero-kpi-card kpi-azul">
+      <div class="tablero-kpi-label">
+        Pedidos y Ticket Promedio
+        <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Número de pedidos confirmados, prendas salidas y gasto promedio por venta." class="emuna-icon-tip" />
+      </div>
+      <div class="tablero-kpi-valor">{{ resumen.kpis.cantidad_pedidos }} ped.</div>
+      <div class="tablero-kpi-sub">
+        Ticket promedio: <strong>S/ {{ resumen.kpis.ticket_promedio|floatformat:2 }}</strong> &middot;
+        <strong>{{ resumen.kpis.unidades_vendidas }}</strong> camisetas
+      </div>
+    </div>
+
+    <div class="tablero-kpi-card {% if resumen.total_variantes_agotadas > 0 %}kpi-rojo{% elif resumen.total_variantes_bajo_umbral > 0 %}kpi-ambar{% else %}kpi-verde{% endif %}">
+      <div class="tablero-kpi-label">
+        Alertas de Stock Bajo
+        <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Tallas activas agotadas (ROJO) o igual/debajo de su umbral mínimo (ÁMBAR)." class="emuna-icon-tip" />
+      </div>
+      <div class="tablero-kpi-valor">{{ resumen.alertas_stock|length }} tallas</div>
+      <div class="tablero-kpi-sub">
+        🔴 Agotadas: <strong>{{ resumen.total_variantes_agotadas }}</strong> &middot;
+        🟡 Stock bajo: <strong>{{ resumen.total_variantes_bajo_umbral }}</strong>
+      </div>
+    </div>
+
+    <div class="tablero-kpi-card {% if resumen.pedidos_pendientes_antiguos %}kpi-rojo{% else %}kpi-verde{% endif %}">
+      <div class="tablero-kpi-label">
+        Pendientes &gt; {{ resumen.horas_pendiente_limite }} h
+        <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Pedidos en NUEVO o COTIZADO sin pago confirmado pasadas las horas límite configuradas." class="emuna-icon-tip" />
+      </div>
+      <div class="tablero-kpi-valor">{{ resumen.pedidos_pendientes_antiguos|length }} ped.</div>
+      <div class="tablero-kpi-sub">
+        {% if resumen.pedidos_pendientes_antiguos %}
+          Requieren cotización o seguimiento por WhatsApp.
+        {% else %}
+          🟢 Sin pedidos rezagados fuera de plazo.
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Cola operativa actual -->
+  <div class="tablero-cola-bar">
+    <span class="tablero-cola-titulo">
+      Cola operativa actual
+      <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Conteo en vivo de todos los pedidos según su etapa actual en tienda." class="emuna-icon-tip" />:
+    </span>
+    <a href="{% url 'admin:pedidos_pedido_changelist' %}?estado__exact=NUEVO" class="tablero-cola-chip">
+      ⚪ Nuevo (cotizar): <strong>{{ resumen.cola_operativa.nuevo }}</strong>
+    </a>
+    <a href="{% url 'admin:pedidos_pedido_changelist' %}?estado__exact=COTIZADO" class="tablero-cola-chip">
+      🟡 Cotizado (esperando pago): <strong>{{ resumen.cola_operativa.cotizado }}</strong>
+    </a>
+    <a href="{% url 'admin:pedidos_pedido_changelist' %}?estado__exact=PAGADO" class="tablero-cola-chip">
+      🟢 Pagado (por enviar): <strong>{{ resumen.cola_operativa.pagado }}</strong>
+    </a>
+    <a href="{% url 'admin:pedidos_pedido_changelist' %}?estado__exact=ENVIADO" class="tablero-cola-chip">
+      🔵 Enviado (en ruta): <strong>{{ resumen.cola_operativa.enviado }}</strong>
+    </a>
+    <a href="{% url 'admin:pedidos_pedido_changelist' %}?estado__exact=ENTREGADO" class="tablero-cola-chip">
+      ✅ Entregado: <strong>{{ resumen.cola_operativa.entregado }}</strong>
+    </a>
+  </div>
+
+  <!-- Bloque 1: Alertas urgentes (Pendientes > 24h + Stock bajo) -->
+  <div class="tablero-grid-2" style="margin-bottom: 18px;">
+    <!-- Pendientes antiguos -->
+    <div id="seccion-pendientes" class="tablero-panel">
+      <div class="tablero-panel-head">
+        <h3>
+          ⏰ Pedidos Pendientes Antiguos (&gt; {{ resumen.horas_pendiente_limite }} h)
+          <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Lista de pedidos NUEVO o COTIZADO con más de {{ resumen.horas_pendiente_limite }} horas esperando respuesta o pago." class="emuna-icon-tip" />
+        </h3>
+        <span class="tablero-badge {% if resumen.pedidos_pendientes_antiguos %}badge-rojo{% else %}badge-verde{% endif %}">
+          {{ resumen.pedidos_pendientes_antiguos|length }} alerta(s)
+        </span>
+      </div>
+      {% if resumen.pedidos_pendientes_antiguos %}
+        <div class="emuna-swipe-hint emuna-swipe-hint-modal">← Desliza la tabla para ver todas las columnas →</div>
+        <div class="emuna-table-scroll">
+          <table class="tablero-table"
+                 data-emuna-mob-modal="Pedidos Pendientes Antiguos"
+                 data-emuna-mob-keep="0,2"
+                 data-emuna-mob-actions="5"
+                 data-emuna-mob-title-col="0">
+            <thead>
+              <tr>
+                <th>Código <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Identificador público del pedido." class="emuna-icon-tip" /></th>
+                <th>Estado</th>
+                <th>Espera <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Horas transcurridas desde que el cliente envió el pedido." class="emuna-icon-tip" /></th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ped in resumen.pedidos_pendientes_antiguos %}
+                <tr>
+                  <td><strong>{{ ped.codigo }}</strong></td>
+                  <td>
+                    <span class="tablero-badge {% if ped.estado == 'NUEVO' %}badge-gris{% else %}badge-ambar{% endif %}">
+                      {{ ped.estado }}
+                    </span>
+                  </td>
+                  <td><strong style="color:#B91C1C;">{{ ped.horas_espera }} h</strong></td>
+                  <td>
+                    {{ ped.cliente_nombre }}
+                    <div style="font-size:11px;color:#64748B;">{{ ped.cliente_telefono }}</div>
+                  </td>
+                  <td><strong>S/ {{ ped.total|floatformat:2 }}</strong></td>
+                  <td style="white-space:nowrap;">
+                    <a href="{{ ped.url_admin }}" class="tablero-link-btn">Gestionar</a>
+                    <a href="{{ ped.url_whatsapp }}" target="_blank" class="tablero-link-btn tablero-link-wa">💬 WA</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="tablero-vacio">
+          🟢 Al día: no hay pedidos pendientes con más de {{ resumen.horas_pendiente_limite }} horas de espera.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Alertas de stock bajo -->
+    <div id="seccion-stock-bajo" class="tablero-panel">
+      <div class="tablero-panel-head">
+        <h3>
+          📦 Alertas de Stock Bajo y Agotado
+          <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Tallas activas cuyo stock actual es menor o igual a su umbral configurado." class="emuna-icon-tip" />
+        </h3>
+        <span class="tablero-badge {% if resumen.alertas_stock %}badge-ambar{% else %}badge-verde{% endif %}">
+          {{ resumen.alertas_stock|length }} talla(s)
+        </span>
+      </div>
+      {% if resumen.alertas_stock %}
+        <div class="emuna-swipe-hint emuna-swipe-hint-modal">← Desliza la tabla para ver todas las columnas →</div>
+        <div class="emuna-table-scroll">
+          <table class="tablero-table"
+                 data-emuna-mob-modal="Alertas de Stock"
+                 data-emuna-mob-keep="0,1"
+                 data-emuna-mob-actions="4"
+                 data-emuna-mob-title-col="1">
+            <thead>
+              <tr>
+                <th>Semáforo <img src="{% static 'toltip.png' %}" alt="Ayuda" title="ROJO: stock en 0 unidades. ÁMBAR: stock bajo umbral." class="emuna-icon-tip" /></th>
+                <th>Camiseta / SKU</th>
+                <th>Talla</th>
+                <th>Stock / Mín.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for var in resumen.alertas_stock %}
+                <tr>
+                  <td>
+                    {% if var.nivel == "ROJO" %}
+                      <span class="tablero-badge badge-rojo">🔴 Agotado</span>
+                    {% else %}
+                      <span class="tablero-badge badge-ambar">🟡 Bajo</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <strong>{{ var.producto_nombre }}</strong>
+                    <div style="font-size:11px;color:#475569;font-family:monospace;">{{ var.sku }}</div>
+                  </td>
+                  <td><strong>{{ var.talla }}</strong></td>
+                  <td><strong>{{ var.cantidad_stock }}</strong> / {{ var.umbral_efectivo }} und.</td>
+                  <td>
+                    <a href="{{ var.url_admin }}" class="tablero-link-btn">Reponer</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="tablero-vacio">
+          🟢 Inventario saludable: ninguna talla activa se encuentra debajo de su umbral mínimo.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bloque 2: Ranking más vendidos + Productos activos sin ventas -->
+  <div class="tablero-grid-2" style="margin-bottom: 18px;">
+    <!-- Más vendidos -->
+    <div class="tablero-panel">
+      <div class="tablero-panel-head">
+        <h3>
+          🏆 Camisetas Más Vendidas ({{ resumen.etiqueta_periodo }})
+          <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Top 10 modelos por volumen de unidades confirmadas en el período." class="emuna-icon-tip" />
+        </h3>
+        <span class="tablero-badge badge-azul">Top {{ resumen.mas_vendidos|length }}</span>
+      </div>
+      {% if resumen.mas_vendidos %}
+        <div class="emuna-swipe-hint">← Desliza la tabla para ver todas las columnas →</div>
+        <div class="emuna-table-scroll">
+          <table class="tablero-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Camiseta / SKU</th>
+                <th>Unidades <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Cantidad total de prendas vendidas sumando todas sus tallas." class="emuna-icon-tip" /></th>
+                <th>Ingresos (S/)</th>
+                <th>Ficha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for prod in resumen.mas_vendidos %}
+                <tr>
+                  <td><strong>#{{ prod.posicion }}</strong></td>
+                  <td>
+                    <strong>{{ prod.nombre }}</strong>
+                    <div style="font-size:11px;color:#475569;font-family:monospace;">{{ prod.sku }}</div>
+                  </td>
+                  <td><span class="tablero-badge badge-verde">{{ prod.unidades }} und.</span></td>
+                  <td><strong>S/ {{ prod.ingresos|floatformat:2 }}</strong></td>
+                  <td><a href="{{ prod.url_admin }}" class="tablero-link-btn">Ver</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="tablero-vacio-neutro">
+          Aún no se registran ventas confirmadas en el período seleccionado.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Productos sin ventas -->
+    <div class="tablero-panel">
+      <div class="tablero-panel-head">
+        <h3>
+          🧊 Productos Activos Sin Ventas (últimos {{ resumen.dias_sin_ventas_limite }} días)
+          <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Modelos visibles que no han registrado ninguna venta confirmada en los últimos {{ resumen.dias_sin_ventas_limite }} días." class="emuna-icon-tip" />
+        </h3>
+        <span class="tablero-badge {% if resumen.productos_sin_ventas %}badge-ambar{% else %}badge-verde{% endif %}">
+          {{ resumen.productos_sin_ventas|length }} modelo(s)
+        </span>
+      </div>
+      {% if resumen.productos_sin_ventas %}
+        <div class="emuna-swipe-hint emuna-swipe-hint-modal">← Desliza la tabla para ver todas las columnas →</div>
+        <div class="emuna-table-scroll">
+          <table class="tablero-table"
+                 data-emuna-mob-modal="Productos Sin Ventas"
+                 data-emuna-mob-keep="0,2"
+                 data-emuna-mob-actions="3"
+                 data-emuna-mob-title-col="0">
+            <thead>
+              <tr>
+                <th>Camiseta / Categoría</th>
+                <th>Precio Unit.</th>
+                <th>Stock Total <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Unidades acumuladas entre todas las tallas del producto." class="emuna-icon-tip" /></th>
+                <th>Ficha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for prod in resumen.productos_sin_ventas %}
+                <tr>
+                  <td>
+                    <strong>{{ prod.nombre }}</strong>
+                    <div style="font-size:11px;color:#475569;">{{ prod.categoria_nombre }} &middot; <code>{{ prod.sku }}</code></div>
+                  </td>
+                  <td>S/ {{ prod.precio_unidad|floatformat:2 }}</td>
+                  <td><strong>{{ prod.stock_total }} und.</strong></td>
+                  <td><a href="{{ prod.url_admin }}" class="tablero-link-btn">Revisar</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="tablero-vacio">
+          🟢 Excelente rotación: todos los productos activos registraron ventas en los últimos {{ resumen.dias_sin_ventas_limite }} días.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bloque 3: Ventas diarias del período -->
+  <div class="tablero-panel">
+    <div class="tablero-panel-head">
+      <h3>
+        📈 Evolución Diaria de Ventas ({{ resumen.etiqueta_periodo }})
+        <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Resumen cronológico por fecha comparando ingresos Web y POS Presencial." class="emuna-icon-tip" />
+      </h3>
+      <span class="tablero-badge badge-gris">{{ resumen.ventas_por_dia|length }} día(s) con venta</span>
+    </div>
+    {% if resumen.ventas_por_dia %}
+      <div class="emuna-swipe-hint">← Desliza la tabla para ver todas las columnas →</div>
+        <div class="emuna-table-scroll">
+        <table class="tablero-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Pedidos</th>
+              <th>Tienda Web (S/)</th>
+              <th>POS Presencial (S/)</th>
+              <th>Total Día (S/)</th>
+              <th>Proporción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dia in resumen.ventas_por_dia %}
+              <tr>
+                <td><strong>{{ dia.fecha|date:"d/m/Y" }}</strong></td>
+                <td>{{ dia.pedidos }}</td>
+                <td>S/ {{ dia.web|floatformat:2 }}</td>
+                <td>S/ {{ dia.presencial|floatformat:2 }}</td>
+                <td><strong style="color:#15803D;">S/ {{ dia.total|floatformat:2 }}</strong></td>
+                <td>
+                  <div class="tablero-barra-bg" title="S/ {{ dia.total|floatformat:2 }}">
+                    <div class="tablero-barra-fill" style="width: {{ dia.porcentaje_barra }}%;"></div>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="tablero-vacio-neutro">
+        No hay movimientos de venta confirmada registrados dentro del rango {{ resumen.fecha_desde|date:"d/m/Y" }} al {{ resumen.fecha_hasta|date:"d/m/Y" }}.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Bloque 4: Clientes VIP y Recurrentes (Análisis sobre datos principales del cliente) -->
+  <div class="tablero-panel" style="margin-top: 18px;">
+    <div class="tablero-panel-head">
+      <h3>
+        👑 Clientes VIP y Top Compradores ({{ resumen.etiqueta_periodo }})
+        <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Ranking de clientes con compras confirmadas agrupados por celular/nombre. Marca VIP Recurrente si acumula 2+ pedidos o 3+ prendas (mayorista)." class="emuna-icon-tip" />
+      </h3>
+      <span class="tablero-badge badge-azul">Top {{ resumen.clientes_vip|length }}</span>
+    </div>
+    {% if resumen.clientes_vip %}
+      <div class="emuna-swipe-hint emuna-swipe-hint-modal">← Desliza la tabla para ver todas las columnas →</div>
+      <div class="emuna-table-scroll">
+        <table class="tablero-table"
+               data-emuna-mob-modal="Cliente VIP"
+               data-emuna-mob-keep="1,5"
+               data-emuna-mob-actions="6"
+               data-emuna-mob-title-col="1">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente / Nivel</th>
+              <th>Celular / DNI</th>
+              <th>Pedidos <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Cantidad de pedidos confirmados (PAGADO, ENVIADO o ENTREGADO) en el período." class="emuna-icon-tip" /></th>
+              <th>Prendas</th>
+              <th>Total Invertido (S/)</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cli in resumen.clientes_vip %}
+              <tr>
+                <td><strong>#{{ cli.posicion }}</strong></td>
+                <td>
+                  <strong>{{ cli.nombre }}</strong>
+                  <div style="margin-top:2px;">
+                    {% if cli.es_vip_recurrente %}
+                      <span class="tablero-badge badge-verde">👑 VIP / Mayorista</span>
+                    {% else %}
+                      <span class="tablero-badge badge-gris">⭐ Cliente</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  {% if cli.telefono %}
+                    <div style="font-weight:700;font-family:monospace;">{{ cli.telefono }}</div>
+                  {% endif %}
+                  {% if cli.dni %}
+                    <div style="font-size:11px;color:#475569;">DNI: {{ cli.dni }}</div>
+                  {% endif %}
+                </td>
+                <td><strong>{{ cli.pedidos }} ped.</strong></td>
+                <td>{{ cli.unidades }} und.</td>
+                <td><strong style="color:#15803D;">S/ {{ cli.total_gastado|floatformat:2 }}</strong></td>
+                <td>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <a href="{{ cli.url_historial }}" class="tablero-link-btn">Historial</a>
+                    {% if cli.url_whatsapp %}
+                      <a href="{{ cli.url_whatsapp }}" target="_blank" rel="noopener" class="tablero-link-btn" style="background:#DCFCE7;color:#14532D;border-color:#15803D;">WhatsApp</a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="tablero-vacio-neutro">
+        Aún no se registran clientes con compras confirmadas en el período seleccionado.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

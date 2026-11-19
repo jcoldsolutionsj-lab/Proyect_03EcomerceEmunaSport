@@ -3,14 +3,16 @@
 NIVEL DE INFORMACIÓN: RECURSOS DE MARCA
 
 PROPÓSITO
-  Guardar el logo y los recursos visuales de Emuná Sport que usa el diseño.
+  Guardar el logo, íconos y las referencias visuales (fotos y videos de marca) de Emuná Sport que usa el diseño del Frontend.
 
 QUÉ VA
-  logo-emuna-sport.png (fondo negro, letras plateadas, rayo "E" verde neón, lema "Estilo deportivo").
-  Más adelante: íconos, favicon, versiones del logo.
+  - logo-emuna-sport.png (fondo negro, letras plateadas, rayo "E" verde neón, lema "Estilo deportivo").
+  - banners-inicio/ : Videos del Hero Banner de la página de inicio (banner_1.mp4, banner_2.mp4, banner_3.mp4).
+  - productos-demo/argentina-messi/ : Fotos reales de la camiseta Argentina x Messi #10 (originales corregidos .jpg y versiones optimizadas .webp de 400 px y 900 px).
+  - referencias-marca/ : Carpeta para referencias visuales adicionales de Emuná Sport.
 
 QUÉ NO VA
-  Fotos de productos reales (las sube Richard desde el panel al almacenamiento), QR de Yape ni boletas.
+  QR real de Yape, boletas de clientes ni datos personales.
 
 NOTA
   El logo original sin modificar está en 01-Relevamiento/fuentes/.

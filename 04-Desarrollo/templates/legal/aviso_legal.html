@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block meta_titulo %}Aviso Legal y Términos y Condiciones | {{ tienda_config.nombre|default:"Emuná Sport" }}{% endblock %}
+
+{% block contenido %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+  <div class="border border-silver p-8 sm:p-10 bg-white space-y-6">
+    <div>
+      <span class="bg-neon text-ink text-xs font-extrabold uppercase px-2.5 py-1 border border-ink">
+        Información Legal – Perú
+      </span>
+      <h1 class="font-display italic font-extrabold text-4xl uppercase tracking-tight mt-3">
+        Aviso Legal y Términos de Compra
+      </h1>
+    </div>
+
+    <div class="space-y-4 text-sm text-ink/90 leading-relaxed">
+      <h2 class="font-bold text-base uppercase tracking-wider text-ink">1. Identificación del Comercio</h2>
+      <p>
+        <strong>{{ tienda_config.nombre|default:"Emuná Sport" }} («Estilo deportivo»)</strong> opera como tienda comercializadora de prendas deportivas en Lima y con despachos a nivel nacional en el Perú, atendida directamente por su titular Richard a través del canal oficial de WhatsApp <strong>+51 {{ tienda_config.numero_whatsapp|default:"999888777" }}</strong>.
+      </p>
+
+      <h2 class="font-bold text-base uppercase tracking-wider text-ink">2. Precios en Soles (PEN) y Reglas por Mayor</h2>
+      <p>
+        Todos los precios mostrados en el catálogo están expresados en <strong>Soles Peruanos (S/ - PEN)</strong>. Los descuentos por mayor se aplican automáticamente según las escalas publicadas en cada producto (por ejemplo, a partir de 3 y 6 unidades).
+      </p>
+
+      <h2 class="font-bold text-base uppercase tracking-wider text-ink">3. Modalidades de Entrega y Cotización de Envío</h2>
+      <ul class="list-disc pl-5 space-y-1.5">
+        <li><strong>Envío a Provincia por Agencia (Shalom / Olva Courier):</strong> el costo de envío se cotiza según la ciudad de destino antes de realizar el pago.</li>
+        <li><strong>Punto de Encuentro en Lima:</strong> sin costo adicional de envío (<code>S/ 0.00</code>), previa coordinación de lugar, fecha y hora con Richard.</li>
+        <li><strong>Delivery en Lima o Recojo coordinado:</strong> se confirma directamente por WhatsApp tras registrar el pedido.</li>
+      </ul>
+
+      <h2 class="font-bold text-base uppercase tracking-wider text-ink">4. Reserva de Stock y Pago con Yape</h2>
+      <p>
+        El registro de un pedido genera un código único de atención. El descuento definitivo de stock se realiza al confirmarse el pago por <strong>Yape</strong> (verificando siempre el nombre del titular oficial) o al momento de la entrega presencial acordada en Lima.
+      </p>
+    </div>
+
+    <div class="pt-4 border-t border-silver">
+      <a href="{% url 'catalogo:inicio' %}"
+         class="inline-flex items-center bg-neon text-ink font-extrabold text-xs uppercase tracking-wider px-6 py-3.5 border-2 border-ink">
+        ← Volver al Catálogo de Camisetas
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

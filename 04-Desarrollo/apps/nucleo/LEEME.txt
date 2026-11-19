@@ -1,0 +1,6 @@
+CARPETA: 04-Desarrollo/apps/nucleo
+NIVEL DE INFORMACION: Aplicacion transversal de configuracion de tienda, metodos de pago, validadores anti-hacking y excepciones de negocio.
+
+Modelos fisicos:
+- TBL_RCONFIGURACION_TIENDA (ConfiguracionTienda)
+- TBL_RMETODO_PAGO (MetodoPago)

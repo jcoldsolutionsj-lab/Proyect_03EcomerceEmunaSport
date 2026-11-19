@@ -1,0 +1,2 @@
+CARPETA: 04-Desarrollo/apps/inventario
+NIVEL DE INFORMACION: Aplicacion de kardex inmutable de movimientos de stock y alertas de inventario.

@@ -92,7 +92,8 @@ Tablas de Django que **no** se renombran: `auth_user`, `auth_group`, `auth_permi
 | `PRO_CSKU` | `sku` | varchar(30) | No | UK | Código interno, ej. EMU-001 |
 | `PRO_CDESCRIPCION` | `descripcion` | text | Sí |  | Descripción |
 | `PRO_CMARCA` | `marca` | varchar(80) | Sí |  | Marca (opcional; solo se muestra si está activada) |
-| `PRO_NPRECIO_UNIDAD` | `precio_unidad` | numeric(10,2) | No |  | Precio base por unidad en PEN |
+| `PRO_NPRECIO_UNIDAD` | `precio_unidad` | numeric(10,2) | No |  | Precio base o de oferta actual por unidad en PEN (ej. 55.00) |
+| `PRO_NPRECIO_ANTERIOR` | `precio_anterior` | numeric(10,2) | Sí |  | Precio regular tachado en PEN (opcional, ej. 69.90) |
 | `PRO_OACTIVO` | `activo` | boolean | No |  | Visible en la web |
 | `PRO_ODESTACADO` | `destacado` | boolean | No |  | Destacado en el inicio |
 | `PRO_DFECHA_CREACION` | `fecha_creacion` | timestamptz | No |  | Fecha de creación |
@@ -108,6 +109,7 @@ Tablas de Django que **no** se renombran: `auth_user`, `auth_group`, `auth_permi
 | `IMA_CRUTA_ORIGINAL` | `ruta_original` | varchar(255) | No |  | Ruta del original (bucket privado) |
 | `IMA_CRUTA_MINIATURA` | `ruta_miniatura` | varchar(255) | Sí |  | Miniatura de unos 400 px en WebP |
 | `IMA_CRUTA_DETALLE` | `ruta_detalle` | varchar(255) | Sí |  | Detalle de unos 900 px en WebP |
+| `IMA_CTEXTO_ALT` | `texto_alternativo` | varchar(180) | Sí |  | Texto alternativo (alt) para SEO y accesibilidad; si es nulo usa el nombre del producto |
 | `IMA_NORDEN` | `orden` | integer | No |  | Orden en la galería |
 | `IMA_OPRINCIPAL` | `es_principal` | boolean | No |  | Imagen principal del producto |
 | `IMA_DFECHA_CREACION` | `fecha_creacion` | timestamptz | No |  | Fecha de creación |

@@ -57,6 +57,7 @@ erDiagram
     text PRO_CDESCRIPCION
     varchar PRO_CMARCA
     numeric PRO_NPRECIO_UNIDAD
+    numeric PRO_NPRECIO_ANTERIOR
     boolean PRO_OACTIVO
     boolean PRO_ODESTACADO
   }
@@ -66,6 +67,7 @@ erDiagram
     varchar IMA_CRUTA_ORIGINAL
     varchar IMA_CRUTA_MINIATURA
     varchar IMA_CRUTA_DETALLE
+    varchar IMA_CTEXTO_ALT
     integer IMA_NORDEN
     boolean IMA_OPRINCIPAL
   }

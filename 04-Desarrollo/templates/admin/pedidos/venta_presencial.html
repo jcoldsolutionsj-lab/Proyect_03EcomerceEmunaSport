@@ -1,0 +1,754 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block content_title %}Registrar Venta Presencial (POS){% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='pedidos' %}">Pedidos</a>
+  &rsaquo; <a href="{% url 'admin:pedidos_pedido_changelist' %}">Pedidos</a>
+  &rsaquo; Registrar Venta Presencial
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .pos-shell {
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 15px 0 40px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
+  }
+  .pos-card {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 22px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .pos-search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    max-width: 100%;
+  }
+  .pos-search-input {
+    height: 36px;
+    padding: 6px 12px;
+    border: 1px solid #94A3B8;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 320px;
+    max-width: 100%;
+    flex: 1 1 220px;
+    background: #FFFFFF;
+    color: #0F172A;
+    box-sizing: border-box;
+  }
+  .pos-pagination-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
+  .pos-desglose-wrap {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    padding: 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  @media (max-width: 767px) {
+    .pos-shell {
+      padding: 4px 0 24px 0 !important;
+    }
+    .pos-header-inner {
+      padding: 14px 16px !important;
+    }
+    .pos-header-inner h1 {
+      font-size: 18px !important;
+      line-height: 1.3;
+    }
+    .pos-card {
+      padding: 14px !important;
+      margin-bottom: 16px !important;
+    }
+    .pos-search-bar {
+      width: 100%;
+    }
+    .pos-search-input {
+      width: 100% !important;
+      flex: 1 1 100% !important;
+    }
+    .pos-search-bar button {
+      flex: 1 1 auto;
+      min-height: 38px;
+    }
+    .pos-kpi-grid {
+      width: 100%;
+    }
+    .pos-kpi-card {
+      flex: 1 1 130px;
+      text-align: left !important;
+    }
+    .pos-desglose-wrap {
+      padding: 10px !important;
+    }
+    .pos-footer-actions {
+      flex-direction: column-reverse;
+      align-items: stretch !important;
+    }
+    .pos-footer-buttons {
+      width: 100%;
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+    .pos-footer-buttons button {
+      width: 100%;
+      min-height: 44px;
+      height: auto !important;
+      white-space: normal;
+      line-height: 1.3;
+    }
+    .pos-cancel-link {
+      text-align: center;
+      padding: 6px 0;
+      display: block;
+    }
+    .pos-qty-btn {
+      min-width: 34px !important;
+      min-height: 36px !important;
+    }
+    .pos-qty-input {
+      width: 52px !important;
+      min-height: 36px !important;
+    }
+  }
+</style>
+<div id="content-main" class="pos-shell">
+
+  <!-- Cabecera Institucional Oficial Emuná Sport (#0A0A0A + #39FF14) -->
+  <div style="background: #FFFFFF; border: 1px solid #0A0A0A; border-radius: 4px; margin-bottom: 22px; overflow: hidden;">
+    <div class="pos-header-inner" style="background: #0A0A0A; color: #FFFFFF; padding: 16px 22px; border-bottom: 4px solid #39FF14;">
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #39FF14; font-weight: 800;">
+        Sistema de Caja y Mostrador · Emuná Sport
+      </div>
+      <h1 style="margin: 4px 0 4px 0; color: #FFFFFF; font-size: 22px; font-weight: 800;">
+        ⚡ Registrar Venta Presencial Directa (Flujo C - POS Mostrador)
+      </h1>
+      <p style="margin: 0; color: #C9CED3; font-size: 13px;">
+        Usa este formulario para registrar ventas directas en taller, ferias o entregas presenciales. Se descontará el inventario en base de datos de forma atómica y quedará registrado con trazabilidad completa.
+      </p>
+    </div>
+  </div>
+
+  {% if form_error %}
+    <div style="background: #FEF2F2; border: 1px solid #EF4444; border-left: 5px solid #DC2626; color: #991B1B; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-weight: 700; font-size: 14px;">
+      ⚠️ {{ form_error }}
+    </div>
+  {% endif %}
+
+  <form method="post" action="" id="form-venta-presencial">
+    {% csrf_token %}
+    
+    <!-- 1. Datos del Cliente y Método de Pago -->
+    <div class="module pos-card">
+      <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 15px; font-weight: 800; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px; color: #0F172A; text-transform: uppercase; letter-spacing: 0.04em;">
+        1. Datos del Cliente y Método de Cobro
+      </h2>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label for="cliente_nombre" style="display: block; font-weight: 800; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; color: #334155;">
+            Nombre del Cliente (Opcional):
+          </label>
+          <input type="text" id="cliente_nombre" name="cliente_nombre" value="{{ post_data.cliente_nombre|default:'' }}" placeholder="Ej. Carlos Mostrador / Cliente feria" style="width: 100%; height: 38px; padding: 6px 12px; border: 1px solid #94A3B8; border-radius: 4px; background: #FFFFFF; color: #0F172A; font-size: 13px; box-sizing: border-box;">
+        </div>
+        
+        <div>
+          <label for="cliente_telefono" style="display: block; font-weight: 800; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; color: #334155;">
+            Teléfono / WhatsApp (Opcional):
+          </label>
+          <input type="text" id="cliente_telefono" name="cliente_telefono" value="{{ post_data.cliente_telefono|default:'' }}" placeholder="Ej. 987654321" style="width: 100%; height: 38px; padding: 6px 12px; border: 1px solid #94A3B8; border-radius: 4px; background: #FFFFFF; color: #0F172A; font-size: 13px; box-sizing: border-box;">
+        </div>
+        
+        <div>
+          <label for="metodo_pago" style="display: block; font-weight: 800; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; color: #334155;">
+            Método de Pago Cobrado:
+          </label>
+          <select id="metodo_pago" name="metodo_pago" style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border: 1px solid #94A3B8; border-radius: 4px; background-color: #FFFFFF !important; color: #0F172A !important; font-size: 13px; font-weight: 700; box-sizing: border-box;">
+            <option value="EFECTIVO" {% if post_data.metodo_pago == 'EFECTIVO' %}selected{% endif %}>💵 Efectivo en mano (Mostrador)</option>
+            <option value="YAPE" {% if post_data.metodo_pago == 'YAPE' or not post_data %}selected{% endif %}>🟣 Yape (Richard Ramos)</option>
+            <option value="PLIN" {% if post_data.metodo_pago == 'PLIN' %}selected{% endif %}>🔵 Plin</option>
+            <option value="TRANSFERENCIA" {% if post_data.metodo_pago == 'TRANSFERENCIA' %}selected{% endif %}>🏦 Transferencia BCP / Interbank / BBVA</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; background: #F8FAFC; border: 1px solid #E2E8F0; padding: 10px 14px; border-radius: 4px;">
+        <input type="checkbox" id="marcar_entregado" name="marcar_entregado" value="1" {% if post_data.marcar_entregado != '0' %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #15803D;">
+        <label for="marcar_entregado" style="font-weight: 700; font-size: 13px; color: #0F172A; cursor: pointer;">
+          Entregar prendas inmediatamente en mano (pasa de inmediato a estado ENTREGADO)
+        </label>
+      </div>
+
+      <div>
+        <label for="notas" style="display: block; font-weight: 800; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; color: #334155;">
+          Notas u Observaciones Internas (Opcional):
+        </label>
+        <input type="text" id="notas" name="notas" value="{{ post_data.notas|default:'' }}" placeholder="Ej. Venta en mostrador taller central / Pago con billete de 100 exacto" style="width: 100%; height: 38px; padding: 6px 12px; border: 1px solid #94A3B8; border-radius: 4px; background: #FFFFFF; color: #0F172A; font-size: 13px; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <!-- 2. Seleccionar Camisetas y Tallas con Buscador Único por Palabras y Paginación -->
+    <div class="module pos-card">
+      
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px; margin-bottom: 16px;">
+        <div style="min-width: 0;">
+          <h2 style="margin: 0; font-size: 15px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.04em;">
+            2. Seleccionar Camisetas y Tallas
+          </h2>
+          <span style="font-size: 12px; color: #64748B;">
+            Mostrando {{ variantes|length }} camisetas en esta página · Total en catálogo con stock: <strong>{{ total_disponibles }}</strong>
+          </span>
+        </div>
+
+        <!-- Buscador Único Indexado por Palabras (Filtra al escribir y consulta toda la BD con Buscar/Enter) -->
+        <div class="pos-search-bar">
+          <input type="text"
+                 id="input-busqueda-servidor"
+                 class="pos-search-input"
+                 oninput="filtrarTablaEnVivo(this.value)"
+                 placeholder="🔍 Buscar por palabras (ej. Argentina Messi L)..."
+                 value="{{ busqueda|default:'' }}">
+          <button type="button" onclick="ejecutarBusquedaServidor()" style="background: #0A0A0A; color: #39FF14; border: 1px solid #0A0A0A; height: 36px; padding: 0 16px; border-radius: 4px; font-weight: 800; font-size: 12px; cursor: pointer;">
+            Buscar
+          </button>
+          {% if busqueda %}
+            <button type="button" onclick="limpiarBusquedaServidor()" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; height: 36px; padding: 0 12px; border-radius: 4px; font-weight: 700; font-size: 12px; cursor: pointer;">
+              ✕ Limpiar
+            </button>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Tabla de Camisetas con Tooltips Formales en Todas las Columnas -->
+      <div class="emuna-swipe-hint">← Desliza la tabla para ver precio, stock y cantidad →</div><div class="emuna-table-scroll" style="overflow-x: auto; border: 1px solid #E2E8F0; border-radius: 4px;">
+        <table id="tabla-variantes-pos" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+          <thead>
+            <tr style="background: #F8FAFC; border-bottom: 2px solid #CBD5E1; color: #334155;">
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;">
+                Camiseta
+                <img src="/static/toltip.png" alt="Ayuda" title="Nombre comercial del modelo de camiseta y color disponible." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center;">
+                Talla
+                <img src="/static/toltip.png" alt="Ayuda" title="Talla física de la prenda (S, M, L, XL) que saldrá del almacén." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;">
+                SKU
+                <img src="/static/toltip.png" alt="Ayuda" title="Código único interno que identifica este modelo y talla exacta." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: right;">
+                Precio Unit.
+                <img src="/static/toltip.png" alt="Ayuda" title="Precio unitario referencial de catálogo por camiseta." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center;">
+                Stock Disp. (Semáforo)
+                <img src="/static/toltip.png" alt="Ayuda" title="Unidades físicas disponibles en almacén. Verde: stock normal; Ámbar: pocas unidades; Rojo: agotado." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; text-align: center; width: 165px; background: #F1F5F9;">
+                Cantidad a Vender
+                <img src="/static/toltip.png" alt="Ayuda" title="Ingresa cuántas unidades de esta camiseta y talla se lleva el cliente en esta venta." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for var in variantes %}
+              <tr class="fila-variante" data-texto="{{ var.producto.nombre|lower }} {{ var.talla|lower }} {{ var.sku|lower }} {{ var.color|default:''|lower }}" style="border-bottom: 1px solid #F1F5F9;">
+                <td style="padding: 10px 12px; font-weight: 700; color: #0F172A;">
+                  {{ var.producto.nombre }}
+                  {% if var.color %}<span style="color:#64748B; font-weight:normal; font-size:12px;">({{ var.color }})</span>{% endif %}
+                </td>
+                <td style="padding: 10px 12px; text-align: center;">
+                  <span style="display: inline-block; padding: 2px 8px; background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: 800; color: #1E293B;">
+                    {{ var.talla }}
+                  </span>
+                </td>
+                <td style="padding: 10px 12px; font-family: monospace; color: #475569; font-weight: 600;">
+                  {{ var.sku }}
+                </td>
+                <td style="padding: 10px 12px; font-weight: 800; color: #15803D; text-align: right; font-family: monospace;">
+                  <div>S/ {{ var.producto.precio_unidad|floatformat:2 }}</div>
+                  {% if var.producto.reglas_precio.all %}
+                    <div style="margin-top: 3px; font-size: 10px; color: #1E40AF; font-weight: 700; white-space: nowrap;">
+                      {% for regla in var.producto.reglas_precio.all %}
+                        <span style="display: inline-block; background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 3px; padding: 1px 5px; margin-left: 2px;">
+                          {{ regla.cantidad_minima }}+ u: S/ {{ regla.precio_unidad|floatformat:2 }}
+                        </span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </td>
+                <td style="padding: 10px 12px; text-align: center;">
+                  {% if var.cantidad_stock > 5 %}
+                    <span style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">
+                      🟢 {{ var.cantidad_stock }} unid.
+                    </span>
+                  {% elif var.cantidad_stock > 0 %}
+                    <span style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">
+                      🟡 {{ var.cantidad_stock }} unid. (Bajo)
+                    </span>
+                  {% else %}
+                    <span style="background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">
+                      🔴 Agotado (0)
+                    </span>
+                  {% endif %}
+                </td>
+                <td style="padding: 10px 12px; text-align: center; background: #F8FAFC;">
+                  <div style="display: inline-flex; align-items: center; gap: 4px;">
+                    <button type="button" class="pos-qty-btn" onclick="ajustarCantidad({{ var.id }}, -1)" title="Restar 1" style="width: 28px; height: 32px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: 900; font-size: 15px; cursor: pointer; color: #475569;">−</button>
+                    <input type="number"
+                           class="pos-qty-input"
+                           name="cant_{{ var.id }}" 
+                           id="cant_{{ var.id }}" 
+                           value="0" 
+                           min="0" 
+                           max="{{ var.cantidad_stock }}" 
+                           oninput="onInputCantidad({{ var.id }})" 
+                           data-id="{{ var.id }}"
+                           data-producto-id="{{ var.producto_id }}"
+                           data-nombre="{{ var.producto.nombre }}"
+                           data-talla="{{ var.talla }}"
+                           data-sku="{{ var.sku }}"
+                           data-precio="{{ var.producto.precio_unidad|stringformat:'s' }}"
+                           data-precio-base="{{ var.producto.precio_unidad|stringformat:'s' }}"
+                           data-stock-max="{{ var.cantidad_stock }}"
+                           style="width: 55px; height: 32px; text-align: center; border: 1px solid #94A3B8; border-radius: 4px; font-weight: 800; font-size: 14px; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
+                    <button type="button" class="pos-qty-btn" onclick="ajustarCantidad({{ var.id }}, 1)" title="Sumar 1" style="width: 28px; height: 32px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px; font-weight: 900; font-size: 15px; cursor: pointer; color: #15803D;">+</button>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" style="padding: 24px; text-align: center; color: #64748B; font-size: 14px;">
+                  No se encontraron camisetas con stock disponible{% if busqueda %} para la búsqueda "<strong>{{ busqueda }}</strong>"{% endif %}.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Barra de Paginación Enterprise Tipo Java JSP -->
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 12px; color: #475569;">
+        <div>
+          Mostrando del <strong>{{ pagina_obj.start_index|default:0 }}</strong> al <strong>{{ pagina_obj.end_index|default:0 }}</strong> de <strong>{{ total_disponibles }}</strong> camisetas
+          {% if busqueda %}(filtradas por "<strong>{{ busqueda }}</strong>"){% endif %}
+        </div>
+        
+        {% if paginador.num_pages > 1 %}
+          <div class="pos-pagination-links">
+            {% if pagina_obj.has_previous %}
+              <a href="?page=1{% if busqueda %}&q={{ busqueda }}{% endif %}" style="padding: 5px 10px; background: #FFFFFF; border: 1px solid #CBD5E1; color: #1E293B; text-decoration: none; border-radius: 4px; font-weight: 700;">« Primera</a>
+              <a href="?page={{ pagina_obj.previous_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}" style="padding: 5px 10px; background: #FFFFFF; border: 1px solid #CBD5E1; color: #1E293B; text-decoration: none; border-radius: 4px; font-weight: 700;">‹ Anterior</a>
+            {% endif %}
+            
+            <span style="padding: 5px 12px; background: #0A0A0A; color: #39FF14; border: 1px solid #0A0A0A; border-radius: 4px; font-weight: 800;">
+              Página {{ pagina_obj.number }} de {{ paginador.num_pages }}
+            </span>
+            
+            {% if pagina_obj.has_next %}
+              <a href="?page={{ pagina_obj.next_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}" style="padding: 5px 10px; background: #FFFFFF; border: 1px solid #CBD5E1; color: #1E293B; text-decoration: none; border-radius: 4px; font-weight: 700;">Siguiente ›</a>
+              <a href="?page={{ paginador.num_pages }}{% if busqueda %}&q={{ busqueda }}{% endif %}" style="padding: 5px 10px; background: #FFFFFF; border: 1px solid #CBD5E1; color: #1E293B; text-decoration: none; border-radius: 4px; font-weight: 700;">Última »</a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- 3. CUADRO TOTALIZADOR / RESUMEN EN TIEMPO REAL -->
+    <div class="module pos-card" id="modulo-totalizador-venta" style="border-top: 4px solid #0A0A0A; margin-bottom: 24px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 2px solid #F1F5F9; padding-bottom: 12px; margin-bottom: 14px;">
+        <div style="min-width: 0; flex: 1 1 240px;">
+          <span style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: #15803D; letter-spacing: 0.06em;">
+            3. Resumen y Totalizador de Venta Presencial
+          </span>
+          <h2 style="margin: 2px 0 0 0; font-size: 18px; font-weight: 900; color: #0F172A;">
+            Prendas Seleccionadas para Facturar
+          </h2>
+        </div>
+        
+        <!-- Indicadores Numéricos Grandes -->
+        <div class="pos-kpi-grid" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <div class="pos-kpi-card" style="text-align: right; background: #F8FAFC; border: 1px solid #CBD5E1; padding: 8px 16px; border-radius: 4px;">
+            <span style="display: block; font-size: 11px; text-transform: uppercase; color: #475569; font-weight: 800;">Total Prendas:</span>
+            <strong id="kpi-total-prendas" style="font-size: 24px; font-weight: 900; color: #0F172A; font-family: monospace;">0</strong>
+            <span style="font-size: 12px; color: #64748B; font-weight: 700;">unid.</span>
+          </div>
+          <div id="kpi-ahorro-card" class="pos-kpi-card" style="display: none; text-align: right; background: #EFF6FF; border: 1px solid #93C5FD; padding: 8px 16px; border-radius: 4px;">
+            <span style="display: block; font-size: 11px; text-transform: uppercase; color: #1E40AF; font-weight: 800;">Ahorro x Mayor:</span>
+            <strong id="kpi-total-ahorro" style="font-size: 24px; font-weight: 900; color: #1D4ED8; font-family: monospace;">S/ 0.00</strong>
+          </div>
+          <div class="pos-kpi-card" style="text-align: right; background: #0A0A0A; border: 2px solid #0A0A0A; padding: 8px 18px; border-radius: 4px;">
+            <span style="display: block; font-size: 11px; text-transform: uppercase; color: #FFFFFF; font-weight: 800;">Total a Cobrar:</span>
+            <strong id="kpi-total-soles" style="font-size: 26px; font-weight: 900; color: #39FF14; font-family: monospace;">S/ 0.00</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla Dinámica con el Desglose de Camisetas que se van a Vender -->
+      <div id="contenedor-desglose" class="pos-desglose-wrap">
+        <p id="mensaje-vacio-resumen" style="margin: 0; color: #64748B; font-size: 13px; font-style: italic;">
+          ℹ️ Ninguna camiseta seleccionada todavía. Ingresa la cantidad en la tabla de arriba o pulsa el botón <strong>+</strong> para sumar unidades.
+        </p>
+        
+        <table id="tabla-desglose-resumen" style="width: 100%; border-collapse: collapse; display: none; font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 2px solid #CBD5E1; color: #334155; text-align: left; background: #F1F5F9;">
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase;">
+                Camiseta / Talla
+                <img src="/static/toltip.png" alt="Ayuda" title="Modelo y talla seleccionada para esta venta presencial." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: center;">
+                SKU
+                <img src="/static/toltip.png" alt="Ayuda" title="Código único del inventario que será descontado." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: center;">
+                Cantidad
+                <img src="/static/toltip.png" alt="Ayuda" title="Número total de unidades de esta camiseta en la venta." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: right;">
+                P. Unitario
+                <img src="/static/toltip.png" alt="Ayuda" title="Precio unitario real aplicado. Si sumas 3+ o 6+ unidades de un mismo modelo (incluso mezclando tallas), se aplica automáticamente el precio por mayor." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: right;">
+                Subtotal
+                <img src="/static/toltip.png" alt="Ayuda" title="Resultado de multiplicar cantidad por precio unitario." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:4px;cursor:help;display:inline-block;" />
+              </th>
+              <th style="padding: 8px 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; text-align: center; width: 65px;">
+                Quitar
+                <img src="/static/toltip.png" alt="Ayuda" title="Elimina esta camiseta de la venta actual." style="width:13px;height:13px;object-fit:contain;vertical-align:middle;margin-left:2px;cursor:help;display:inline-block;" />
+              </th>
+            </tr>
+          </thead>
+          <tbody id="tbody-desglose-resumen">
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Contenedor oculto para inyectar selecciones que vienen de otras páginas de la paginación -->
+      <div id="inputs-ocultos-persistencia"></div>
+    </div>
+
+    <!-- Botones de Acción Finales -->
+    <div class="pos-footer-actions" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+      <a href="{% url 'admin:pedidos_pedido_changelist' %}" class="pos-cancel-link" style="color: #64748B; text-decoration: underline; font-weight: 700; font-size: 14px;">
+        ← Cancelar y volver al listado de pedidos
+      </a>
+      
+      <div class="pos-footer-buttons" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+        <button type="button" onclick="limpiarTodoElCarrito()" style="background: #FFFFFF; color: #DC2626; border: 1px solid #EF4444; padding: 12px 18px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer;">
+          ✕ Limpiar Selección
+        </button>
+        <button type="submit" id="btn-submit-venta" style="background: #39FF14; color: #0A0A0A; border: 2px solid #0A0A0A; padding: 12px 26px; border-radius: 4px; font-size: 15px; font-weight: 900; cursor: pointer;">
+          ✓ Confirmar Venta Presencial (<span id="btn-total-prendas-texto">0 unid.</span> · <span id="btn-total-soles-texto">S/ 0.00</span>)
+        </button>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+<!-- Lógica JavaScript de Totalizador (con Tramos por Mayor), Persistencia de Páginas y Buscador Único -->
+{{ reglas_productos_map|json_script:"pos-reglas-precio-data" }}
+<script>
+  const STORAGE_KEY = 'emuna_pos_carrito_v1';
+  const REGLAS_POR_PRODUCTO = JSON.parse(
+    document.getElementById('pos-reglas-precio-data')?.textContent || '{}'
+  );
+  let carritoPOS = {};
+
+  function obtenerPrecioPorMayor(productoId, precioBase, totalUnidadesProducto) {
+    if (!productoId || totalUnidadesProducto <= 1) {
+      return precioBase;
+    }
+    const reglas = REGLAS_POR_PRODUCTO[String(productoId)] || [];
+    let mejorRegla = null;
+    for (const regla of reglas) {
+      if (regla.cantidad_minima <= totalUnidadesProducto) {
+        if (!mejorRegla || regla.cantidad_minima > mejorRegla.cantidad_minima) {
+          mejorRegla = regla;
+        }
+      }
+    }
+    return mejorRegla ? parseFloat(mejorRegla.precio_unidad) : precioBase;
+  }
+
+  function cargarCarritoDesdeStorage() {
+    try {
+      const guardado = sessionStorage.getItem(STORAGE_KEY);
+      if (guardado) {
+        carritoPOS = JSON.parse(guardado);
+      }
+    } catch (e) {
+      console.warn('No se pudo leer sessionStorage:', e);
+      carritoPOS = {};
+    }
+  }
+
+  function guardarCarritoEnStorage() {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(carritoPOS));
+    } catch (e) {
+      console.warn('No se pudo guardar en sessionStorage:', e);
+    }
+  }
+
+  function sincronizarInputsPagina() {
+    document.querySelectorAll('input[name^="cant_"]').forEach(inp => {
+      const id = inp.dataset.id;
+      if (id && carritoPOS[id]) {
+        inp.value = carritoPOS[id].cantidad;
+        // Enriquecer con productoId / precioBase si provenía de una sesión anterior
+        carritoPOS[id].productoId = inp.dataset.productoId || carritoPOS[id].productoId;
+        carritoPOS[id].precioBase = parseFloat(
+          inp.dataset.precioBase || inp.dataset.precio || carritoPOS[id].precioBase || carritoPOS[id].precio || '0'
+        );
+      }
+    });
+  }
+
+  function ajustarCantidad(id, delta) {
+    const inp = document.getElementById('cant_' + id);
+    if (!inp) {
+      if (carritoPOS[id]) {
+        carritoPOS[id].cantidad = Math.max(0, carritoPOS[id].cantidad + delta);
+        if (carritoPOS[id].cantidad === 0) {
+          delete carritoPOS[id];
+        }
+        guardarCarritoEnStorage();
+        actualizarVistaTotalizador();
+      }
+      return;
+    }
+
+    let valActual = parseInt(inp.value || '0', 10);
+    const maxStock = parseInt(inp.dataset.stockMax || '999', 10);
+    let nuevoVal = Math.max(0, Math.min(maxStock, valActual + delta));
+    inp.value = nuevoVal;
+    onInputCantidad(id);
+  }
+
+  function onInputCantidad(id) {
+    const inp = document.getElementById('cant_' + id);
+    if (!inp) return;
+
+    let cant = parseInt(inp.value || '0', 10);
+    const maxStock = parseInt(inp.dataset.stockMax || '999', 10);
+    
+    if (isNaN(cant) || cant <= 0) {
+      cant = 0;
+      inp.value = '0';
+      delete carritoPOS[id];
+    } else {
+      if (cant > maxStock) {
+        cant = maxStock;
+        inp.value = cant;
+      }
+      const precioBase = parseFloat(inp.dataset.precioBase || inp.dataset.precio || '0');
+      carritoPOS[id] = {
+        id: id,
+        productoId: inp.dataset.productoId || '',
+        nombre: inp.dataset.nombre || 'Camiseta',
+        talla: inp.dataset.talla || '',
+        sku: inp.dataset.sku || '',
+        precio: precioBase,
+        precioBase: precioBase,
+        cantidad: cant,
+        maxStock: maxStock,
+      };
+    }
+
+    guardarCarritoEnStorage();
+    actualizarVistaTotalizador();
+  }
+
+  function quitarDelResumen(id) {
+    delete carritoPOS[id];
+    guardarCarritoEnStorage();
+    const inp = document.getElementById('cant_' + id);
+    if (inp) {
+      inp.value = '0';
+    }
+    actualizarVistaTotalizador();
+  }
+
+  function limpiarTodoElCarrito() {
+    carritoPOS = {};
+    guardarCarritoEnStorage();
+    document.querySelectorAll('input[name^="cant_"]').forEach(inp => {
+      inp.value = '0';
+    });
+    actualizarVistaTotalizador();
+  }
+
+  function actualizarVistaTotalizador() {
+    let totalPrendas = 0;
+    let totalMonto = 0;
+    let totalAhorro = 0;
+    const items = Object.values(carritoPOS);
+
+    // 1. Sumar cantidades por modelo (productoId) combinando tallas diferentes
+    const totalesPorProducto = {};
+    items.forEach(item => {
+      const pid = String(item.productoId || '');
+      if (pid) {
+        totalesPorProducto[pid] = (totalesPorProducto[pid] || 0) + item.cantidad;
+      }
+    });
+
+    const tbody = document.getElementById('tbody-desglose-resumen');
+    const tabla = document.getElementById('tabla-desglose-resumen');
+    const mensajeVacio = document.getElementById('mensaje-vacio-resumen');
+    const inputsOcultos = document.getElementById('inputs-ocultos-persistencia');
+
+    tbody.innerHTML = '';
+    inputsOcultos.innerHTML = '';
+
+    if (items.length === 0) {
+      tabla.style.display = 'none';
+      mensajeVacio.style.display = 'block';
+    } else {
+      tabla.style.display = 'table';
+      mensajeVacio.style.display = 'none';
+
+      items.forEach(item => {
+        totalPrendas += item.cantidad;
+        const pid = String(item.productoId || '');
+        const precioBase = parseFloat(item.precioBase ?? item.precio ?? 0);
+        const totalModelo = pid ? (totalesPorProducto[pid] || item.cantidad) : item.cantidad;
+        const precioAplicado = obtenerPrecioPorMayor(pid, precioBase, totalModelo);
+        const tieneDescuento = precioAplicado < precioBase;
+        const subtotal = precioAplicado * item.cantidad;
+        const ahorroLinea = Math.max(0, (precioBase - precioAplicado) * item.cantidad);
+        totalMonto += subtotal;
+        totalAhorro += ahorroLinea;
+
+        const htmlPrecioUnit = tieneDescuento
+          ? `<span style="text-decoration:line-through;color:#94A3B8;font-size:11px;display:block;">S/ ${precioBase.toFixed(2)}</span>
+             <strong style="color:#1D4ED8;">S/ ${precioAplicado.toFixed(2)}</strong>
+             <span style="display:inline-block;background:#DBEAFE;color:#1E40AF;border:1px solid #93C5FD;padding:1px 4px;border-radius:3px;font-size:9px;font-weight:800;">[POR MAYOR]</span>`
+          : `S/ ${precioAplicado.toFixed(2)}`;
+
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #E2E8F0';
+        tr.innerHTML = `
+          <td style="padding: 8px 10px; font-weight: 700; color: #0F172A;">
+            ${item.nombre} <span style="display:inline-block; padding:1px 6px; background:#F1F5F9; border:1px solid #CBD5E1; border-radius:3px; font-size:11px; margin-left:4px;">Talla ${item.talla}</span>
+          </td>
+          <td style="padding: 8px 10px; font-family: monospace; text-align: center; color: #64748B;">
+            ${item.sku}
+          </td>
+          <td style="padding: 8px 10px; font-weight: 800; text-align: center; color: #0F172A; font-size: 14px;">
+            ${item.cantidad}
+          </td>
+          <td style="padding: 8px 10px; text-align: right; color: #475569; font-family: monospace;">
+            ${htmlPrecioUnit}
+          </td>
+          <td style="padding: 8px 10px; text-align: right; font-weight: 800; color: #15803D; font-family: monospace;">
+            S/ ${subtotal.toFixed(2)}
+          </td>
+          <td style="padding: 8px 10px; text-align: center;">
+            <button type="button" onclick="quitarDelResumen('${item.id}')" title="Quitar de la venta" style="background:#FEE2E2; border:1px solid #EF4444; color:#DC2626; border-radius:3px; width:22px; height:22px; font-size:11px; font-weight:bold; cursor:pointer;">✕</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        const inputVisible = document.getElementById('cant_' + item.id);
+        if (!inputVisible) {
+          const hInput = document.createElement('input');
+          hInput.type = 'hidden';
+          hInput.name = 'cant_' + item.id;
+          hInput.value = item.cantidad;
+          inputsOcultos.appendChild(hInput);
+        }
+      });
+    }
+
+    const kpiAhorroCard = document.getElementById('kpi-ahorro-card');
+    if (kpiAhorroCard) {
+      kpiAhorroCard.style.display = totalAhorro > 0 ? 'block' : 'none';
+      document.getElementById('kpi-total-ahorro').innerText = 'S/ ' + totalAhorro.toFixed(2);
+    }
+
+    document.getElementById('kpi-total-prendas').innerText = totalPrendas;
+    document.getElementById('kpi-total-soles').innerText = 'S/ ' + totalMonto.toFixed(2);
+    document.getElementById('btn-total-prendas-texto').innerText = totalPrendas + ' unid.';
+    document.getElementById('btn-total-soles-texto').innerText = 'S/ ' + totalMonto.toFixed(2);
+  }
+
+  function filtrarTablaEnVivo(termino) {
+    const t = (termino || '').toLowerCase().trim();
+    const palabras = t.split(/\s+/).filter(Boolean);
+    const filas = document.querySelectorAll('.fila-variante');
+
+    filas.forEach(fila => {
+      const textoFila = fila.dataset.texto || '';
+      let coincide = true;
+      for (const p of palabras) {
+        if (!textoFila.includes(p)) {
+          coincide = false;
+          break;
+        }
+      }
+      fila.style.display = coincide ? '' : 'none';
+    });
+  }
+
+  function ejecutarBusquedaServidor() {
+    const q = document.getElementById('input-busqueda-servidor').value.trim();
+    const url = new URL(window.location.href);
+    if (q) {
+      url.searchParams.set('q', q);
+    } else {
+      url.searchParams.delete('q');
+    }
+    url.searchParams.set('page', '1');
+    window.location.href = url.toString();
+  }
+
+  function limpiarBusquedaServidor() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('q');
+    url.searchParams.set('page', '1');
+    window.location.href = url.toString();
+  }
+
+  document.getElementById('input-busqueda-servidor')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      ejecutarBusquedaServidor();
+    }
+  });
+
+  document.getElementById('form-venta-presencial')?.addEventListener('submit', function() {
+    sessionStorage.removeItem(STORAGE_KEY);
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    cargarCarritoDesdeStorage();
+    sincronizarInputsPagina();
+    actualizarVistaTotalizador();
+  });
+</script>
+{% endblock %}

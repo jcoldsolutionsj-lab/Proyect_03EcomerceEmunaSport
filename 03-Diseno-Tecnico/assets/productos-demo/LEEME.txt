@@ -1,0 +1,11 @@
+CARPETA: 03-Diseno-Tecnico/assets/productos-demo
+NIVEL DE INFORMACION: Fotos reales de camisetas para el catalogo de demostracion (cargar_demo) y prototipo Frontend.
+
+Subcarpeta actual:
+- argentina-messi/
+  - Producto: ARGENTINA X MESSI (Edicion Jugador #10 - 3 Estrellas)
+  - Precio oferta (PRO_NPRECIO_UNIDAD): S/ 55.00
+  - Precio regular tachado (PRO_NPRECIO_ANTERIOR): S/ 69.90
+  - Tallas (TBL_RVARIANTE): S, M, L, XL
+  - originales/ : 5 fotos JPEG corregidas con su extension real (argentina_1.jpg a argentina_5.jpg).
+  - webp/ : Versiones optimizadas listas para la web (miniatura de 400px ~25 KB y detalle de 900px ~150 KB).

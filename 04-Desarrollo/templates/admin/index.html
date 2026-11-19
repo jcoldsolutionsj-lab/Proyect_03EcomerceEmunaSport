@@ -1,0 +1,83 @@
+{% extends 'admin/base_site.html' %}
+{% load i18n static unfold %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="mb-6 flex flex-col gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-base-200 rounded-default p-4">
+            <div class="min-w-0">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-base-500">
+                    Panel Operativo Flat · Emuná Sport
+                </div>
+                <h2 class="text-base sm:text-lg font-bold text-base-900 mt-0.5">
+                    Accesos rápidos de venta diaria, stock y métricas
+                </h2>
+            </div>
+            <div class="flex flex-wrap" style="gap: 10px;">
+                <a href="{% url 'tablero:resumen' %}"
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-default text-xs sm:text-sm font-bold no-underline"
+                   style="background: #0A0A0A; color: #FFFFFF; border: 1px solid #0A0A0A;">
+                    <span class="material-symbols-outlined text-[18px]" style="color: #39FF14;">analytics</span>
+                    <span>Abrir Tablero y Alertas</span>
+                </a>
+                <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}"
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-default text-xs sm:text-sm font-bold no-underline"
+                   style="background: #39FF14; color: #0A0A0A; border: 2px solid #0A0A0A; font-weight: 800;">
+                    <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
+                    <span>Registrar Venta Presencial (POS)</span>
+                </a>
+            </div>
+        </div>
+
+        {% if emuna_resumen_inicio %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <a href="{% url 'tablero:resumen' %}?periodo=hoy" class="block bg-white border border-base-200 border-t-4 border-t-primary-600 rounded-default p-4 hover:border-base-300 no-underline">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-base-500">Ventas confirmadas hoy</div>
+                <div class="text-2xl font-extrabold text-primary-600 mt-1 tabular-nums">
+                    S/ {{ emuna_resumen_inicio.ventas_hoy|floatformat:2 }}
+                </div>
+                <div class="text-xs text-base-500 mt-1">
+                    {{ emuna_resumen_inicio.pedidos_hoy }} ped. &middot; {{ emuna_resumen_inicio.unidades_hoy }} camisetas
+                </div>
+            </a>
+
+            <a href="{% url 'admin:pedidos_pedido_changelist' %}?estado__exact=NUEVO" class="block bg-white border border-base-200 border-t-4 border-t-base-800 rounded-default p-4 hover:border-base-300 no-underline">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-base-500">Cola de atención</div>
+                <div class="text-2xl font-extrabold text-base-900 mt-1 tabular-nums">
+                    {{ emuna_resumen_inicio.cola_nuevo|add:emuna_resumen_inicio.cola_cotizado }} por cerrar
+                </div>
+                <div class="text-xs text-base-500 mt-1">
+                    Nuevo: {{ emuna_resumen_inicio.cola_nuevo }} &middot; Cotizado: {{ emuna_resumen_inicio.cola_cotizado }} &middot; Por enviar: {{ emuna_resumen_inicio.cola_pagado }}
+                </div>
+            </a>
+
+            <a href="{% url 'tablero:resumen' %}#seccion-stock" class="block bg-white border border-base-200 border-t-4 {% if emuna_resumen_inicio.alertas_stock > 0 %}border-t-orange-500{% else %}border-t-primary-600{% endif %} rounded-default p-4 hover:border-base-300 no-underline">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-base-500">Tallas bajo mínimo</div>
+                <div class="text-2xl font-extrabold {% if emuna_resumen_inicio.alertas_stock > 0 %}text-orange-600{% else %}text-primary-600{% endif %} mt-1 tabular-nums">
+                    {{ emuna_resumen_inicio.alertas_stock }} tallas
+                </div>
+                <div class="text-xs text-base-500 mt-1">
+                    {% if emuna_resumen_inicio.alertas_stock > 0 %}Requieren reposición de taller{% else %}Stock óptimo en catálogo{% endif %}
+                </div>
+            </a>
+
+            <a href="{% url 'tablero:resumen' %}#seccion-pendientes" class="block bg-white border border-base-200 border-t-4 {% if emuna_resumen_inicio.pendientes_antiguos > 0 %}border-t-red-600{% else %}border-t-primary-600{% endif %} rounded-default p-4 hover:border-base-300 no-underline">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-base-500">Pendientes con demora</div>
+                <div class="text-2xl font-extrabold {% if emuna_resumen_inicio.pendientes_antiguos > 0 %}text-red-600{% else %}text-primary-600{% endif %} mt-1 tabular-nums">
+                    {{ emuna_resumen_inicio.pendientes_antiguos }} ped.
+                </div>
+                <div class="text-xs text-base-500 mt-1">
+                    {% if emuna_resumen_inicio.pendientes_antiguos > 0 %}Avisar cliente por WhatsApp{% else %}Sin demoras pendientes{% endif %}
+                </div>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% include "unfold/helpers/dashboard_default.html" %}
+{% endblock %}

@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block meta_titulo %}{{ producto.nombre }} – S/ {{ producto.precio_unidad }} | {{ tienda_config.nombre|default:"Emuná Sport" }}{% endblock %}
+{% block meta_descripcion %}Compra {{ producto.nombre }} (SKU {{ producto.sku }}) a S/ {{ producto.precio_unidad }}. Tallas S, M, L y XL con precios por mayor. Envíos a todo el Perú por Shalom/Olva y entregas en Lima.{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_titulo %}{{ producto.nombre }} – S/ {{ producto.precio_unidad }} | Emuná Sport{% endblock %}
+{% block og_descripcion %}{{ producto.descripcion|default:producto.nombre }} · Tallas S, M, L y XL · Precios especiales por mayor.{% endblock %}
+{% block og_imagen %}{% if imagen_principal %}{{ SITE_URL }}{% static imagen_principal.ruta_detalle %}{% else %}{{ SITE_URL }}{% static 'logo_emuna_transparente.png' %}{% endif %}{% endblock %}
+
+{% block datos_estructurados_extra %}
+<script type="application/ld+json">
+{{ esquema_producto_json|safe }}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Inicio",
+      "item": "{{ SITE_URL }}{% url 'catalogo:inicio' %}"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "{{ producto.categoria.nombre|escapejs }}",
+      "item": "{{ SITE_URL }}{% url 'catalogo:inicio' %}?categoria={{ producto.categoria.slug }}#catalogo-completo"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ producto.nombre|escapejs }}",
+      "item": "{{ SITE_URL }}{{ producto.get_absolute_url }}"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block contenido %}
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 sm:pb-12"
+         x-data="{
+           fotoActiva: '{% if imagen_principal %}{% static imagen_principal.ruta_detalle %}{% endif %}',
+           altActivo: '{{ imagen_principal.alt_seo|escapejs }}',
+           zoomActivo: false,
+           modalZoomAbierto: false,
+           zoomX: 50,
+           zoomY: 50,
+           cursorPxX: 0,
+           cursorPxY: 0,
+           tallaSeleccionada: '{{ variante_inicial.talla|default:"M" }}',
+           varianteId: {{ variante_inicial.id|default:0 }},
+           stockActual: {{ variante_inicial.cantidad_stock|default:0 }},
+           cantidad: 1,
+           agregadoOk: false,
+           actualizarLupa(evento) {
+             const rect = evento.currentTarget.getBoundingClientRect();
+             const x = evento.clientX - rect.left;
+             const y = evento.clientY - rect.top;
+             this.cursorPxX = x;
+             this.cursorPxY = y;
+             this.zoomX = Math.max(0, Math.min(100, (x / rect.width) * 100));
+             this.zoomY = Math.max(0, Math.min(100, (y / rect.height) * 100));
+           },
+           seleccionarVariante(id, talla, stock) {
+             this.varianteId = id;
+             this.tallaSeleccionada = talla;
+             this.stockActual = stock;
+             if (this.cantidad > stock && stock > 0) {
+               this.cantidad = stock;
+             }
+           }
+         }">
+
+  <!-- Miga de pan (Breadcrumb) -->
+  <nav aria-label="Breadcrumb" class="text-xs text-silverDark mb-6 flex items-center gap-2">
+    <a href="{% url 'catalogo:inicio' %}" class="hover:text-ink">Inicio</a>
+    <span>/</span>
+    <a href="{% url 'catalogo:inicio' %}?categoria={{ producto.categoria.slug }}#catalogo-completo" class="hover:text-ink">
+      {{ producto.categoria.nombre }}
+    </a>
+    <span>/</span>
+    <strong class="text-ink truncate">{{ producto.nombre }}</strong>
+  </nav>
+
+  <!-- Diseño de 3 bloques igual a Captura 3 (Foto Grande con Lupa Zoom al pasar el cursor + 5 Miniaturas + Caja de Compra) -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+    <!-- BLOQUE 1 y 2: Foto Principal 4:5 + Columna Central de 5 Miniaturas Verticales -->
+    <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
+
+      <!-- Foto grande principal: la Lupa Zoom solo aparece cuando el cursor entra a esta imagen -->
+      <div class="sm:col-span-10 relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden select-none cursor-zoom-in"
+           @mouseenter="zoomActivo = true"
+           @mouseleave="zoomActivo = false"
+           @mousemove="actualizarLupa($event)"
+           @click="modalZoomAbierto = true">
+
+        <img :src="fotoActiva"
+             :alt="altActivo"
+             fetchpriority="high"
+             :style="zoomActivo ? `transform: scale(2.25); transform-origin: ${zoomX}% ${zoomY}%;` : 'transform: scale(1); transform-origin: center center;'"
+             class="w-full h-full object-cover transition-transform duration-75 ease-out pointer-events-none">
+
+        <!-- Lupa circular flotante: visible únicamente cuando el cursor está dentro de la foto -->
+        <div x-show="zoomActivo"
+             style="display: none;"
+             :style="`left: ${cursorPxX}px; top: ${cursorPxY}px;`"
+             class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full border-2 border-neon shadow-[0_0_0_2px_rgba(10,10,10,0.85)] z-20">
+        </div>
+
+        <!-- Badges superiores (se atenúan cuando la lupa está activa para ver la prenda limpia) -->
+        <div class="absolute top-3 left-3 flex flex-col gap-1.5 pointer-events-none transition-opacity duration-150"
+             :class="zoomActivo ? 'opacity-0' : 'opacity-100'">
+          {% if producto.monto_ahorro %}
+          <span class="bg-neon text-ink text-xs font-extrabold uppercase px-3 py-1 border border-ink tabular-nums">
+            Ahorras S/ {{ producto.monto_ahorro }} (-{{ producto.porcentaje_descuento }}%)
+          </span>
+          {% endif %}
+          <span class="bg-ink text-white text-[11px] font-bold uppercase px-2.5 py-1">
+            SKU: {{ producto.sku }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Columna central de 5 miniaturas verticales apiladas (idéntico a Captura 3) -->
+      <div class="sm:col-span-2 grid grid-cols-5 sm:grid-cols-1 gap-2.5">
+        {% for img in imagenes %}
+        <button type="button"
+                @click="fotoActiva = '{% static img.ruta_detalle %}'; altActivo = '{{ img.alt_seo|escapejs }}'"
+                class="aspect-[4/5] border overflow-hidden bg-neutral-100 transicion-tactil focus:outline-none"
+                :class="fotoActiva === '{% static img.ruta_detalle %}' ? 'border-2 border-ink ring-2 ring-neon' : 'border-silver opacity-75 hover:opacity-100'"
+                aria-label="Ver vista {{ img.orden }} de {{ producto.nombre }}">
+          <img src="{% static img.ruta_miniatura %}"
+               alt="{{ img.alt_seo }}"
+               class="w-full h-full object-cover">
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- BLOQUE 3: Caja Derecha con Borde Fino (#C9CED3) igual a Captura 3 pero con Reglas de Emuná Sport -->
+    <div class="lg:col-span-5 border border-silver bg-white p-6 sm:p-8 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between text-xs text-silverDark uppercase tracking-wider mb-2">
+          <span>{{ producto.categoria.nombre }}</span>
+          {% if tienda_config.mostrar_marcas and producto.marca %}
+          <span>{{ producto.marca }}</span>
+          {% else %}
+          <span class="text-neonDark font-bold">⚡ Edición Jugador</span>
+          {% endif %}
+        </div>
+
+        <h1 class="font-display italic font-extrabold text-3xl sm:text-4xl uppercase tracking-tight text-ink leading-tight mb-3">
+          {{ producto.nombre }}
+        </h1>
+
+        <!-- Precio de Oferta Grande + Precio Regular Tachado + Resta Exacta del Ahorro (S/ 14.90) -->
+        <div class="flex flex-wrap items-baseline gap-3 mb-1 tabular-nums">
+          <span class="text-3xl font-extrabold text-ink">S/ {{ producto.precio_unidad }}</span>
+          {% if producto.precio_anterior %}
+          <span class="text-base text-silverDark line-through font-semibold">S/ {{ producto.precio_anterior }}</span>
+          <span class="text-xs font-extrabold bg-neon text-ink px-2.5 py-0.5 border border-ink">
+            Ahorras S/ {{ producto.monto_ahorro }} (-{{ producto.porcentaje_descuento }}%)
+          </span>
+          {% endif %}
+        </div>
+        <p class="text-[11px] text-silverDark mb-5">
+          Precio en Soles Peruanos (PEN) · El envío se cotiza según tu modalidad de entrega
+        </p>
+
+        <!-- Tabla de Precios por Mayor visible de un vistazo (Regla doc 02 + UI UX Pro Max) -->
+        {% if reglas_precio %}
+        <div class="bg-neutral-50 border border-silver p-3.5 mb-6">
+          <p class="text-[11px] font-extrabold uppercase tracking-wider text-ink mb-2">
+            🔥 Precios Especiales por Mayor (puedes combinar tallas S, M, L y XL):
+          </p>
+          <div class="grid grid-cols-2 gap-2 text-xs tabular-nums">
+            {% for regla in reglas_precio %}
+            <div class="bg-white border border-silver px-3 py-2 flex items-center justify-between">
+              <span class="font-semibold text-silverDark">Desde {{ regla.cantidad_minima }} unid.</span>
+              <strong class="text-neonDark font-extrabold">S/ {{ regla.precio_unidad }} c/u</strong>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Descripción del Producto -->
+        {% if producto.descripcion %}
+        <p class="text-xs sm:text-sm text-ink/90 leading-relaxed mb-6">
+          {{ producto.descripcion }}
+        </p>
+        {% endif %}
+
+        <!-- Selector de Talla en Cuadrados [S] [M] [L] [XL] con Stock en Vivo (como Captura 3) -->
+        <div class="mb-5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-ink">
+              Selecciona tu Talla: <strong x-text="tallaSeleccionada" class="text-neonDark"></strong>
+            </span>
+            <span class="text-xs font-bold tabular-nums"
+                  :class="stockActual === 0 ? 'text-danger' : (stockActual <= 3 ? 'text-amber-700' : 'text-neonDark')">
+              <template x-if="stockActual === 0"><span>Agotada en esta talla</span></template>
+              <template x-if="stockActual > 0 && stockActual <= 3">
+                <span>¡Últimas <strong x-text="stockActual"></strong> unidades en talla <strong x-text="tallaSeleccionada"></strong>!</span>
+              </template>
+              <template x-if="stockActual > 3">
+                <span><strong x-text="stockActual"></strong> disponibles en talla <strong x-text="tallaSeleccionada"></strong></span>
+              </template>
+            </span>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2.5">
+            {% for v in variantes %}
+            <button type="button"
+                    @click="seleccionarVariante({{ v.id }}, '{{ v.talla }}', {{ v.cantidad_stock }})"
+                    :class="{
+                      'bg-ink text-neon border-2 border-ink font-extrabold': tallaSeleccionada === '{{ v.talla }}',
+                      'bg-white text-ink border border-silver hover:border-ink font-bold': tallaSeleccionada !== '{{ v.talla }}' && {{ v.cantidad_stock }} > 0,
+                      'bg-neutral-100 text-silverDark border border-silver line-through opacity-60': {{ v.cantidad_stock }} === 0 && tallaSeleccionada !== '{{ v.talla }}'
+                    }"
+                    class="h-12 flex flex-col items-center justify-center text-xs transicion-tactil">
+              <span>{{ v.talla }}</span>
+              <span class="text-[10px] font-normal opacity-80">
+                {% if v.cantidad_stock == 0 %}Agotado{% else %}{{ v.cantidad_stock }} u.{% endif %}
+              </span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Selector de Cantidad -->
+        <div class="mb-6 flex items-center justify-between border border-silver px-4 py-2.5">
+          <span class="text-xs font-bold uppercase tracking-wider text-silverDark">Cantidad</span>
+          <div class="flex items-center gap-3 tabular-nums">
+            <button type="button"
+                    @click="if (cantidad > 1) cantidad--"
+                    class="w-8 h-8 border border-silver hover:border-ink font-bold text-sm flex items-center justify-center">
+              −
+            </button>
+            <span x-text="cantidad" class="w-8 text-center font-extrabold text-sm"></span>
+            <button type="button"
+                    @click="if (cantidad < stockActual) cantidad++"
+                    class="w-8 h-8 border border-silver hover:border-ink font-bold text-sm flex items-center justify-center">
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÚNICA LLAMADA A LA ACCIÓN (CTA) PRINCIPAL EN VERDE NEÓN #39FF14 CONECTADA AL CARRITO HTMX (Requisito #20) -->
+      <div class="space-y-3">
+        <form id="form-agregar-carrito-ficha"
+              method="post"
+              action="{% url 'pedidos:agregar_al_carrito' %}"
+              hx-post="{% url 'pedidos:agregar_al_carrito' %}"
+              hx-target="#cuerpo-cajon-carrito"
+              hx-swap="innerHTML">
+          {% csrf_token %}
+          <input type="hidden" name="variante_id" :value="varianteId">
+          <input type="hidden" name="cantidad" :value="cantidad">
+          <input type="hidden" name="origen" value="cajon">
+
+          <button type="submit"
+                  :disabled="stockActual <= 0"
+                  :class="stockActual <= 0 ? 'bg-neutral-200 text-silverDark border-silver cursor-not-allowed' : 'bg-neon text-ink border-2 border-ink hover:brightness-95'"
+                  class="w-full py-4 px-6 font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transicion-tactil">
+            <img src="{% static 'carro-de-la-carretilla.png' %}" alt="" class="w-5 h-5 object-contain">
+            <template x-if="stockActual > 0">
+              <span>AGREGAR AL CARRITO · TALLA <span x-text="tallaSeleccionada"></span> →</span>
+            </template>
+            <template x-if="stockActual <= 0">
+              <span>TALLA AGOTADA – ELIGE OTRA TALLA</span>
+            </template>
+          </button>
+        </form>
+
+        <!-- Acción Secundaria con Borde Plata (#C9CED3) e Icono Oficial whatsapp.png -->
+        <a href="{{ url_whatsapp_contextual }}"
+           target="_blank" rel="noopener"
+           class="w-full py-3.5 px-6 bg-white text-ink hover:border-ink border border-silver font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 transicion-tactil">
+          <img src="{% static 'whatsapp.png' %}" alt="WhatsApp" class="w-5 h-5 object-contain">
+          <span>Consultar esta camiseta a Richard por WhatsApp</span>
+        </a>
+
+        <!-- Modalidades de entrega reales de Richard con logo oficial yape.svg -->
+        <div class="pt-4 border-t border-silver text-[11px] text-silverDark space-y-1.5">
+          <p class="flex items-center gap-1.5 flex-wrap">
+            <span>📍 <strong>Punto de Encuentro en Lima:</strong> envío <strong>S/ 0.00</strong> y pago con</span>
+            <img src="{% static 'yape.svg' %}" alt="Yape" class="h-4 w-auto object-contain inline-block">
+            <span><strong>Yape</strong> al recibir tu camiseta.</span>
+          </p>
+          <p>🚚 <strong>Envíos a todo el Perú:</strong> por <strong>Shalom</strong> y <strong>Olva Courier</strong> con código de seguimiento.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Lightbox a Pantalla Completa (al hacer clic sobre la imagen) -->
+  <div x-show="modalZoomAbierto"
+       style="display: none;"
+       @keydown.escape.window="modalZoomAbierto = false"
+       class="fixed inset-0 z-50 bg-ink/90 flex items-center justify-center p-4">
+    <div @click.outside="modalZoomAbierto = false"
+         class="relative max-w-3xl w-full bg-white border-2 border-neon overflow-hidden shadow-2xl">
+      <div class="bg-ink text-white px-4 py-3 flex items-center justify-between">
+        <span class="text-xs font-extrabold uppercase tracking-wider text-neon">
+          {{ producto.nombre }}
+        </span>
+        <button type="button"
+                @click="modalZoomAbierto = false"
+                aria-label="Cerrar imagen"
+                title="Cerrar imagen"
+                class="w-8 h-8 flex items-center justify-center shrink-0 text-sm font-bold leading-none bg-white/10 hover:bg-neon hover:text-ink">
+          ✕
+        </button>
+      </div>
+      <div class="max-h-[80vh] overflow-auto bg-neutral-100 flex items-center justify-center">
+        <img :src="fotoActiva" :alt="altActivo" class="w-full h-auto object-contain">
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra fija inferior (Sticky Bar) en Celular para comprar con el pulgar (UI UX Pro Max) -->
+  <div class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t-2 border-ink p-3 flex items-center justify-between gap-3 shadow-2xl">
+    <div class="tabular-nums">
+      <span class="block text-[10px] uppercase font-bold text-silverDark">
+        Talla <strong x-text="tallaSeleccionada" class="text-ink"></strong>
+      </span>
+      <span class="text-lg font-extrabold text-ink">S/ {{ producto.precio_unidad }}</span>
+    </div>
+    <button type="button"
+            onclick="document.getElementById('form-agregar-carrito-ficha').requestSubmit()"
+            :disabled="stockActual <= 0"
+            class="flex-1 py-3 px-4 bg-neon text-ink font-extrabold text-xs uppercase tracking-wider border-2 border-ink inline-flex items-center justify-center gap-2">
+      <img src="{% static 'carro-de-la-carretilla.png' %}" alt="" class="w-4 h-4 object-contain">
+      <span>Agregar al Carrito →</span>
+    </button>
+  </div>
+</section>
+{% endblock %}

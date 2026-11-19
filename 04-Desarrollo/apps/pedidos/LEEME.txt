@@ -1,0 +1,2 @@
+CARPETA: 04-Desarrollo/apps/pedidos
+NIVEL DE INFORMACION: Aplicacion de carrito en sesion, pedidos web y presenciales, maquina de estados, PDF y enlaces de WhatsApp.

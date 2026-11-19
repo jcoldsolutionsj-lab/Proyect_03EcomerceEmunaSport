@@ -1,0 +1,31 @@
+{% load unfold_list %}
+
+{% if pagination_required %}
+    {% for i in page_range %}
+        <div class="{% if forloop.last %}pe-2{% else %}pe-4{% endif %}">
+            {% paginator_number cl i %}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="py-4 text-xs sm:text-sm font-medium text-base-700">
+    {% if pagination_required %}
+        -
+    {% endif %}
+
+    {% if cl.show_all %}
+        Mostrando todos ({{ cl.result_count }}
+        {% if cl.result_count == 1 %}{{ cl.opts.verbose_name }}{% else %}{{ cl.opts.verbose_name_plural }}{% endif %})
+    {% else %}
+        Mostrando <strong>{{ cl.result_list|length }}</strong> de <strong>{{ cl.result_count }}</strong>
+        {% if cl.result_count == 1 %}
+            {{ cl.opts.verbose_name }}
+        {% else %}
+            {{ cl.opts.verbose_name_plural }}
+        {% endif %}
+        · <strong>{{ cl.list_per_page }}</strong> filas por página
+        {% if cl.multi_page %}
+            (Pág. {{ cl.page_num }} de {{ cl.paginator.num_pages }})
+        {% endif %}
+    {% endif %}
+</div>

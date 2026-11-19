@@ -1,0 +1,577 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es-PE" class="scroll-smooth">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block meta_titulo %}{{ tienda_config.nombre|default:"Emuná Sport" }} – Estilo deportivo | Camisetas deportivas en Perú{% endblock %}</title>
+  <meta name="description" content="{% block meta_descripcion %}Tienda oficial de {{ tienda_config.nombre|default:'Emuná Sport' }} (Estilo deportivo). Camisetas edición jugador y selecciones por unidad y por mayor. Envíos por Shalom/Olva y entregas en Lima con Yape.{% endblock %}">
+
+  <!-- OpenGraph para compartir en WhatsApp (Requisito #5) -->
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:site_name" content="{{ tienda_config.nombre|default:'Emuná Sport' }}">
+  <meta property="og:title" content="{% block og_titulo %}{{ tienda_config.nombre|default:'Emuná Sport' }} – Estilo deportivo{% endblock %}">
+  <meta property="og:description" content="{% block og_descripcion %}Camisetas deportivas edición jugador, precios por mayor, envíos por Shalom y Olva a todo el Perú y entregas en Lima.{% endblock %}">
+  <meta property="og:image" content="{% block og_imagen %}{{ SITE_URL }}{% static 'logo_emuna_transparente.png' %}{% endblock %}">
+  <meta name="theme-color" content="#0A0A0A">
+
+  <!-- Favicon (Requisito #9) -->
+  <link rel="icon" type="image/png" href="{% static 'logo_emuna_transparente.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'logo_emuna_transparente.png' %}">
+
+  <!-- Tipografía Deportiva: Barlow Condensed + Inter (doc 06 + Taste Skill) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS + Alpine.js + HTMX -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0A0A0A',
+            silver: '#C9CED3',
+            silverDark: '#6B727A',
+            neon: '#39FF14',
+            neonDark: '#1B8F2A',
+            danger: '#C62828',
+          },
+          fontFamily: {
+            display: ['"Barlow Condensed"', 'system-ui', 'sans-serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  {% block scripts_cabecera_extra %}{% endblock %}
+
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --ink: #0A0A0A;
+      --silver: #C9CED3;
+      --silver-dark: #6B727A;
+      --accent: #39FF14;
+      --accent-dark: #1B8F2A;
+      --danger: #C62828;
+    }
+    /* Escala global reducida un -15% para mejor densidad visual */
+    html { zoom: 0.85; }
+    [x-cloak] { display: none !important; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    /* Emil Kowalski / Impeccable: micro-transiciones rápidas con propósito */
+    .transicion-tactil {
+      transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out, border-color 180ms ease-out, background-color 180ms ease-out;
+    }
+    .transicion-tactil:active { transform: scale(0.98); }
+
+    @keyframes parpadeoCursor {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .cursor-teclado {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background-color: #39FF14;
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: parpadeoCursor 0.9s infinite;
+    }
+
+    /* 1. Animación de 2 saltos "Pin-Pon" para el botón flotante de WhatsApp */
+    @keyframes saltosPinPonWhatsapp {
+      0%, 62%, 100% {
+        transform: translateY(0) scale(1);
+      }
+      /* Primer salto pin-pon */
+      70% {
+        transform: translateY(-12px) scale(1.05);
+      }
+      78% {
+        transform: translateY(0) scale(0.96);
+      }
+      /* Segundo salto pin-pon */
+      86% {
+        transform: translateY(-8px) scale(1.03);
+      }
+      94% {
+        transform: translateY(0) scale(1);
+      }
+    }
+    .boton-whatsapp-pinpon {
+      animation: saltosPinPonWhatsapp 3.2s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+    }
+    .boton-whatsapp-pinpon:hover {
+      animation-play-state: paused;
+    }
+
+    /* 2. Ondas de Radar Verdes Concéntricas (muy visibles) */
+    @keyframes ondaRadarWhatsapp {
+      0% {
+        transform: scale(0.95);
+        opacity: 0.95;
+        box-shadow: 0 0 0 0 rgba(57, 255, 20, 0.7);
+      }
+      70% {
+        transform: scale(1.65);
+        opacity: 0.25;
+        box-shadow: 0 0 18px 6px rgba(57, 255, 20, 0.25);
+      }
+      100% {
+        transform: scale(1.9);
+        opacity: 0;
+        box-shadow: 0 0 0 0 rgba(57, 255, 20, 0);
+      }
+    }
+    .radar-anillo-1 {
+      animation: ondaRadarWhatsapp 2.1s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+    .radar-anillo-2 {
+      animation: ondaRadarWhatsapp 2.1s cubic-bezier(0.16, 1, 0.3, 1) 1.05s infinite;
+    }
+
+    /* 3. Notificación Roja (1) que aparece, rebota y desaparece en ciclo */
+    @keyframes pulsoNotificacionUno {
+      0%, 10% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      20% {
+        transform: scale(1.25);
+        opacity: 1;
+      }
+      28%, 74% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.18);
+      }
+      86%, 100% {
+        transform: scale(0);
+        opacity: 0;
+      }
+    }
+    .badge-notificacion-uno {
+      animation: pulsoNotificacionUno 3.2s ease-in-out infinite;
+    }
+
+  </style>
+
+  <!-- Datos estructurados Organization JSON-LD (Requisito #6) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportingGoodsStore",
+    "name": "{{ tienda_config.nombre|default:'Emuná Sport' }}",
+    "slogan": "Estilo deportivo",
+    "url": "{{ SITE_URL }}",
+    "logo": "{{ SITE_URL }}{% static 'logo_emuna_transparente.png' %}",
+    "telephone": "+51{{ tienda_config.numero_whatsapp|default:'999888777' }}",
+    "priceRange": "S/ 45.00 - S/ 75.00",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Lima",
+      "addressCountry": "PE"
+    }
+  }
+  </script>
+  <!-- Analítica Web Opcional (Requisito #19 Antes de lanzar) -->
+  {% if GA4_MEASUREMENT_ID %}
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ GA4_MEASUREMENT_ID }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ GA4_MEASUREMENT_ID }}');
+  </script>
+  {% endif %}
+  {% if CLOUDFLARE_BEACON_TOKEN %}
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "{{ CLOUDFLARE_BEACON_TOKEN }}"}'></script>
+  {% endif %}
+  {% block datos_estructurados_extra %}{% endblock %}
+</head>
+<body class="bg-white text-ink font-sans antialiased selection:bg-neon selection:text-ink flex flex-col min-h-screen"
+      @carrito-actualizado.window="cajonCarritoAbierto = true"
+      x-data="{
+        cajonCarritoAbierto: false,
+        tarjetaWhatsappAbierta: false,
+        avisoCookiesAceptado: localStorage.getItem('emuna_cookies_ok') === '1',
+        aceptarCookies() {
+          this.avisoCookiesAceptado = true;
+          localStorage.setItem('emuna_cookies_ok', '1');
+        },
+        saludoSegunHora() {
+          const hora = new Date().getHours();
+          if (hora >= 5 && hora < 12) return '¡BUENOS DÍAS! ☀️';
+          if (hora >= 12 && hora < 19) return '¡BUENAS TARDES! 🌤️';
+          return '¡BUENAS NOCHES! 🌙';
+        }
+      }"
+      x-init="document.body.addEventListener('carritoActualizado', () => { cajonCarritoAbierto = true; })">
+
+  <!-- Barra superior informativa: el número +51 va DIRECTO al WhatsApp con mensaje prellenado -->
+  <div class="bg-ink text-silver text-xs border-b border-neutral-800 py-2 px-4">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <p class="font-medium tracking-wide flex flex-wrap items-center gap-1.5">
+        <span class="text-neon font-bold">⚡ ESTILO DEPORTIVO:</span>
+        <span>Envíos por <strong>Shalom y Olva</strong> · Entregas en <strong>Punto de Encuentro en Lima (S/ 0.00)</strong> · Pago con</span>
+        <span class="inline-flex items-center gap-1 bg-white/10 text-white px-2 py-0.5 rounded-sm font-bold">
+          <img src="{% static 'yape.svg' %}" alt="Logo Yape" class="h-4 w-auto object-contain">
+          <span>Yape</span>
+        </span>
+      </p>
+      <a href="https://wa.me/51{{ tienda_config.numero_whatsapp|default:'999888777' }}?text=Hola%20Richard%2C%20estuve%20revisando%20tu%20p%C3%A1gina%20web%20de%20*Emun%C3%A1%20Sport*%20y%20me%20gustar%C3%ADa%20hacerte%20una%20consulta."
+         target="_blank" rel="noopener"
+         class="hidden sm:inline-flex items-center gap-1.5 text-white hover:text-neon font-semibold transicion-tactil">
+        <img src="{% static 'whatsapp.png' %}" alt="Icono WhatsApp" class="w-4 h-4 object-contain">
+        <span>+51 {{ tienda_config.numero_whatsapp|default:"999888777" }}</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Encabezado Negro Deportivo (#0A0A0A) con Logo Emuná Sport y animación moderada -->
+  <header class="bg-ink text-white sticky top-0 z-40 border-b border-neutral-800 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+      <!-- Navegación izquierda (en móvil se oculta para dar espacio limpio al logo y carrito) -->
+      <nav class="hidden md:flex items-center gap-6 text-sm font-medium tracking-wide">
+        <a href="{% url 'catalogo:inicio' %}" class="text-white hover:text-neon transicion-tactil font-semibold">
+          Inicio
+        </a>
+        <a href="{% url 'catalogo:inicio' %}#catalogo-completo" class="text-silver hover:text-neon transicion-tactil">
+          Colecciones
+        </a>
+        <a href="{% url 'catalogo:inicio' %}?disponible=1#catalogo-completo" class="text-silver hover:text-neon transicion-tactil">
+          Con Stock
+        </a>
+      </nav>
+
+      <!-- Logo Central Emuná Sport con Video Animado Oficial -->
+      <a href="{% url 'catalogo:inicio' %}" class="flex items-center gap-2 sm:gap-3 group" aria-label="Ir al inicio de Emuná Sport">
+        <video autoplay loop muted playsinline
+               class="h-10 sm:h-12 w-auto object-contain rounded-sm pointer-events-none"
+               aria-label="Logo oficial de Emuná Sport – Estilo deportivo">
+          <source src="{% static 'banners-inicio/Logo_animado.mp4' %}" type="video/mp4">
+          <img src="{% static 'logo_emuna_transparente.png' %}"
+               alt="Logo oficial de Emuná Sport – Estilo deportivo"
+               class="h-10 sm:h-12 w-auto object-contain">
+        </video>
+        <div class="leading-none">
+          <span class="font-display italic font-extrabold text-xl sm:text-2xl tracking-wider text-white group-hover:text-neon transicion-tactil">
+            EMUNÁ <span class="text-neon">SPORT</span>
+          </span>
+          <span class="block text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-silver group-hover:text-white transicion-tactil">
+            Estilo deportivo
+          </span>
+        </div>
+      </a>
+
+      <!-- Acciones derecha: Botón Carrito en píldora con icono profesional carro-de-la-carretilla.png -->
+      <div class="flex items-center gap-3">
+        <button type="button"
+                @click="cajonCarritoAbierto = true"
+                class="inline-flex items-center bg-white text-ink hover:bg-neon transicion-tactil rounded-full pl-4 pr-2 py-1.5 text-sm font-bold tracking-wide border border-silver shadow-xs"
+                aria-label="Abrir carrito de compras">
+          <img src="{% static 'carro-de-la-carretilla.png' %}"
+               alt="Icono carrito de compras"
+               class="w-5 h-5 object-contain mr-2">
+          <span>Carrito</span>
+          <span id="contador-carrito-header"
+                class="ml-2.5 inline-flex items-center justify-center w-7 h-7 rounded-full bg-ink text-neon font-bold tabular-nums text-xs">
+            {{ carrito.total_unidades|default:0 }}
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <main class="flex-grow">
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <!-- Cajón lateral del Carrito (Drawer fluido conectado en tiempo real con HTMX) -->
+  <div x-show="cajonCarritoAbierto"
+       style="display: none;"
+       class="fixed inset-0 z-50 overflow-hidden"
+       aria-labelledby="titulo-cajon-carrito" role="dialog" aria-modal="true">
+    <div x-show="cajonCarritoAbierto"
+         x-transition.opacity
+         @click="cajonCarritoAbierto = false"
+         class="fixed inset-0 bg-ink/60 backdrop-blur-xs"></div>
+
+    <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div x-show="cajonCarritoAbierto"
+           x-transition:enter="transform transition ease-out duration-200"
+           x-transition:enter-start="translate-x-full"
+           x-transition:enter-end="translate-x-0"
+           x-transition:leave="transform transition ease-in duration-150"
+           x-transition:leave-start="translate-x-0"
+           x-transition:leave-end="translate-x-full"
+           class="w-screen max-w-md bg-white border-l border-silver shadow-2xl flex flex-col justify-between">
+        <div class="p-6 border-b border-silver flex items-center justify-between bg-ink text-white">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-neon flex items-center justify-center">
+              <img src="{% static 'carro-de-la-carretilla.png' %}" alt="Carrito" class="w-5 h-5 object-contain">
+            </div>
+            <div>
+              <h2 id="titulo-cajon-carrito" class="font-display italic font-extrabold text-2xl tracking-wide uppercase leading-none">
+                Tu Carrito de Compra
+              </h2>
+              <p class="text-xs text-silver mt-0.5">El delivery o envío por agencia se cotiza aparte</p>
+            </div>
+          </div>
+          <button type="button" @click="cajonCarritoAbierto = false" class="p-2 text-silver hover:text-neon">
+            ✕
+          </button>
+        </div>
+
+        <!-- Cuerpo dinámico HTMX del cajón lateral -->
+        <div id="cuerpo-cajon-carrito" class="flex-grow flex flex-col justify-between overflow-y-auto">
+          {% include "pedidos/parcial_cajon_carrito.html" %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- WIDGET ASISTENTE RÁPIDO DE WHATSAPP (Radar + 2 Saltos Pin-Pon + '1')      -->
+  <!-- ========================================================================= -->
+  <div class="fixed bottom-20 md:bottom-6 right-5 z-40 flex flex-col items-end"
+       @keydown.escape.window="tarjetaWhatsappAbierta = false">
+
+    <!-- TARJETA EMERGENTE DE OPCIONES RÁPIDAS (Inspirada en la referencia de Jonathan) -->
+    <div x-show="tarjetaWhatsappAbierta"
+         style="display: none;"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-4 scale-95"
+         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+         x-transition:leave-end="opacity-0 translate-y-4 scale-95"
+         @click.outside="tarjetaWhatsappAbierta = false"
+         class="mb-4 w-[335px] sm:w-[370px] rounded-2xl bg-[#0D131F] text-white border border-white/15 shadow-2xl overflow-hidden">
+
+      <!-- Cabecera de la tarjeta: Avatar Emuná Sport + Estado En Línea -->
+      <div class="bg-gradient-to-r from-[#131C2E] via-[#10232A] to-[#0D131F] px-5 py-4 border-b border-white/10 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="relative w-12 h-12 rounded-full bg-ink border-2 border-neon/70 p-1 flex items-center justify-center shrink-0">
+            <img src="{% static 'logo_emuna_transparente.png' %}" alt="Emuná Sport" class="w-full h-full object-contain rounded-full">
+            <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-neon border-2 border-[#0D131F]"></span>
+          </div>
+          <div>
+            <p class="font-display italic font-extrabold text-lg tracking-wider uppercase text-white leading-none">
+              EMUNÁ SPORT · RICHARD
+            </p>
+            <p class="text-xs text-silver mt-1 flex items-center gap-1.5">
+              <span class="text-neon font-bold">• En línea</span>
+              <span>- responde en &lt;5 min</span>
+            </p>
+          </div>
+        </div>
+        <button type="button"
+                @click="tarjetaWhatsappAbierta = false"
+                aria-label="Cerrar tarjeta de WhatsApp"
+                class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-silver hover:text-white flex items-center justify-center text-sm transicion-tactil">
+          ✕
+        </button>
+      </div>
+
+      <!-- Bloque de Bienvenida Dinámica -->
+      <div class="px-5 pt-4 pb-3 border-b border-white/10">
+        <p class="font-display italic font-extrabold text-xl uppercase tracking-wide text-white"
+           x-text="saludoSegunHora()">
+          ¡BUENAS TARDES! 🌤️
+        </p>
+        <p class="text-xs text-silver mt-1 leading-relaxed">
+          ¿Cómo podemos ayudarte hoy? Selecciona una opción para agilizar tu pedido sin tener que escribir:
+        </p>
+      </div>
+
+      <!-- Lista de Opciones Rápidas de un Clic para E-commerce de Camisetas -->
+      <div class="p-4 space-y-2.5 max-h-[340px] overflow-y-auto">
+
+        <!-- Opción 1: Compra por Unidad (contextual si está viendo una camiseta) -->
+        <a href="https://wa.me/51{{ tienda_config.numero_whatsapp|default:'999888777' }}?text={% if producto %}Hola%20Richard%2C%20estoy%20viendo%20la%20camiseta%20*{{ producto.nombre|urlencode }}*%20(SKU%20{{ producto.sku|urlencode }})%20a%20S/%20{{ producto.precio_unidad }}%20y%20quiero%20confirmar%20talla%20disponible%20para%20comprar.{% else %}Hola%20Richard%2C%20vengo%20de%20la%20web%20de%20*Emun%C3%A1%20Sport*%20y%20quiero%20consultar%20tallas%20disponibles%20(S%2C%20M%2C%20L%2C%20XL)%20para%20comprar%20por%20unidad.{% endif %}"
+           target="_blank" rel="noopener"
+           class="group flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 hover:border-neon/60 transicion-tactil">
+          <div class="w-10 h-10 rounded-lg bg-neon/15 border border-neon/30 text-neon flex items-center justify-center text-lg shrink-0">
+            👕
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-extrabold uppercase tracking-wider text-white group-hover:text-neon truncate">
+              {% if producto %}QUIERO ESTA CAMISETA ({{ producto.sku }}){% else %}COMPRAR CAMISETA POR UNIDAD{% endif %}
+            </p>
+            <p class="text-[11px] text-silver truncate">
+              {% if producto %}Consultar stock en tallas S, M, L y XL · S/ {{ producto.precio_unidad }}{% else %}Consultar stock inmediato en tallas S, M, L y XL{% endif %}
+            </p>
+          </div>
+          <span class="w-7 h-7 rounded-full bg-white/5 group-hover:bg-neon text-neon group-hover:text-ink flex items-center justify-center text-xs font-extrabold shrink-0 transicion-tactil">
+            ↗
+          </span>
+        </a>
+
+        <!-- Opción 2: Pedido por Mayor (3 a 6+ unidades) -->
+        <a href="https://wa.me/51{{ tienda_config.numero_whatsapp|default:'999888777' }}?text=Hola%20Richard%2C%20vengo%20de%20la%20web%20de%20*Emun%C3%A1%20Sport*%20y%20quiero%20cotizar%20un%20pedido%20*POR%20MAYOR*%20(desde%203%20o%206%2B%20camisetas%20combinando%20tallas%20S%2C%20M%2C%20L%20y%20XL)."
+           target="_blank" rel="noopener"
+           class="group flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 hover:border-neon/60 transicion-tactil">
+          <div class="w-10 h-10 rounded-lg bg-neon/15 border border-neon/30 text-neon flex items-center justify-center text-lg shrink-0">
+            📦
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-extrabold uppercase tracking-wider text-white group-hover:text-neon truncate">
+              QUIERO COMPRAR POR MAYOR
+            </p>
+            <p class="text-[11px] text-silver truncate">
+              Precios especiales desde 3 u. (S/ 50) y 6+ u. (S/ 45)
+            </p>
+          </div>
+          <span class="w-7 h-7 rounded-full bg-white/5 group-hover:bg-neon text-neon group-hover:text-ink flex items-center justify-center text-xs font-extrabold shrink-0 transicion-tactil">
+            ↗
+          </span>
+        </a>
+
+        <!-- Opción 3: Punto de Encuentro en Lima (Pago con Yape al recibir) -->
+        <a href="https://wa.me/51{{ tienda_config.numero_whatsapp|default:'999888777' }}?text=Hola%20Richard%2C%20estoy%20en%20*Lima*%20y%20quiero%20coordinar%20una%20entrega%20en%20*PUNTO%20DE%20ENCUENTRO*%20(env%C3%ADo%20S/%200.00)%20para%20pagar%20con%20Yape%20al%20recibir."
+           target="_blank" rel="noopener"
+           class="group flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 hover:border-neon/60 transicion-tactil">
+          <div class="w-10 h-10 rounded-lg bg-neon/15 border border-neon/30 text-neon flex items-center justify-center shrink-0">
+            <img src="{% static 'yape.svg' %}" alt="Yape" class="w-6 h-6 object-contain">
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-extrabold uppercase tracking-wider text-white group-hover:text-neon truncate">
+              PUNTO DE ENCUENTRO EN LIMA
+            </p>
+            <p class="text-[11px] text-silver truncate">
+              Entrega en mano (envío S/ 0.00) y pago Yape al recibir
+            </p>
+          </div>
+          <span class="w-7 h-7 rounded-full bg-white/5 group-hover:bg-neon text-neon group-hover:text-ink flex items-center justify-center text-xs font-extrabold shrink-0 transicion-tactil">
+            ↗
+          </span>
+        </a>
+
+        <!-- Opción 4: Envíos a Provincia por Shalom / Olva Courier -->
+        <a href="https://wa.me/51{{ tienda_config.numero_whatsapp|default:'999888777' }}?text=Hola%20Richard%2C%20quiero%20consultar%20el%20env%C3%ADo%20a%20*provincia*%20por%20*Shalom%20/%20Olva%20Courier*%20para%20mi%20pedido%20en%20Emun%C3%A1%20Sport."
+           target="_blank" rel="noopener"
+           class="group flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 hover:border-neon/60 transicion-tactil">
+          <div class="w-10 h-10 rounded-lg bg-neon/15 border border-neon/30 text-neon flex items-center justify-center text-lg shrink-0">
+            🚚
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-extrabold uppercase tracking-wider text-white group-hover:text-neon truncate">
+              ENVÍO A PROVINCIA (SHALOM / OLVA)
+            </p>
+            <p class="text-[11px] text-silver truncate">
+              Consultar tarifa y tiempo de llegada a mi ciudad
+            </p>
+          </div>
+          <span class="w-7 h-7 rounded-full bg-white/5 group-hover:bg-neon text-neon group-hover:text-ink flex items-center justify-center text-xs font-extrabold shrink-0 transicion-tactil">
+            ↗
+          </span>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- BOTÓN CIRCULAR FLOTANTE DE WHATSAPP CON ONDAS DE RADAR VERDES, 2 SALTOS PIN-PON E INSIGNIA '1' -->
+    <button type="button"
+            @click="tarjetaWhatsappAbierta = !tarjetaWhatsappAbierta"
+            aria-label="Abrir asistente de atención rápida por WhatsApp"
+            class="boton-whatsapp-pinpon relative w-16 h-16 rounded-full bg-ink border-2 border-neon shadow-[0_0_20px_rgba(57,255,20,0.45)] flex items-center justify-center focus:outline-none group">
+
+      <!-- Dos anillos concéntricos de radar verde (exacto a la imagen 1 de referencia) -->
+      <span x-show="!tarjetaWhatsappAbierta"
+            class="radar-anillo-1 pointer-events-none absolute inset-0 rounded-full border-2 border-neon"></span>
+      <span x-show="!tarjetaWhatsappAbierta"
+            class="radar-anillo-2 pointer-events-none absolute inset-0 rounded-full border-2 border-neon/80"></span>
+
+      <!-- Icono oficial whatsapp.png -->
+      <img src="{% static 'whatsapp.png' %}"
+           alt="WhatsApp Emuná Sport"
+           class="w-10 h-10 object-contain group-hover:scale-110 transicion-tactil relative z-10">
+
+      <!-- Notificación roja con el número '1' que aparece y desaparece suavemente -->
+      <span x-show="!tarjetaWhatsappAbierta"
+            class="badge-notificacion-uno pointer-events-none absolute -top-1 -right-1 z-20 w-6 h-6 rounded-full bg-[#FF2E2E] text-white border-2 border-ink flex items-center justify-center text-[11px] font-extrabold shadow-md tabular-nums">
+        1
+      </span>
+    </button>
+  </div>
+
+  <!-- Aviso discreto de Cookies (Requisito #3 Antes de lanzar) -->
+  <div x-show="!avisoCookiesAceptado"
+       style="display: none;"
+       class="fixed bottom-0 inset-x-0 z-50 bg-ink text-white border-t-2 border-neon px-4 py-3 shadow-2xl">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <p class="text-silver">
+        Usamos cookies técnicas necesarias para guardar tu carrito de compras sin pedirte registro.
+        Revisa nuestra <a href="{% url 'catalogo:privacidad' %}" class="underline text-white hover:text-neon">Política de Privacidad (Ley N.º 29733)</a>
+        y el <a href="{% url 'catalogo:cookies' %}" class="underline text-white hover:text-neon">Aviso de Cookies</a>.
+      </p>
+      <button type="button"
+              @click="aceptarCookies()"
+              class="shrink-0 bg-neon text-ink font-extrabold px-4 py-2 uppercase tracking-wider text-xs transicion-tactil">
+        Entendido
+      </button>
+    </div>
+  </div>
+
+  <!-- Pie de página (Inspirado en Captura 1 + Medios de Pago y Enlaces Legales Perú) -->
+  <footer class="bg-neutral-100 border-t border-silver text-ink mt-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
+      <div>
+        <p class="text-[11px] uppercase tracking-[0.2em] text-silverDark mb-3">Navegación</p>
+        <ul class="space-y-2 text-xs font-semibold uppercase tracking-wider">
+          <li><a href="{% url 'catalogo:inicio' %}" class="hover:text-neonDark">Inicio</a></li>
+          <li><a href="{% url 'catalogo:inicio' %}#catalogo-completo" class="hover:text-neonDark">Catálogo de Camisetas</a></li>
+          <li><a href="{% url 'pedidos:ver_carrito' %}" class="hover:text-neonDark">Mi Carrito de Compra</a></li>
+          <li>
+            <a href="https://wa.me/51{{ tienda_config.numero_whatsapp|default:'999888777' }}?text=Hola%20Richard%2C%20estuve%20revisando%20tu%20p%C3%A1gina%20web%20de%20*Emun%C3%A1%20Sport*%20y%20me%20gustar%C3%ADa%20hacerte%20una%20consulta."
+               target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1.5 hover:text-neonDark uppercase tracking-wider font-semibold">
+              <img src="{% static 'whatsapp.png' %}" alt="WhatsApp" class="w-4 h-4 object-contain">
+              <span>Contacto WhatsApp</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="text-center">
+        <div class="inline-flex items-center justify-center bg-ink p-3 mb-3 border border-silver/50 rounded-xl">
+          <img src="{% static 'logo_emuna_transparente.png' %}" alt="Logo Emuná Sport en pie de página" class="h-12 w-auto">
+        </div>
+        <p class="font-display italic font-extrabold text-3xl tracking-tight uppercase">
+          EMUNÁ SPORT
+        </p>
+        <p class="text-xs text-silverDark mt-1">
+          {{ tienda_config.texto_pie|default:"Estilo deportivo · Envíos por Shalom y Olva a todo el Perú · Entregas en Lima." }}
+        </p>
+        <div class="mt-4 inline-flex items-center gap-3 bg-white border border-silver px-3.5 py-1.5 text-xs font-bold text-ink">
+          <span>Medios de pago y atención:</span>
+          <img src="{% static 'yape.svg' %}" alt="Pago con Yape" class="h-5 w-auto object-contain">
+          <img src="{% static 'whatsapp.png' %}" alt="Atención por WhatsApp" class="h-5 w-5 object-contain">
+        </div>
+      </div>
+
+      <div class="md:text-right">
+        <p class="text-[11px] uppercase tracking-[0.2em] text-silverDark mb-3">Legal y Privacidad (Perú)</p>
+        <ul class="space-y-2 text-xs font-semibold uppercase tracking-wider">
+          <li><a href="{% url 'catalogo:aviso_legal' %}" class="hover:text-neonDark">Aviso Legal y Términos</a></li>
+          <li><a href="{% url 'catalogo:privacidad' %}" class="hover:text-neonDark">Política de Privacidad (Ley N.º 29733)</a></li>
+          <li><a href="{% url 'catalogo:cookies' %}" class="hover:text-neonDark">Aviso de Cookies</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-silver py-4 px-4 text-center text-[11px] text-silverDark">
+      © {% now "Y" %} {{ tienda_config.nombre|default:"Emuná Sport" }} – Todos los derechos reservados · Lima, Perú.
+    </div>
+  </footer>
+</body>
+</html>

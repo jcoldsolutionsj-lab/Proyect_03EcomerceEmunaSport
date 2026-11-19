@@ -1,0 +1,35 @@
+{% spaceless %}
+    {% if parts|length > 1 %}
+        <span class="emuna-breadcrumb-wrap">
+            <span class="emuna-crumb-trail-mobile">
+                {% for part in parts %}
+                    {% if not forloop.last %}
+                        {% if part.link and part.link != "" %}
+                            <a href="{{ part.link }}" class="emuna-crumb-parent-link">{{ part.title|capfirst }}</a>
+                        {% else %}
+                            <span>{{ part.title|capfirst }}</span>
+                        {% endif %}
+                        {% if forloop.revcounter0 > 1 %}
+                            <span class="emuna-crumb-dot">›</span>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </span>
+            {% for part in parts %}
+                <{% if part.link and part.link != "" %}a href="{{ part.link }}"{% else %}span{% endif %} class="{% if forloop.last %}emuna-crumb-current{% else %}emuna-crumb-desktop-only{% endif %} align-middle inline-block leading-5 min-w-0 truncate tracking-tight">
+                    {{ part.title|capfirst }}
+                </{% if part.link %}a{% else %}span{% endif %}>
+
+                {% if not forloop.last %}
+                    <span class="emuna-crumb-desktop-only material-symbols-outlined inline-block align-middle leading-5 mx-2 text-base-400 dark:text-base-500 rtl:-scale-x-100">chevron_right</span>
+                {% endif %}
+            {% endfor %}
+        </span>
+    {% else %}
+        {% for part in parts %}
+            <{% if part.link and part.link != "" %}a href="{{ part.link }}"{% else %}span{% endif %} class="emuna-crumb-current align-middle inline-block leading-5 min-w-0 truncate tracking-tight">
+                {{ part.title|capfirst }}
+            </{% if part.link %}a{% else %}span{% endif %}>
+        {% endfor %}
+    {% endif %}
+{% endspaceless %}
