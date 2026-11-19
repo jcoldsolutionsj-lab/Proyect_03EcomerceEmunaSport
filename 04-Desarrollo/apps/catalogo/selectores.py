@@ -1,13 +1,18 @@
 """Selectores optimizados de lectura del catálogo (cero consultas N+1)."""
+from datetime import datetime, time, timedelta
 from decimal import Decimal
+from typing import Any
 
-from django.db.models import Prefetch, Q, QuerySet, Sum
+from django.db.models import DecimalField, Prefetch, Q, QuerySet, Sum, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from apps.nucleo.validadores import limpiar_texto_seguro
 
 from .models import Categoria, ImagenProducto, Producto, ReglaPrecio, Variante
+
+MAX_PRODUCTOS_DESTACADOS = 8
 
 
 def listar_categorias_activas() -> QuerySet[Categoria]:
@@ -130,3 +135,156 @@ def calcular_precio_unitario_aplicado(
 
     mejor_regla = max(reglas_aplicables, key=lambda r: r.cantidad_minima)
     return mejor_regla.precio_unidad
+
+
+_MAPA_ETIQUETAS_VITRINA: dict[tuple[str, ...], tuple[str, str]] = {
+    ("Hoy",): ("Hoy", "🔥 Más vendida de hoy"),
+    ("Semana",): ("Semana", "🔥 Más vendida de la semana"),
+    ("Mes",): ("Mes", "🔥 Más vendida del mes"),
+    ("Hoy", "Semana"): ("Hoy · Semana", "🔥 Más vendida · Hoy y semana"),
+    ("Hoy", "Mes"): ("Hoy · Mes", "🔥 Más vendida · Hoy y mes"),
+    ("Semana", "Mes"): ("Semana · Mes", "🔥 Más vendida · Semana y mes"),
+    ("Hoy", "Semana", "Mes"): ("Top ventas", "🔥 Más vendida · Hoy, semana y mes"),
+}
+
+
+def _construir_tarjeta_vitrina_portada(
+    *,
+    producto: Producto,
+    periodos: list[str],
+    unidades: int,
+    es_respaldo: bool,
+) -> dict[str, Any]:
+    """Arma el diccionario serializable para un slide de la vitrina editorial de portada.
+
+    Qué hace:      Extrae fotos reales (1 o 2), tallas con stock, tramo mayorista y textos limpios.
+    Va hacia:      Retorna un dict listo para renderizar en templates/catalogo/inicio.html.
+    Depende de:    Producto con relaciones imagenes, variantes y reglas_precio prefetched.
+    Cuándo usarla: Desde obtener_vitrina_mas_vendidas_portada() para cada ganador único o respaldo.
+    Si no opera:   Si el producto no tiene fotos o tallas con stock, devuelve imagen None y 'Sin stock'.
+    """
+    imagenes = list(producto.imagenes.all())
+    tallas_disp = list(dict.fromkeys(v.talla for v in producto.variantes.all() if v.cantidad_stock > 0))
+    tallas_texto = " · ".join(tallas_disp) if tallas_disp else "Consultar stock"
+    regla_mayor = next(iter(producto.reglas_precio.all()), None)
+
+    if es_respaldo:
+        etiqueta_pill = "Destacada"
+        etiqueta_badge = "⭐ Destacada Emuná Sport"
+        etiqueta_volumen = ""
+    else:
+        etiqueta_pill, etiqueta_badge = _MAPA_ETIQUETAS_VITRINA.get(
+            tuple(periodos), ("Top ventas", "🔥 Más vendida")
+        )
+        unidad_lbl = "ud. vendida" if unidades == 1 else "uds. vendidas"
+        etiqueta_volumen = f"{unidades} {unidad_lbl}"
+
+    return {
+        "producto": producto,
+        "etiqueta_pill": etiqueta_pill,
+        "etiqueta_badge": etiqueta_badge,
+        "etiqueta_volumen": etiqueta_volumen,
+        "unidades": unidades,
+        "es_respaldo": es_respaldo,
+        "imagen_1": imagenes[0] if len(imagenes) >= 1 else None,
+        "imagen_2": imagenes[1] if len(imagenes) >= 2 else None,
+        "total_fotos": len(imagenes),
+        "tallas_texto": tallas_texto,
+        "regla_mayor": regla_mayor,
+    }
+
+
+def obtener_vitrina_mas_vendidas_portada(
+    *, destacados: list[Producto] | None = None
+) -> list[dict[str, Any]]:
+    """Obtiene los productos reales más vendidos de hoy, la semana y el mes para la vitrina de portada.
+
+    Qué hace:      Consulta ventas confirmadas (PAGADO/ENVIADO/ENTREGADO) por período y deduplica modelos.
+    Va hacia:      Retorna hasta 3 slides reales (Hoy/Semana/Mes) o 1 respaldo destacado si aún no hay ventas.
+    Depende de:    apps.pedidos.models.ItemPedido, ESTADOS_VENTA_CONFIRMADA y resolver_rango_fechas().
+    Cuándo usarla: En vista_inicio_catalogo() al construir la Sección 1 de portada.
+    Si no opera:   Si no existen ventas confirmadas en ningún período, usa el primer destacado sin errores.
+    """
+    from apps.pedidos.models import ItemPedido
+    from apps.tablero.selectores import ESTADOS_VENTA_CONFIRMADA, resolver_rango_fechas
+
+    zona_actual = timezone.get_current_timezone()
+    slots: list[dict[str, Any]] = []
+    slots_por_pid: dict[int, dict[str, Any]] = {}
+
+    for clave_periodo, corto in (("hoy", "Hoy"), ("7dias", "Semana"), ("mes", "Mes")):
+        fecha_desde, fecha_hasta, _ = resolver_rango_fechas(periodo=clave_periodo)
+        inicio_dt = timezone.make_aware(datetime.combine(fecha_desde, time.min), zona_actual)
+        fin_dt = timezone.make_aware(
+            datetime.combine(fecha_hasta + timedelta(days=1), time.min),
+            zona_actual,
+        )
+
+        top_fila = (
+            ItemPedido.objects.filter(
+                pedido__estado__in=ESTADOS_VENTA_CONFIRMADA,
+                variante__producto__activo=True,
+                variante__producto__categoria__activa=True,
+            )
+            .annotate(fecha_efectiva=Coalesce("pedido__fecha_pagado", "pedido__fecha_creacion"))
+            .filter(fecha_efectiva__gte=inicio_dt, fecha_efectiva__lt=fin_dt)
+            .values("variante__producto_id")
+            .annotate(
+                unidades=Coalesce(Sum("cantidad"), Value(0)),
+                ingresos=Coalesce(
+                    Sum("subtotal"),
+                    Value(Decimal("0.00")),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                ),
+            )
+            .order_by("-unidades", "-ingresos", "-variante__producto_id")
+            .first()
+        )
+        if not top_fila:
+            continue
+
+        pid = int(top_fila["variante__producto_id"])
+        unidades_periodo = int(top_fila["unidades"])
+        if pid in slots_por_pid:
+            slots_por_pid[pid]["periodos"].append(corto)
+            slots_por_pid[pid]["unidades"] = max(slots_por_pid[pid]["unidades"], unidades_periodo)
+        else:
+            nuevo = {
+                "producto_id": pid,
+                "periodos": [corto],
+                "unidades": unidades_periodo,
+            }
+            slots_por_pid[pid] = nuevo
+            slots.append(nuevo)
+
+    if slots:
+        productos_map = {
+            p.id: p
+            for p in listar_productos_catalogo().filter(
+                id__in=[s["producto_id"] for s in slots]
+            )
+        }
+        tarjetas = [
+            _construir_tarjeta_vitrina_portada(
+                producto=productos_map[s["producto_id"]],
+                periodos=s["periodos"],
+                unidades=s["unidades"],
+                es_respaldo=False,
+            )
+            for s in slots
+            if s["producto_id"] in productos_map
+        ]
+        if tarjetas:
+            return tarjetas
+
+    respaldo = destacados[0] if destacados else listar_productos_catalogo().first()
+    if not respaldo:
+        return []
+    return [
+        _construir_tarjeta_vitrina_portada(
+            producto=respaldo,
+            periodos=[],
+            unidades=0,
+            es_respaldo=True,
+        )
+    ]

@@ -1,0 +1,34 @@
+{% load i18n static admin_emuna_tags %}
+
+<thead class="hidden relative lg:table-header-group">
+    <tr>
+        {% for field in inline_admin_formset.fields %}
+            {% if not field.widget.is_hidden %}
+                {% with tooltip_col=inline_admin_formset.opts|obtener_tooltip_inline:field.name %}
+                <th class="column-{{ field.name }}{% if field.required %} required{% endif %} align-middle border-b border-base-200 dark:border-base-800 font-semibold px-1.5 first:pl-3 last:pr-3 py-2 text-left text-font-important-light text-sm whitespace-nowrap dark:text-font-important-dark {% if inline_admin_formset.opts.ordering_field and field.name == inline_admin_formset.opts.ordering_field and inline_admin_formset.opts.hide_ordering_field %}hidden{% endif %}">
+                    <span class="flex flex-row items-center">
+                        <span>
+                            {{ field.label|capfirst }}{% if field.required %}<span class="text-red-600 dark:text-red-500">*</span>{% endif %}
+                        </span>
+
+                        {% if tooltip_col %}
+                            <img src="{% static 'toltip.png' %}" class="emuna-icon-tip help-tooltip" alt="({{ tooltip_col }})" title="{{ tooltip_col }}">
+                        {% elif field.help_text %}
+                            <img src="{% static 'toltip.png' %}" class="emuna-icon-tip help-tooltip" alt="({{ field.help_text|striptags }})" title="{{ field.help_text|striptags }}">
+                        {% endif %}
+                    </span>
+                </th>
+                {% endwith %}
+            {% endif %}
+        {% endfor %}
+
+        {% if inline_admin_formset.formset.can_delete and inline_admin_formset.has_delete_permission %}
+            <th class="align-middle border-b border-base-200 dark:border-base-800 font-semibold px-3 py-2 text-left text-font-important-light text-sm whitespace-nowrap lg:w-px dark:text-font-important-dark">
+                <span class="flex flex-row items-center">
+                    {% translate "Delete?" %}
+                    <img src="{% static 'toltip.png' %}" class="emuna-icon-tip help-tooltip" alt="Ayuda" title="Marca la casilla y haz clic en Guardar para eliminar esta fila.">
+                </span>
+            </th>
+        {% endif %}
+    </tr>
+</thead>

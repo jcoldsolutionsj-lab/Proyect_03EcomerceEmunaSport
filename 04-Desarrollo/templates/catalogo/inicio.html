@@ -164,11 +164,33 @@
   </div>
 </section>
 
-<!-- SECCIÓN 1: VITRINA EDITORIAL DESKTOP (Estructura Captura 1 - en móvil se oculta para evitar scroll repetitivo) -->
-<section class="hidden lg:block max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-14 border-b border-silver">
+<!-- SECCIÓN 1: VITRINA EDITORIAL DESKTOP (Top ventas reales Hoy / Semana / Mes con rotación suave cada 4 s) -->
+<section class="hidden lg:block max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-14 border-b border-silver"
+         x-data="{
+           activo: 0,
+           total: {{ vitrina_portada|length|default:0 }},
+           pausado: false,
+           temporizador: null,
+           iniciar() {
+             if (this.total <= 1 || this.temporizador) return;
+             this.temporizador = setInterval(() => {
+               if (!this.pausado) {
+                 this.activo = (this.activo + 1) % this.total;
+               }
+             }, 4000);
+           },
+           irA(idx) {
+             if (this.total <= 1) return;
+             this.activo = (idx + this.total) % this.total;
+           }
+         }"
+         x-init="iniciar()"
+         @mouseenter="pausado = true"
+         @mouseleave="pausado = false"
+         @touchstart.passive="pausado = true">
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
 
-    <!-- Columna Izquierda: Categorías rápidas, Buscador y Resumen de Oferta Estrella -->
+    <!-- Columna Izquierda: Categorías rápidas, Buscador y Resumen dinámico sincronizado -->
     <div class="lg:col-span-5 flex flex-col justify-between">
       <div>
         <p class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-silverDark mb-2">
@@ -185,7 +207,7 @@
           {% endfor %}
         </ul>
 
-        <!-- Buscador rápido gris suave (como Captura 1) -->
+        <!-- Buscador rápido gris suave -->
         <form action="#catalogo-completo" method="get" class="mb-8">
           <div class="flex items-center bg-neutral-200/80 border border-silver px-3.5 py-2.5">
             <input type="search"
@@ -208,126 +230,283 @@
         </p>
       </div>
 
-      {% with estrella=destacados.0 %}
-      {% if estrella %}
-      <div class="border border-silver bg-white p-4 space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-extrabold uppercase tracking-wider text-neonDark">
-            🇦🇷 Camiseta Más Pedida
-          </span>
-          {% if estrella.monto_ahorro %}
-          <span class="bg-neon text-ink text-[11px] font-extrabold px-2 py-0.5 border border-ink tabular-nums">
-            Ahorras S/ {{ estrella.monto_ahorro }} (-{{ estrella.porcentaje_descuento }}%)
-          </span>
-          {% endif %}
-        </div>
-        <p class="font-display italic font-extrabold text-xl uppercase text-ink">
-          {{ estrella.nombre }}
-        </p>
-        <div class="flex items-baseline justify-between tabular-nums">
-          <div>
-            <span class="text-2xl font-extrabold text-ink">S/ {{ estrella.precio_unidad }}</span>
-            {% if estrella.precio_anterior %}
-            <span class="text-xs text-silverDark line-through ml-1.5">S/ {{ estrella.precio_anterior }}</span>
-            {% endif %}
+      {% if vitrina_portada %}
+      <div class="border border-silver bg-white p-4 space-y-2.5">
+        {% if vitrina_portada|length > 1 %}
+        <div class="flex items-center justify-between gap-2 pb-2 border-b border-silver/70"
+             aria-label="Selector de período más vendido">
+          <div class="flex items-center flex-wrap gap-1.5">
+            {% for slide in vitrina_portada %}
+            <button type="button"
+                    @click="irA({{ forloop.counter0 }})"
+                    :class="activo === {{ forloop.counter0 }} ? 'bg-ink text-neon border-ink' : 'bg-neutral-100 text-ink border-silver hover:border-ink'"
+                    class="px-2 py-0.5 border text-[10px] font-extrabold uppercase tracking-wider transicion-tactil">
+              {{ slide.etiqueta_pill }}
+            </button>
+            {% endfor %}
           </div>
-          <a href="{{ estrella.get_absolute_url }}"
-             class="text-xs font-extrabold uppercase tracking-wider text-ink underline hover:text-neonDark">
-            Ver detalle →
-          </a>
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button"
+                    @click="irA(activo - 1)"
+                    aria-label="Producto más vendido anterior"
+                    class="w-6 h-6 border border-silver bg-white hover:bg-ink hover:text-white text-ink text-xs font-bold flex items-center justify-center transicion-tactil">
+              ‹
+            </button>
+            <button type="button"
+                    @click="irA(activo + 1)"
+                    aria-label="Siguiente producto más vendido"
+                    class="w-6 h-6 border border-silver bg-white hover:bg-ink hover:text-white text-ink text-xs font-bold flex items-center justify-center transicion-tactil">
+              ›
+            </button>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="grid">
+          {% for slide in vitrina_portada %}
+          <div class="col-start-1 row-start-1 space-y-2 transition-all duration-500 ease-in-out"
+               :class="activo === {{ forloop.counter0 }} ? 'opacity-100 translate-y-0 pointer-events-auto z-10' : 'opacity-0 translate-y-1 pointer-events-none z-0'"
+               :aria-hidden="activo !== {{ forloop.counter0 }}">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-neonDark">
+                {{ slide.etiqueta_badge }}
+              </span>
+              {% if slide.producto.monto_ahorro %}
+              <span class="bg-neon text-ink text-[11px] font-extrabold px-2 py-0.5 border border-ink tabular-nums shrink-0">
+                Ahorras S/ {{ slide.producto.monto_ahorro }} (-{{ slide.producto.porcentaje_descuento }}%)
+              </span>
+              {% endif %}
+            </div>
+            <p class="font-display italic font-extrabold text-xl uppercase text-ink leading-tight">
+              {{ slide.producto.nombre }}
+            </p>
+            <div class="flex items-baseline justify-between gap-2 tabular-nums">
+              <div class="flex items-baseline flex-wrap gap-x-2">
+                <span class="text-2xl font-extrabold text-ink">S/ {{ slide.producto.precio_unidad }}</span>
+                {% if slide.producto.precio_anterior %}
+                <span class="text-xs text-silverDark line-through">S/ {{ slide.producto.precio_anterior }}</span>
+                {% endif %}
+                {% if slide.etiqueta_volumen %}
+                <span class="text-[11px] font-semibold text-silverDark">· {{ slide.etiqueta_volumen }}</span>
+                {% endif %}
+              </div>
+              <a href="{{ slide.producto.get_absolute_url }}"
+                 :tabindex="activo === {{ forloop.counter0 }} ? 0 : -1"
+                 class="text-xs font-extrabold uppercase tracking-wider text-ink underline hover:text-neonDark shrink-0">
+                Ver detalle →
+              </a>
+            </div>
+          </div>
+          {% endfor %}
         </div>
       </div>
       {% endif %}
-      {% endwith %}
     </div>
 
-    <!-- Columna Derecha: 2 Cuadros Grandes 4:5 lado a lado (Vista Frontal + Vista Dorsal #10 de Argentina x Messi) -->
-    {% with estrella=destacados.0 %}
-    <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-5">
-      {% if estrella %}
-      <!-- Cuadro 1: Vista Frontal Argentina x Messi #10 -->
-      <a href="{{ estrella.get_absolute_url }}"
-         class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
-        <img src="{% static 'productos-demo/argentina-messi/webp/argentina_1_detalle.webp' %}"
-             alt="Camiseta Argentina x Messi #10 Vista Frontal con parche campeón"
-             fetchpriority="high"
-             class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
-        <div class="absolute top-3 left-3 flex flex-col gap-1.5">
-          {% if estrella.monto_ahorro %}
-          <span class="bg-neon text-ink text-xs font-extrabold uppercase px-2.5 py-1 border border-ink tabular-nums">
-            Ahorras S/ {{ estrella.monto_ahorro }}
-          </span>
-          {% endif %}
-          <span class="bg-ink text-white text-[10px] font-bold uppercase px-2.5 py-1">
-            Vista Frontal · Escudo 3 Estrellas
-          </span>
-        </div>
-        <div class="absolute inset-x-0 bottom-0 bg-ink/90 text-white p-4 flex items-center justify-between gap-2">
-          <div>
-            <p class="text-[10px] text-neon font-bold uppercase tracking-wider">Tallas: S · M · L · XL</p>
-            <p class="font-display italic font-bold text-lg uppercase leading-tight truncate max-w-[180px]">
-              {{ estrella.nombre }}
-            </p>
-          </div>
-          <div class="text-right tabular-nums shrink-0">
-            <span class="block text-neon font-extrabold text-lg leading-none">S/ {{ estrella.precio_unidad }}</span>
-            {% if estrella.precio_anterior %}
-            <span class="text-[11px] text-silver line-through">S/ {{ estrella.precio_anterior }}</span>
-            {% endif %}
-          </div>
-        </div>
-      </a>
+    <!-- Columna Derecha: Vitrina fotográfica sincronizada (2 cuadros si tiene 2+ fotos; 1 cuadro limpio si solo tiene 1) -->
+    {% if vitrina_portada %}
+    <div class="lg:col-span-7 grid items-start">
+      {% for slide in vitrina_portada %}
+      <div class="col-start-1 row-start-1 w-full transition-all duration-500 ease-in-out"
+           :class="activo === {{ forloop.counter0 }} ? 'opacity-100 scale-100 pointer-events-auto z-10' : 'opacity-0 scale-[0.99] pointer-events-none z-0'"
+           :aria-hidden="activo !== {{ forloop.counter0 }}">
+        {% if slide.imagen_2 %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <!-- Cuadro 1: Foto principal del producto real -->
+          <a href="{{ slide.producto.get_absolute_url }}"
+             :tabindex="activo === {{ forloop.counter0 }} ? 0 : -1"
+             class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
+            <img src="{% static slide.imagen_1.ruta_detalle %}"
+                 alt="{{ slide.imagen_1.alt_seo }}"
+                 {% if forloop.first %}fetchpriority="high"{% else %}decoding="async"{% endif %}
+                 class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+            <div class="absolute top-3 left-3 flex flex-col items-start gap-1.5 pointer-events-none">
+              {% if slide.producto.monto_ahorro %}
+              <span class="bg-neon text-ink text-xs font-extrabold uppercase px-2.5 py-1 border border-ink tabular-nums">
+                Ahorras S/ {{ slide.producto.monto_ahorro }}
+              </span>
+              {% endif %}
+              <span class="bg-ink text-white text-[10px] font-bold uppercase px-2.5 py-1">
+                {{ slide.etiqueta_badge }}
+              </span>
+            </div>
+            <div class="absolute inset-x-0 bottom-0 bg-ink/90 text-white p-4 flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-[10px] text-neon font-bold uppercase tracking-wider truncate">Tallas: {{ slide.tallas_texto }}</p>
+                <p class="font-display italic font-bold text-lg uppercase leading-tight truncate">
+                  {{ slide.producto.nombre }}
+                </p>
+              </div>
+              <div class="text-right tabular-nums shrink-0">
+                <span class="block text-neon font-extrabold text-lg leading-none">S/ {{ slide.producto.precio_unidad }}</span>
+                {% if slide.producto.precio_anterior %}
+                <span class="text-[11px] text-silver line-through">S/ {{ slide.producto.precio_anterior }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </a>
 
-      <!-- Cuadro 2: Vista Dorsal Oficial MESSI #10 -->
-      <a href="{{ estrella.get_absolute_url }}"
-         class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
-        <img src="{% static 'productos-demo/argentina-messi/webp/argentina_5_detalle.webp' %}"
-             alt="Camiseta Argentina x Messi #10 Dorsal Oficial Messi 10 en espalda"
-             class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
-        <div class="absolute top-3 left-3 flex flex-col gap-1.5">
-          <span class="bg-ink text-neon text-xs font-extrabold uppercase px-2.5 py-1 border border-ink">
-            Dorsal Oficial #10
-          </span>
-          <span class="bg-white/95 text-ink text-[10px] font-bold uppercase px-2.5 py-1 border border-silver">
-            Desde 3 u. → S/ 50.00 c/u
-          </span>
+          <!-- Cuadro 2: Segunda foto real del mismo producto -->
+          <a href="{{ slide.producto.get_absolute_url }}"
+             :tabindex="activo === {{ forloop.counter0 }} ? 0 : -1"
+             class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
+            <img src="{% static slide.imagen_2.ruta_detalle %}"
+                 alt="{{ slide.imagen_2.alt_seo }}"
+                 decoding="async"
+                 class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+            <div class="absolute top-3 left-3 flex flex-col items-start gap-1.5 pointer-events-none">
+              <span class="bg-ink text-neon text-xs font-extrabold uppercase px-2.5 py-1 border border-ink">
+                {% if slide.total_fotos > 2 %}Vista 2 de {{ slide.total_fotos }}{% else %}Segunda vista{% endif %}
+              </span>
+              {% if slide.regla_mayor %}
+              <span class="bg-white/95 text-ink text-[10px] font-bold uppercase px-2.5 py-1 border border-silver tabular-nums">
+                Desde {{ slide.regla_mayor.cantidad_minima }} u. → S/ {{ slide.regla_mayor.precio_unidad }} c/u
+              </span>
+              {% endif %}
+            </div>
+            <div class="absolute inset-x-0 bottom-0 bg-ink/90 text-white p-4 flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-[10px] text-neon font-bold uppercase tracking-wider truncate">{{ slide.producto.categoria.nombre }}</p>
+                <p class="font-display italic font-bold text-lg uppercase leading-tight truncate">
+                  {{ slide.producto.nombre }}
+                </p>
+              </div>
+              <span class="text-xs font-extrabold uppercase tracking-wider text-neon underline shrink-0">
+                Elegir talla →
+              </span>
+            </div>
+          </a>
         </div>
-        <div class="absolute inset-x-0 bottom-0 bg-ink/90 text-white p-4 flex items-center justify-between gap-2">
-          <div>
-            <p class="text-[10px] text-neon font-bold uppercase tracking-wider">Estampado Microperforado</p>
-            <p class="font-display italic font-bold text-lg uppercase leading-tight">
-              ESPALDA MESSI #10
-            </p>
-          </div>
-          <span class="text-xs font-extrabold uppercase tracking-wider text-neon underline">
-            Elegir talla →
-          </span>
+        {% elif slide.imagen_1 %}
+        <!-- Un solo cuadro limpio cuando el producto cuenta con una sola fotografía -->
+        <div class="max-w-[360px] mx-auto w-full">
+          <a href="{{ slide.producto.get_absolute_url }}"
+             :tabindex="activo === {{ forloop.counter0 }} ? 0 : -1"
+             class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden group block">
+            <img src="{% static slide.imagen_1.ruta_detalle %}"
+                 alt="{{ slide.imagen_1.alt_seo }}"
+                 {% if forloop.first %}fetchpriority="high"{% else %}decoding="async"{% endif %}
+                 class="w-full h-full object-cover group-hover:scale-105 transicion-tactil">
+            <div class="absolute top-3 left-3 flex flex-col items-start gap-1.5 pointer-events-none">
+              {% if slide.producto.monto_ahorro %}
+              <span class="bg-neon text-ink text-xs font-extrabold uppercase px-2.5 py-1 border border-ink tabular-nums">
+                Ahorras S/ {{ slide.producto.monto_ahorro }}
+              </span>
+              {% endif %}
+              <span class="bg-ink text-white text-[10px] font-bold uppercase px-2.5 py-1">
+                {{ slide.etiqueta_badge }}
+              </span>
+              {% if slide.regla_mayor %}
+              <span class="bg-white/95 text-ink text-[10px] font-bold uppercase px-2.5 py-1 border border-silver tabular-nums">
+                Desde {{ slide.regla_mayor.cantidad_minima }} u. → S/ {{ slide.regla_mayor.precio_unidad }} c/u
+              </span>
+              {% endif %}
+            </div>
+            <div class="absolute inset-x-0 bottom-0 bg-ink/90 text-white p-4 flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-[10px] text-neon font-bold uppercase tracking-wider truncate">Tallas: {{ slide.tallas_texto }}</p>
+                <p class="font-display italic font-bold text-lg uppercase leading-tight truncate">
+                  {{ slide.producto.nombre }}
+                </p>
+              </div>
+              <div class="text-right tabular-nums shrink-0">
+                <span class="block text-neon font-extrabold text-lg leading-none">S/ {{ slide.producto.precio_unidad }}</span>
+                {% if slide.producto.precio_anterior %}
+                <span class="text-[11px] text-silver line-through">S/ {{ slide.producto.precio_anterior }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </a>
         </div>
-      </a>
-      {% endif %}
+        {% else %}
+        <div class="max-w-[360px] mx-auto w-full border border-silver bg-neutral-100 aspect-[4/5] flex flex-col items-center justify-center p-6 text-center">
+          <p class="text-xs font-extrabold uppercase tracking-wider text-neonDark mb-2">{{ slide.etiqueta_badge }}</p>
+          <p class="font-display italic font-extrabold text-xl uppercase text-ink mb-4">{{ slide.producto.nombre }}</p>
+          <a href="{{ slide.producto.get_absolute_url }}"
+             :tabindex="activo === {{ forloop.counter0 }} ? 0 : -1"
+             class="bg-ink text-neon text-xs font-extrabold uppercase tracking-wider px-4 py-2">
+            Ver ficha completa →
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
-    {% endwith %}
+    {% endif %}
 
   </div>
 </section>
 
-<!-- SECCIÓN 2: DESTACADOS DE LA SEMANA (Estructura 'NEW THIS WEEK' de Captura 1) -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 border-b border-silver">
-  <div class="flex items-end justify-between mb-8">
+<!-- SECCIÓN 2: DESTACADOS DE LA SEMANA (Máximo 8 modelos, rotan cada 3 s en bloques de 4) -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 border-b border-silver"
+         x-data="{
+           bloque: 0,
+           totalBloques: {% if destacados|length > 4 %}2{% else %}1{% endif %},
+           pausado: false,
+           temporizador: null,
+           iniciar() {
+             if (this.totalBloques <= 1 || this.temporizador) return;
+             this.temporizador = setInterval(() => {
+               if (!this.pausado) {
+                 this.bloque = (this.bloque + 1) % this.totalBloques;
+               }
+             }, 3000);
+           },
+           irABloque(idx) {
+             this.bloque = (idx + this.totalBloques) % this.totalBloques;
+           }
+         }"
+         x-init="iniciar()"
+         @mouseenter="pausado = true"
+         @mouseleave="pausado = false"
+         @touchstart.passive="pausado = true">
+  <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
     <div>
       <h2 class="font-display italic font-extrabold text-4xl sm:text-5xl uppercase tracking-tight leading-none">
         DESTACADOS DE LA SEMANA
         <sup class="text-neonDark font-sans font-extrabold text-base ml-1">({{ destacados|length }})</sup>
       </h2>
     </div>
-    <a href="#catalogo-completo" class="text-xs font-bold uppercase tracking-wider text-ink hover:text-neonDark underline">
-      Ver Todos
-    </a>
+    <div class="flex items-center gap-3">
+      {% if destacados|length > 4 %}
+      <div class="flex items-center gap-1.5" aria-label="Controles de destacados">
+        <button type="button"
+                @click="irABloque(bloque - 1)"
+                aria-label="Bloque anterior de destacados"
+                class="w-7 h-7 border border-silver bg-white hover:bg-ink hover:text-white text-ink text-xs font-bold flex items-center justify-center transicion-tactil">
+          ‹
+        </button>
+        <button type="button"
+                @click="irABloque(0)"
+                aria-label="Primeros 4 destacados"
+                :class="bloque === 0 ? 'bg-ink border-ink w-5' : 'bg-silver border-silver w-2'"
+                class="h-2 border transition-all"></button>
+        <button type="button"
+                @click="irABloque(1)"
+                aria-label="Siguientes destacados"
+                :class="bloque === 1 ? 'bg-ink border-ink w-5' : 'bg-silver border-silver w-2'"
+                class="h-2 border transition-all"></button>
+        <button type="button"
+                @click="irABloque(bloque + 1)"
+                aria-label="Siguiente bloque de destacados"
+                class="w-7 h-7 border border-silver bg-white hover:bg-ink hover:text-white text-ink text-xs font-bold flex items-center justify-center transicion-tactil">
+          ›
+        </button>
+      </div>
+      {% endif %}
+      <a href="#catalogo-completo" class="text-xs font-bold uppercase tracking-wider text-ink hover:text-neonDark underline">
+        Ver Todos
+      </a>
+    </div>
   </div>
 
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
     {% for prod in destacados %}
-    <article class="group flex flex-col">
+    <article class="group flex flex-col"
+             {% if destacados|length > 4 %}
+             x-show="bloque === {% if forloop.counter0 < 4 %}0{% else %}1{% endif %}"
+             {% if forloop.counter0 >= 4 %}x-cloak{% endif %}
+             {% endif %}>
       <a href="{{ prod.get_absolute_url }}"
          class="relative aspect-[4/5] bg-neutral-100 border border-silver overflow-hidden mb-3 block">
         {% with img=prod.imagenes.all.0 %}
@@ -357,11 +536,6 @@
           </span>
           {% endif %}
         </div>
-
-        <!-- Botón '+' central inferior igual a Captura 1 -->
-        <span class="absolute bottom-2.5 left-1/2 -translate-x-1/2 w-8 h-8 sm:w-9 sm:h-9 bg-white/95 group-hover:bg-neon text-ink border border-silver flex items-center justify-center font-bold text-base sm:text-lg transicion-tactil">
-          +
-        </span>
       </a>
 
       <!-- Categoría y Tallas disponibles (sin solapamiento en móvil) -->

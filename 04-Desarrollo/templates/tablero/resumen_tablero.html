@@ -1,6 +1,8 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
 
+{% block content_title %}Tablero Operativo y Alertas{% endblock %}
+
 {% block breadcrumbs %}
 <div class="breadcrumbs">
   <a href="{% url 'admin:index' %}">Inicio</a>
@@ -11,16 +13,22 @@
 {% block content %}
 <style>
   .tablero-shell {
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
     color: #0F172A;
     font-variant-numeric: tabular-nums;
   }
   .tablero-hero {
-    background: #1E293B;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: #0A0A0A;
     color: #FFFFFF;
-    border: 1px solid #0F172A;
-    border-bottom: 3px solid #15803D;
-    border-radius: 6px;
+    border: 1px solid #0A0A0A;
+    border-bottom: 3px solid #39FF14;
+    border-radius: 4px;
     padding: 16px 20px;
     margin-bottom: 16px;
     display: flex;
@@ -28,7 +36,6 @@
     justify-content: space-between;
     align-items: center;
     gap: 14px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
   }
   .tablero-hero h2 {
     margin: 0 0 4px 0 !important;
@@ -78,12 +85,14 @@
   }
 
   .tablero-filtros-card {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 14px 16px;
     margin-bottom: 16px;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -156,12 +165,14 @@
     margin-bottom: 16px;
   }
   .tablero-kpi-card {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
     border-top: 4px solid #1E293B;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 14px 16px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -195,16 +206,18 @@
   }
 
   .tablero-cola-bar {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 12px 16px;
     margin-bottom: 18px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
   .tablero-cola-titulo {
     font-size: 12px;
@@ -240,10 +253,23 @@
   .tablero-panel {
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     margin-bottom: 18px;
+  }
+  .emuna-table-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    scrollbar-width: thin;
   }
   .tablero-grid-2 .tablero-panel {
     margin-bottom: 0;
@@ -366,7 +392,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .tablero-grid-2 {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
   @media (max-width: 767px) {
@@ -389,6 +415,8 @@
     .tablero-rango-form input[type="date"],
     .tablero-rango-form button {
       width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .tablero-table {
       min-width: 540px;
@@ -533,8 +561,13 @@
         </span>
       </div>
       {% if resumen.pedidos_pendientes_antiguos %}
+        <div class="emuna-swipe-hint emuna-swipe-hint-modal">← Desliza la tabla para ver todas las columnas →</div>
         <div class="emuna-table-scroll">
-          <table class="tablero-table">
+          <table class="tablero-table"
+                 data-emuna-mob-modal="Pedidos Pendientes Antiguos"
+                 data-emuna-mob-keep="0,2"
+                 data-emuna-mob-actions="5"
+                 data-emuna-mob-title-col="0">
             <thead>
               <tr>
                 <th>Código <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Identificador público del pedido." class="emuna-icon-tip" /></th>
@@ -571,7 +604,7 @@
         </div>
       {% else %}
         <div class="tablero-vacio">
-          🟢 [VERDE] Al día: no hay pedidos pendientes con más de {{ resumen.horas_pendiente_limite }} horas de espera.
+          🟢 Al día: no hay pedidos pendientes con más de {{ resumen.horas_pendiente_limite }} horas de espera.
         </div>
       {% endif %}
     </div>
@@ -588,8 +621,13 @@
         </span>
       </div>
       {% if resumen.alertas_stock %}
+        <div class="emuna-swipe-hint emuna-swipe-hint-modal">← Desliza la tabla para ver todas las columnas →</div>
         <div class="emuna-table-scroll">
-          <table class="tablero-table">
+          <table class="tablero-table"
+                 data-emuna-mob-modal="Alertas de Stock"
+                 data-emuna-mob-keep="0,1"
+                 data-emuna-mob-actions="4"
+                 data-emuna-mob-title-col="1">
             <thead>
               <tr>
                 <th>Semáforo <img src="{% static 'toltip.png' %}" alt="Ayuda" title="ROJO: stock en 0 unidades. ÁMBAR: stock bajo umbral." class="emuna-icon-tip" /></th>
@@ -604,9 +642,9 @@
                 <tr>
                   <td>
                     {% if var.nivel == "ROJO" %}
-                      <span class="tablero-badge badge-rojo">🔴 [ROJO] Agotado</span>
+                      <span class="tablero-badge badge-rojo">🔴 Agotado</span>
                     {% else %}
-                      <span class="tablero-badge badge-ambar">🟡 [ÁMBAR] Bajo</span>
+                      <span class="tablero-badge badge-ambar">🟡 Bajo</span>
                     {% endif %}
                   </td>
                   <td>
@@ -625,7 +663,7 @@
         </div>
       {% else %}
         <div class="tablero-vacio">
-          🟢 [VERDE] Inventario saludable: ninguna talla activa se encuentra debajo de su umbral mínimo.
+          🟢 Inventario saludable: ninguna talla activa se encuentra debajo de su umbral mínimo.
         </div>
       {% endif %}
     </div>
@@ -643,6 +681,7 @@
         <span class="tablero-badge badge-azul">Top {{ resumen.mas_vendidos|length }}</span>
       </div>
       {% if resumen.mas_vendidos %}
+        <div class="emuna-swipe-hint">← Desliza la tabla para ver todas las columnas →</div>
         <div class="emuna-table-scroll">
           <table class="tablero-table">
             <thead>
@@ -689,8 +728,13 @@
         </span>
       </div>
       {% if resumen.productos_sin_ventas %}
+        <div class="emuna-swipe-hint emuna-swipe-hint-modal">← Desliza la tabla para ver todas las columnas →</div>
         <div class="emuna-table-scroll">
-          <table class="tablero-table">
+          <table class="tablero-table"
+                 data-emuna-mob-modal="Productos Sin Ventas"
+                 data-emuna-mob-keep="0,2"
+                 data-emuna-mob-actions="3"
+                 data-emuna-mob-title-col="0">
             <thead>
               <tr>
                 <th>Camiseta / Categoría</th>
@@ -716,7 +760,7 @@
         </div>
       {% else %}
         <div class="tablero-vacio">
-          🟢 [VERDE] Excelente rotación: todos los productos activos registraron ventas en los últimos {{ resumen.dias_sin_ventas_limite }} días.
+          🟢 Excelente rotación: todos los productos activos registraron ventas en los últimos {{ resumen.dias_sin_ventas_limite }} días.
         </div>
       {% endif %}
     </div>
@@ -732,7 +776,8 @@
       <span class="tablero-badge badge-gris">{{ resumen.ventas_por_dia|length }} día(s) con venta</span>
     </div>
     {% if resumen.ventas_por_dia %}
-      <div class="emuna-table-scroll">
+      <div class="emuna-swipe-hint">← Desliza la tabla para ver todas las columnas →</div>
+        <div class="emuna-table-scroll">
         <table class="tablero-table">
           <thead>
             <tr>
@@ -765,6 +810,79 @@
     {% else %}
       <div class="tablero-vacio-neutro">
         No hay movimientos de venta confirmada registrados dentro del rango {{ resumen.fecha_desde|date:"d/m/Y" }} al {{ resumen.fecha_hasta|date:"d/m/Y" }}.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Bloque 4: Clientes VIP y Recurrentes (Análisis sobre datos principales del cliente) -->
+  <div class="tablero-panel" style="margin-top: 18px;">
+    <div class="tablero-panel-head">
+      <h3>
+        👑 Clientes VIP y Top Compradores ({{ resumen.etiqueta_periodo }})
+        <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Ranking de clientes con compras confirmadas agrupados por celular/nombre. Marca VIP Recurrente si acumula 2+ pedidos o 3+ prendas (mayorista)." class="emuna-icon-tip" />
+      </h3>
+      <span class="tablero-badge badge-azul">Top {{ resumen.clientes_vip|length }}</span>
+    </div>
+    {% if resumen.clientes_vip %}
+      <div class="emuna-swipe-hint emuna-swipe-hint-modal">← Desliza la tabla para ver todas las columnas →</div>
+      <div class="emuna-table-scroll">
+        <table class="tablero-table"
+               data-emuna-mob-modal="Cliente VIP"
+               data-emuna-mob-keep="1,5"
+               data-emuna-mob-actions="6"
+               data-emuna-mob-title-col="1">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente / Nivel</th>
+              <th>Celular / DNI</th>
+              <th>Pedidos <img src="{% static 'toltip.png' %}" alt="Ayuda" title="Cantidad de pedidos confirmados (PAGADO, ENVIADO o ENTREGADO) en el período." class="emuna-icon-tip" /></th>
+              <th>Prendas</th>
+              <th>Total Invertido (S/)</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cli in resumen.clientes_vip %}
+              <tr>
+                <td><strong>#{{ cli.posicion }}</strong></td>
+                <td>
+                  <strong>{{ cli.nombre }}</strong>
+                  <div style="margin-top:2px;">
+                    {% if cli.es_vip_recurrente %}
+                      <span class="tablero-badge badge-verde">👑 VIP / Mayorista</span>
+                    {% else %}
+                      <span class="tablero-badge badge-gris">⭐ Cliente</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  {% if cli.telefono %}
+                    <div style="font-weight:700;font-family:monospace;">{{ cli.telefono }}</div>
+                  {% endif %}
+                  {% if cli.dni %}
+                    <div style="font-size:11px;color:#475569;">DNI: {{ cli.dni }}</div>
+                  {% endif %}
+                </td>
+                <td><strong>{{ cli.pedidos }} ped.</strong></td>
+                <td>{{ cli.unidades }} und.</td>
+                <td><strong style="color:#15803D;">S/ {{ cli.total_gastado|floatformat:2 }}</strong></td>
+                <td>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <a href="{{ cli.url_historial }}" class="tablero-link-btn">Historial</a>
+                    {% if cli.url_whatsapp %}
+                      <a href="{{ cli.url_whatsapp }}" target="_blank" rel="noopener" class="tablero-link-btn" style="background:#DCFCE7;color:#14532D;border-color:#15803D;">WhatsApp</a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="tablero-vacio-neutro">
+        Aún no se registran clientes con compras confirmadas en el período seleccionado.
       </div>
     {% endif %}
   </div>

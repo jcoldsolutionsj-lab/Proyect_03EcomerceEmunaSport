@@ -2,10 +2,14 @@
 {% load i18n admin_urls %}
 
 {% block object-tools-items %}
-  <li>
-    <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}" class="addlink" style="background: #15803D; color: #FFFFFF; font-weight: bold; border: 1px solid #166534; padding: 6px 12px; border-radius: 4px; text-decoration: none;">
-      ⚡ Registrar Venta Presencial (POS)
+  <div class="emuna-object-tools-row flex flex-row items-center" style="gap: 8px;">
+    <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}"
+       class="emuna-btn-header-pos inline-flex items-center rounded-default whitespace-nowrap no-underline"
+       style="gap: 6px; height: 38px; padding: 0 12px; background: #39FF14; color: #0A0A0A; border: 2px solid #0A0A0A; font-weight: 800; font-size: 13px; box-sizing: border-box;">
+      <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
+      <span class="emuna-btn-pos-texto-full">Venta POS</span>
+      <span class="emuna-btn-pos-texto-short">POS</span>
     </a>
-  </li>
-  {{ block.super }}
+    {{ block.super }}
+  </div>
 {% endblock %}

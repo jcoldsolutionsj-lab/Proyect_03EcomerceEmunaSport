@@ -53,11 +53,17 @@ class Command(BaseCommand):
         jonathan, creado_j = User.objects.get_or_create(
             username="jonathan",
             defaults={
+                "first_name": "Jonathan",
+                "last_name": "Vera",
                 "email": "jonathan@emunasport.pe",
                 "is_staff": True,
                 "is_superuser": True,
             },
         )
+        if not jonathan.first_name:
+            jonathan.first_name = "Jonathan"
+            jonathan.last_name = "Vera"
+            jonathan.save(update_fields=["first_name", "last_name"])
         if creado_j:
             jonathan.set_password(clave_local)
             jonathan.save()
@@ -65,10 +71,16 @@ class Command(BaseCommand):
         richard, creado_r = User.objects.get_or_create(
             username="richard",
             defaults={
+                "first_name": "Richard Alexander",
+                "last_name": "Ramos Hinostroza",
                 "email": "richard@emunasport.pe",
                 "is_staff": True,
             },
         )
+        if not richard.first_name:
+            richard.first_name = "Richard Alexander"
+            richard.last_name = "Ramos Hinostroza"
+            richard.save(update_fields=["first_name", "last_name"])
         if creado_r:
             richard.set_password(clave_local)
             richard.save()

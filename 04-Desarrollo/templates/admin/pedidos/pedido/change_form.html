@@ -1,10 +1,10 @@
 {% extends "admin/change_form.html" %}
-{% load i18n admin_urls %}
+{% load i18n admin_urls static %}
 
-{% block object-tools %}
+{% block form_before %}
   {{ block.super }}
   {% if change and original %}
-  <div id="panel-flujo-pedido" class="emuna-panel">
+  <div id="panel-flujo-pedido" class="emuna-panel mb-6">
     
     <!-- Cabecera Institucional Estilo Java JSP Enterprise -->
     <div class="emuna-panel-header">
@@ -17,27 +17,27 @@
           
           {% if original.estado == 'COTIZADO' %}
             <span style="background: #FEF3C7; color: #92400E; border: 1px solid #F59E0B; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
-              🟡 [ÁMBAR] Cotizado (esperando pago o entrega)
+              🟡 Cotizado (esperando pago o entrega)
             </span>
           {% elif original.estado == 'PAGADO' %}
             <span style="background: #DCFCE7; color: #166534; border: 1px solid #22C55E; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
-              🟢 [VERDE] Pago Confirmado (preparar prendas)
+              🟢 Pago Confirmado (preparar prendas)
             </span>
           {% elif original.estado == 'ENVIADO' %}
             <span style="background: #DBEAFE; color: #1E40AF; border: 1px solid #3B82F6; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
-              🔵 [AZUL] En Camino (Guía y Clave registradas)
+              🔵 En Camino (Guía y Clave registradas)
             </span>
           {% elif original.estado == 'ENTREGADO' %}
             <span style="background: #DCFCE7; color: #14532D; border: 1px solid #16A34A; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
-              🟢 [VERDE] Entregado al Cliente
+              🟢 Entregado al Cliente
             </span>
           {% elif original.estado == 'CANCELADO' %}
             <span style="background: #FEE2E2; color: #991B1B; border: 1px solid #EF4444; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
-              🔴 [ROJO] Cancelado
+              🔴 Cancelado
             </span>
           {% else %}
             <span style="background: #F1F5F9; color: #334155; border: 1px solid #94A3B8; padding: 3px 10px; font-size: 12px; font-weight: 800; border-radius: 4px;">
-              ⚪ [GRIS] {{ original.get_estado_display }}
+              ⚪ {{ original.get_estado_display }}
             </span>
           {% endif %}
 
@@ -53,11 +53,11 @@
       </div>
 
       <div class="emuna-header-actions" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-        <a href="{{ url_publica_pedido }}" target="_blank" class="emuna-btn" style="background: #FFFFFF; color: #1E293B; border: 1px solid #CBD5E1; font-weight: 700; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+        <a href="{{ url_publica_pedido }}" target="_blank" class="emuna-btn" style="background: #FFFFFF; color: #1E293B; border: 1px solid #CBD5E1; font-weight: 700; font-size: 12px;">
           🌐 Ver comprobante público / PDF
         </a>
         {% if original.estado == 'COTIZADO' %}
-          <a href="{{ url_whatsapp_cotizado }}" target="_blank" class="emuna-btn" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; font-weight: 800; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+          <a href="{{ url_whatsapp_cotizado }}" target="_blank" class="emuna-btn" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; font-weight: 800; font-size: 12px;">
             💬 Avisar Cotización por WhatsApp
           </a>
         {% elif original.estado == 'ENVIADO' %}
@@ -94,7 +94,7 @@
             </label>
             <input type="text" id="id_cotizar_nota" name="nota" placeholder="Ej. Cotizado por {{ original.get_agencia_display|default:'delivery' }}" style="width: 100%; height: 38px; box-sizing: border-box; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A;">
           </div>
-          <button type="submit" class="emuna-btn" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+          <button type="submit" class="emuna-btn" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534;">
             💰 Cotizar envío (pasar a COTIZADO)
           </button>
         </form>
@@ -114,8 +114,12 @@
           <form method="post" action="{% url 'admin:pedidos_pedido_confirmar_y_entregar' original.pk %}" class="emuna-form-card" style="border-top: 3px solid #15803D;">
             {% csrf_token %}
             <div style="flex: 1 1 200px; min-width: 0;">
-              <label for="id_pago_rapido_metodo" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #166534; margin-bottom: 5px;">
-                Método cobrado en Lima *
+              <label for="id_pago_rapido_metodo" style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #166534; margin-bottom: 5px;">
+                <span>Entrega en persona ahora · Método cobrado *</span>
+                <img src="{% static 'toltip.png' %}"
+                     alt="Ayuda"
+                     title="Úsalo SOLO cuando ya estés frente al cliente entregando la camiseta y recibiendo el pago ahora mismo. Descuenta stock y cierra el pedido en ENTREGADO."
+                     class="emuna-icon-tip" />
               </label>
               <select id="id_pago_rapido_metodo" name="metodo_pago" style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background-color: #FFFFFF !important; color: #0F172A !important; font-weight: 700; font-size: 13px; box-sizing: border-box;">
                 {% for cod, etiq in metodos_pago_choices %}
@@ -123,17 +127,38 @@
                 {% endfor %}
               </select>
             </div>
-            <button type="submit" class="emuna-btn" style="background: #15803D; color: #FFFFFF; border: 1px solid #166534; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-              ✓ Confirmar Pago y Entregar en 1 Paso (Descuenta Stock)
-            </button>
+            <div class="emuna-btn-tip-group">
+              <button type="submit"
+                      class="emuna-btn"
+                      title="Úsalo SOLO cuando ya entregues la prenda en persona y recibas el pago ahora mismo. Descuenta el stock y cierra directo en ENTREGADO."
+                      style="background: #15803D; color: #FFFFFF; border: 1px solid #166534;">
+                🤝 Ya entregué y cobré en persona (→ ENTREGADO)
+              </button>
+              <img src="{% static 'toltip.png' %}"
+                   alt="Ayuda botón verde"
+                   title="Botón verde (1 paso): Úsalo SOLO cuando ya estés frente al cliente entregando la prenda y cobrando en ese instante. Descuenta stock y pasa directo a ENTREGADO (no deja Pago Confirmado abierto)."
+                   class="emuna-icon-tip" />
+            </div>
           </form>
         {% endif %}
 
         <form method="post" action="{% url 'admin:pedidos_pedido_confirmar_pago' original.pk %}" class="emuna-form-card" style="border-top: 3px solid #2563EB;">
           {% csrf_token %}
           <div style="flex: 1 1 160px; min-width: 0;">
-            <label for="id_pago_metodo" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #1E40AF; margin-bottom: 5px;">
-              Paso 2 · Método Verificado *
+            <label for="id_pago_metodo" style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #1E40AF; margin-bottom: 5px;">
+              {% if original.tipo_entrega == 'PUNTO_ENCUENTRO' or original.tipo_entrega == 'RECOJO' %}
+                <span>Pago adelantado (Separar prenda) · Método *</span>
+                <img src="{% static 'toltip.png' %}"
+                     alt="Ayuda"
+                     title="Úsalo si el cliente ya yapeó o pagó ANTES de verse. Descuenta el stock para separar su talla y deja el pedido en PAGADO."
+                     class="emuna-icon-tip" />
+              {% else %}
+                <span>Paso 2 · Método Verificado *</span>
+                <img src="{% static 'toltip.png' %}"
+                     alt="Ayuda"
+                     title="Confirma que ya verificaste el Yape o transferencia en tu cuenta. Descuenta el stock y pasa a PAGADO para despachar."
+                     class="emuna-icon-tip" />
+              {% endif %}
             </label>
             <select id="id_pago_metodo" name="metodo_pago" style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background-color: #FFFFFF !important; color: #0F172A !important; font-weight: 700; font-size: 13px; box-sizing: border-box;">
               {% for cod, etiq in metodos_pago_choices %}
@@ -147,9 +172,31 @@
             </label>
             <input type="text" id="id_pago_nota" name="nota" placeholder="Ej. Yape confirmado" style="width: 100%; height: 38px; box-sizing: border-box; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A;">
           </div>
-          <button type="submit" class="emuna-btn" style="background: #2563EB; color: #FFFFFF; border: 1px solid #1D4ED8; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-            ✓ Confirmar Pago (COTIZADO → PAGADO)
-          </button>
+          <div class="emuna-btn-tip-group">
+            {% if original.tipo_entrega == 'PUNTO_ENCUENTRO' or original.tipo_entrega == 'RECOJO' %}
+              <button type="submit"
+                      class="emuna-btn"
+                      title="Úsalo si el cliente pagó por adelantado ANTES del encuentro. Descuenta stock para separar su prenda y pasa a PAGADO; luego, al entregarla, pulsas Marcar ENTREGADO."
+                      style="background: #2563EB; color: #FFFFFF; border: 1px solid #1D4ED8;">
+                💳 Pagó por adelantado (Separar → PAGADO)
+              </button>
+              <img src="{% static 'toltip.png' %}"
+                   alt="Ayuda botón azul"
+                   title="Botón azul (2 pasos): Úsalo cuando el cliente ya yapeó ANTES de encontrarse. Separa el stock y deja el pedido en PAGADO; luego, cuando entregues la camiseta en mano, marcas ENTREGADO."
+                   class="emuna-icon-tip" />
+            {% else %}
+              <button type="submit"
+                      class="emuna-btn"
+                      title="Confirma el abono tras verificarlo en tu cuenta. Descuenta stock y pasa a PAGADO para preparar el envío."
+                      style="background: #2563EB; color: #FFFFFF; border: 1px solid #1D4ED8;">
+                💳 Confirmar Pago Verificado (→ PAGADO)
+              </button>
+              <img src="{% static 'toltip.png' %}"
+                   alt="Ayuda botón azul"
+                   title="Confirma que ya verificaste el Yape o transferencia en tu cuenta. Descuenta el stock del almacén y pasa a PAGADO para registrar el envío."
+                   class="emuna-icon-tip" />
+            {% endif %}
+          </div>
         </form>
 
         <form method="post" action="{% url 'admin:pedidos_pedido_cancelar' original.pk %}" style="display: flex; gap: 8px; align-items: center; max-width: 100%;">
@@ -163,7 +210,7 @@
 
     {% elif original.estado == 'PAGADO' %}
       {% if original.tipo_entrega == 'AGENCIA' %}
-        <form method="post" enctype="multipart/form-data" action="{% url 'admin:pedidos_pedido_registrar_envio' original.pk %}" style="background: #FFFFFF; padding: 18px; border-radius: 4px; border: 1px solid #CBD5E1; border-top: 3px solid #0284C7; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); max-width: 100%;">
+        <form method="post" enctype="multipart/form-data" action="{% url 'admin:pedidos_pedido_registrar_envio' original.pk %}" style="background: #FFFFFF; padding: 18px; border-radius: 4px; border: 1px solid #CBD5E1; border-top: 3px solid #0284C7; margin-bottom: 14px; max-width: 100%;">
           {% csrf_token %}
           <div style="font-size: 13px; font-weight: 800; color: #0369A1; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.04em;">
             Paso 3 · Registrar Despacho en Agencia (PAGADO → ENVIADO)
@@ -191,20 +238,48 @@
             </div>
             <div style="min-width: 0;">
               <label for="id_env_quien" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 5px;">¿Quién paga el flete? *</label>
-              <select id="id_env_quien" name="quien_paga" style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background-color: #FFFFFF !important; color: #0F172A !important; font-weight: 600; font-size: 13px; box-sizing: border-box;">
+              <select id="id_env_quien"
+                      name="quien_paga"
+                      onchange="var chk=document.getElementById('id_env_cobrado'); if(chk){ chk.checked = (this.value === 'CLIENTE_ADELANTADO'); }"
+                      style="width: 100%; height: 38px; line-height: 1.4; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background-color: #FFFFFF !important; color: #0F172A !important; font-weight: 600; font-size: 13px; box-sizing: border-box;">
                 {% for cod, etiq in quien_paga_choices %}
                   <option value="{{ cod }}">{{ etiq }}</option>
                 {% endfor %}
               </select>
             </div>
             <div style="min-width: 0;">
-              <label for="id_env_boleta" style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #15803D; margin-bottom: 5px;">Foto/PDF boleta (privada) *</label>
-              <input type="file" id="id_env_boleta" name="imagen_boleta" required accept="image/*,.pdf" style="width: 100%; min-height: 38px; padding: 6px; border: 1px solid #94A3B8; border-radius: 4px; background: #FFFFFF; color: #0F172A; font-size: 12px; box-sizing: border-box;">
+              <label for="id_env_boleta" style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #15803D; margin-bottom: 5px;">
+                <span>Foto/PDF boleta (privada) *</span>
+                <img src="{% static 'toltip.png' %}"
+                     alt="Ayuda boleta"
+                     title="En celular puedes pulsar 'Tomar foto' para abrir directo la cámara trasera frente al ticket de Shalom/Olva, o 'Adjuntar' para elegir una imagen o PDF guardado."
+                     class="emuna-icon-tip" />
+              </label>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+                <button type="button"
+                        onclick="var inp=document.getElementById('id_env_boleta'); inp.setAttribute('accept','image/*'); inp.setAttribute('capture','environment'); inp.click();"
+                        style="flex: 1 1 110px; height: 32px; padding: 4px 10px; border-radius: 4px; border: 1px solid #15803D; background: #DCFCE7; color: #14532D; font-weight: 800; font-size: 11px; cursor: pointer;">
+                  📷 Tomar foto
+                </button>
+                <button type="button"
+                        onclick="var inp=document.getElementById('id_env_boleta'); inp.removeAttribute('capture'); inp.setAttribute('accept','image/*,.pdf'); inp.click();"
+                        style="flex: 1 1 110px; height: 32px; padding: 4px 10px; border-radius: 4px; border: 1px solid #0284C7; background: #E0F2FE; color: #0369A1; font-weight: 800; font-size: 11px; cursor: pointer;">
+                  📎 Adjuntar galería/PDF
+                </button>
+              </div>
+              <input type="file"
+                     id="id_env_boleta"
+                     name="imagen_boleta"
+                     required
+                     accept="image/*,.pdf"
+                     onchange="var lbl=document.getElementById('id_env_boleta_nombre'); if(lbl){ lbl.textContent = (this.files && this.files.length) ? ('✓ Archivo listo: ' + this.files[0].name) : ''; }"
+                     style="width: 100%; min-height: 36px; padding: 5px; border: 1px solid #94A3B8; border-radius: 4px; background: #FFFFFF; color: #0F172A; font-size: 11px; box-sizing: border-box;">
+              <div id="id_env_boleta_nombre" style="font-size: 11px; font-weight: 700; color: #15803D; margin-top: 3px;"></div>
             </div>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
             <label style="display: flex; align-items: center; gap: 6px; color: #334155; font-size: 12px; font-weight: 600; cursor: pointer;">
-              <input type="checkbox" name="cobrado" value="1" checked style="accent-color: #15803D;">
+              <input type="checkbox" id="id_env_cobrado" name="cobrado" value="1" checked style="accent-color: #15803D;">
               Flete ya cobrado al cliente
             </label>
             <input type="text" name="notas" placeholder="Observaciones de despacho (opcional)" style="flex: 1 1 220px; min-width: 0; max-width: 100%; height: 38px; padding: 6px 12px; border-radius: 4px; border: 1px solid #94A3B8; background: #FFFFFF; color: #0F172A; box-sizing: border-box;">
@@ -235,7 +310,7 @@
 
     {% elif original.estado == 'ENVIADO' %}
       <div style="display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: center;">
-        <div style="background: #FFFFFF; padding: 12px 16px; border-radius: 4px; border: 1px solid #CBD5E1; font-size: 13px; color: #1E293B; box-shadow: 0 1px 2px rgba(0,0,0,0.04); flex: 1 1 280px; min-width: 0; line-height: 1.5; word-break: break-word;">
+        <div style="background: #FFFFFF; padding: 12px 16px; border-radius: 4px; border: 1px solid #CBD5E1; font-size: 13px; color: #1E293B; flex: 1 1 280px; min-width: 0; line-height: 1.5; word-break: break-word;">
           {% if envio_actual %}
             <strong>Despacho registrado:</strong> {{ envio_actual.get_agencia_display }} ·
             Orden <strong>{{ envio_actual.numero_orden_agencia }}</strong> ·

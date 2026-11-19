@@ -3,8 +3,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
-from django.http import HttpRequest, JsonResponse
-from django.urls import include, path
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.urls import include, path, resolve
 
 from apps.catalogo.sitemaps import PaginasEstaticasSitemap, ProductoSitemap
 from apps.catalogo.views import vista_robots_txt
@@ -31,9 +31,34 @@ def vista_estado_salud(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"estado": "ok", "tienda": "Emuná Sport"})
 
 
+def vista_alias_panel_perfil(request: HttpRequest, subruta: str = "") -> HttpResponse:
+    """Resuelve dinámicamente las rutas amigables /PanelDueño/ y /PanelAdministrativo/ hacia el panel.
+
+    Qué hace:      Mapea cualquier acceso bajo /PanelDueño/, /PanelDueno/ o /PanelAdministrativo/ a la vista real.
+    Va hacia:      Ejecuta la vista correspondiente del panel sin perder parámetros GET ni formularios POST.
+    Depende de:    django.urls.resolve y settings.ADMIN_URL.
+    Cuándo usarla: Cuando el dueño o el superadministrador navegan con su URL personalizada por perfil.
+    Si no opera:   Propaga Resolver404 si la subruta interna no existe en el panel.
+    """
+    prefijo_admin = settings.ADMIN_URL.strip("/")
+    ruta_limpia = subruta.lstrip("/")
+    ruta_destino = f"/{prefijo_admin}/{ruta_limpia}" if ruta_limpia else f"/{prefijo_admin}/"
+    coincidencia = resolve(ruta_destino)
+    request.resolver_match = coincidencia
+    request.path = ruta_destino
+    request.path_info = ruta_destino
+    return coincidencia.func(request, *coincidencia.args, **coincidencia.kwargs)
+
+
 urlpatterns = [
     path(f"{settings.ADMIN_URL}tablero/", include("apps.tablero.urls", namespace="tablero")),
     path(settings.ADMIN_URL, admin.site.urls),
+    path("PanelAdministrativo/", vista_alias_panel_perfil, name="panel_administrativo_raiz"),
+    path("PanelAdministrativo/<path:subruta>", vista_alias_panel_perfil, name="panel_administrativo_ruta"),
+    path("PanelDueño/", vista_alias_panel_perfil, name="panel_dueno_tilde_raiz"),
+    path("PanelDueño/<path:subruta>", vista_alias_panel_perfil, name="panel_dueno_tilde_ruta"),
+    path("PanelDueno/", vista_alias_panel_perfil, name="panel_dueno_raiz"),
+    path("PanelDueno/<path:subruta>", vista_alias_panel_perfil, name="panel_dueno_ruta"),
     path("salud/", vista_estado_salud, name="estado_salud"),
     path("robots.txt", vista_robots_txt, name="robots_txt"),
     path(

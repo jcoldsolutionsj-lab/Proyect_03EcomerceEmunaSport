@@ -1,21 +1,25 @@
 """Configuración del panel administrativo para el catálogo de camisetas y auditoría de stock."""
 from typing import Any
 
+from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
-from django.http import HttpRequest, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import path, reverse
 from django.utils.html import format_html
 from django.views.decorators.http import require_POST
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
+from unfold.admin import TabularInline as UnfoldTabularInline
 
 from apps.nucleo.admin_helpers import encabezado_con_tooltip
 from apps.nucleo.excepciones import ErrorDominioEmuna
 
 from .models import Categoria, ImagenProducto, MovimientoStock, Producto, ReglaPrecio, Variante
+from .selectores import MAX_PRODUCTOS_DESTACADOS
 
 
-class ImagenProductoInline(admin.TabularInline):
+class ImagenProductoInline(UnfoldTabularInline):
     """Permite gestionar las fotos del producto en la misma pantalla del producto."""
 
     model = ImagenProducto
@@ -42,7 +46,7 @@ class ImagenProductoInline(admin.TabularInline):
     )
 
 
-class VarianteInline(admin.TabularInline):
+class VarianteInline(UnfoldTabularInline):
     """Permite gestionar las tallas (S, M, L, XL) y ver su stock dentro del producto."""
 
     model = Variante
@@ -62,7 +66,7 @@ class VarianteInline(admin.TabularInline):
     fields = ("talla", "sku", "cantidad_stock", "umbral_stock_bajo", "activa", "color", "modelo")
 
 
-class ReglaPrecioInline(admin.TabularInline):
+class ReglaPrecioInline(UnfoldTabularInline):
     """Permite configurar los tramos de precio por mayor dentro de cada producto."""
 
     model = ReglaPrecio
@@ -79,7 +83,7 @@ class ReglaPrecioInline(admin.TabularInline):
 
 
 @admin.register(Categoria)
-class CategoriaAdmin(admin.ModelAdmin):
+class CategoriaAdmin(UnfoldModelAdmin):
     """Administración de categorías del catálogo."""
 
     list_display = ("nombre_col", "slug_col", "orden_col", "activa_col", "actualizacion_col")
@@ -176,10 +180,41 @@ class CategoriaAdmin(admin.ModelAdmin):
         return obj.fecha_actualizacion
 
 
+class ProductoAdminForm(forms.ModelForm):
+    """Formulario administrativo de Producto con límite de destacados en vitrina."""
+
+    class Meta:
+        model = Producto
+        fields = "__all__"
+
+    def clean(self) -> dict[str, Any]:
+        """Evita superar MAX_PRODUCTOS_DESTACADOS productos marcados como destacados.
+
+        Qué hace:      Cuenta los productos destacados existentes excluyendo el actual y bloquea el 9.º.
+        Va hacia:      Retorna cleaned_data o agrega ValidationError legible sobre el campo 'destacado'.
+        Depende de:    Producto, MAX_PRODUCTOS_DESTACADOS y django.forms.ModelForm.clean().
+        Cuándo usarla: Al guardar o crear un Producto desde el panel /gestion/.
+        Si no opera:   Si faltara validar permitiría más de 8 destacados en base de datos.
+        """
+        cleaned_data = super().clean()
+        if cleaned_data.get("destacado"):
+            qs = Producto.objects.filter(destacado=True)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.count() >= MAX_PRODUCTOS_DESTACADOS:
+                self.add_error(
+                    "destacado",
+                    f"Ya superaste el límite de {MAX_PRODUCTOS_DESTACADOS} productos destacados en inicio. "
+                    "Debes desmarcar primero uno de los 8 actuales antes de activar este modelo.",
+                )
+        return cleaned_data
+
+
 @admin.register(Producto)
-class ProductoAdmin(admin.ModelAdmin):
+class ProductoAdmin(UnfoldModelAdmin):
     """Administración integral de productos con tallas, fotos y precios por mayor."""
 
+    form = ProductoAdminForm
     list_display = (
         "nombre_col",
         "sku_col",
@@ -194,6 +229,51 @@ class ProductoAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("nombre",)}
     list_per_page = 15
     inlines = [VarianteInline, ReglaPrecioInline, ImagenProductoInline]
+
+    def get_form(
+        self,
+        request: HttpRequest,
+        obj: Producto | None = None,
+        change: bool = False,
+        **kwargs: Any,
+    ) -> Any:
+        """Agrega aviso en vivo junto al interruptor 'Destacado en inicio' sobre el tope de 8.
+
+        Qué hace:      Calcula cuántos destacados existen y actualiza help_text de 'destacado'.
+        Va hacia:      Muestra estado o alerta de límite alcanzado justo debajo del switch en /gestion/.
+        Depende de:    Producto.objects.filter(destacado=True) y MAX_PRODUCTOS_DESTACADOS.
+        Cuándo usarla: Al abrir el formulario de alta o edición de un Producto.
+        Si no opera:   Retorna el formulario estándar sin mensaje dinámico.
+        """
+        form = super().get_form(request, obj=obj, change=change, **kwargs)
+        if "destacado" in form.base_fields:
+            total_destacados = Producto.objects.filter(destacado=True).count()
+            url_destacados = reverse("admin:catalogo_producto_changelist") + "?destacado__exact=1"
+            ya_esta_destacado = bool(obj and obj.pk and obj.destacado)
+            if total_destacados >= MAX_PRODUCTOS_DESTACADOS and not ya_esta_destacado:
+                form.base_fields["destacado"].help_text = format_html(
+                    '<span style="display:inline-block;padding:6px 10px;border-radius:4px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;font-weight:700;">'
+                    '⚠️ Límite alcanzado ({}/{}): ya hay {} camisetas destacadas. Desmarca una antes de activar esta '
+                    '(<a href="{}" style="color:#B91C1C;text-decoration:underline;">Ver los {} destacados</a>).'
+                    "</span>",
+                    total_destacados,
+                    MAX_PRODUCTOS_DESTACADOS,
+                    MAX_PRODUCTOS_DESTACADOS,
+                    url_destacados,
+                    MAX_PRODUCTOS_DESTACADOS,
+                )
+            else:
+                form.base_fields["destacado"].help_text = format_html(
+                    '<span style="color:#475569;font-weight:600;">'
+                    "Espacios usados en vitrina de inicio: <strong>{} de {}</strong> "
+                    '(<a href="{}" style="color:#15803D;text-decoration:underline;font-weight:700;">Ver destacados</a>). '
+                    "Si hay más de 4, rotan cada 3 segundos."
+                    "</span>",
+                    total_destacados,
+                    MAX_PRODUCTOS_DESTACADOS,
+                    url_destacados,
+                )
+        return form
 
     @admin.display(
         description=encabezado_con_tooltip(
@@ -318,7 +398,7 @@ class ProductoAdmin(admin.ModelAdmin):
 
 
 @admin.register(Variante)
-class VarianteAdmin(admin.ModelAdmin):
+class VarianteAdmin(UnfoldModelAdmin):
     """Vista directa de variantes por talla y control auditado de stock."""
 
     change_form_template = "admin/catalogo/variante/change_form.html"
@@ -386,20 +466,23 @@ class VarianteAdmin(admin.ModelAdmin):
         ),
         ordering="cantidad_stock",
     )
-    def stock_semaforo(self, obj: Variante) -> str:
-        """Muestra el stock actual con semáforo de color según umbral mínimo.
+    def _resolver_estado_semaforo_variante(self, obj: Variante) -> dict[str, Any]:
+        """Calcula colores y etiquetas de semáforo según stock actual y umbral efectivo.
 
-        Qué hace:      Pinta rojo si está agotado (0), amarillo si es bajo y verde si está normal.
-        Va hacia:      Columna Stock Actual en VarianteAdmin.
-        Depende de:    obj.cantidad_stock y obj.umbral_stock_bajo.
-        Cuándo usarla: Para detectar rápido tallas críticas o agotadas desde el panel.
-        Si no opera:   Muestra el número entero como respaldo.
+        Qué hace:      Determina si la variante está agotada (rojo), en stock bajo (ámbar) o normal (verde).
+        Va hacia:      Retorna diccionario con estilos y textos para listado y cabecera de ficha.
+        Depende de:    obj.cantidad_stock, obj.umbral_stock_bajo y obtener_configuracion_tienda().
+        Cuándo usarla: Compartido entre stock_semaforo() y change_view() para no duplicar lógica.
+        Si no opera:   Si el stock es 0 siempre prioriza estado rojo agotado.
         """
         if obj.cantidad_stock <= 0:
-            return format_html(
-                '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">{}</span>',
-                "🔴 [ROJO] Agotado (0)",
-            )
+            return {
+                "fg": "#991B1B",
+                "bg": "#FEE2E2",
+                "border": "#EF4444",
+                "etiqueta_lista": "🔴 Agotado (0)",
+                "etiqueta_ficha": "🔴 Agotado: 0 und.",
+            }
         from apps.nucleo.selectores import obtener_configuracion_tienda
 
         umbral_efectivo = (
@@ -408,14 +491,59 @@ class VarianteAdmin(admin.ModelAdmin):
             else obtener_configuracion_tienda().umbral_stock_bajo
         )
         if obj.cantidad_stock <= umbral_efectivo:
-            return format_html(
-                '<span style="color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟡 [ÁMBAR] Bajo ({})</span>',
-                obj.cantidad_stock,
-            )
+            return {
+                "fg": "#92400E",
+                "bg": "#FEF3C7",
+                "border": "#F59E0B",
+                "etiqueta_lista": f"🟡 Bajo ({obj.cantidad_stock})",
+                "etiqueta_ficha": f"🟡 Stock bajo: {obj.cantidad_stock} und. (mín. {umbral_efectivo})",
+            }
+        return {
+            "fg": "#166534",
+            "bg": "#DCFCE7",
+            "border": "#22C55E",
+            "etiqueta_lista": f"🟢 {obj.cantidad_stock} und.",
+            "etiqueta_ficha": f"🟢 Stock actual: {obj.cantidad_stock} und.",
+        }
+
+    def stock_semaforo(self, obj: Variante) -> str:
+        """Muestra el stock actual con semáforo de color según umbral mínimo.
+
+        Qué hace:      Pinta rojo si está agotado (0), amarillo si es bajo y verde si está normal.
+        Va hacia:      Columna Stock Actual en VarianteAdmin.
+        Depende de:    VarianteAdmin._resolver_estado_semaforo_variante().
+        Cuándo usarla: Para detectar rápido tallas críticas o agotadas desde el panel.
+        Si no opera:   Muestra el número entero como respaldo.
+        """
+        datos = self._resolver_estado_semaforo_variante(obj)
         return format_html(
-            '<span style="color:#166534;background:#DCFCE7;border:1px solid #22C55E;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟢 [VERDE] {} und.</span>',
-            obj.cantidad_stock,
+            '<span style="color:{};background:{};border:1px solid {};padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">{}</span>',
+            datos["fg"],
+            datos["bg"],
+            datos["border"],
+            datos["etiqueta_lista"],
         )
+
+    def change_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Inyecta el semáforo real de stock para la cabecera del formulario de Variante.
+
+        Qué hace:      Calcula semaforo_variante con el mismo umbral del listado y tablero.
+        Va hacia:      Renderiza el badge superior en templates/admin/catalogo/variante/change_form.html.
+        Depende de:    _resolver_estado_semaforo_variante() y super().change_view().
+        Cuándo usarla: Al editar una variante de talla existente en /gestion/.
+        Si no opera:   Delega sin alteraciones a UnfoldModelAdmin.change_view().
+        """
+        contexto = dict(extra_context or {})
+        variante = self.get_object(request, object_id)
+        if variante is not None:
+            contexto["semaforo_variante"] = self._resolver_estado_semaforo_variante(variante)
+        return super().change_view(request, object_id, form_url, extra_context=contexto)
 
     @admin.display(
         description=encabezado_con_tooltip(
@@ -531,7 +659,7 @@ class VarianteAdmin(admin.ModelAdmin):
 
 
 @admin.register(MovimientoStock)
-class MovimientoStockAdmin(admin.ModelAdmin):
+class MovimientoStockAdmin(UnfoldModelAdmin):
     """Auditoría inmutable de todas las entradas y salidas de stock (TBL_TMOVIMIENTO_STOCK)."""
 
     list_display = (
@@ -649,11 +777,11 @@ class MovimientoStockAdmin(admin.ModelAdmin):
         """
         if obj.cantidad > 0:
             return format_html(
-                '<span style="color:#166534;background:#DCFCE7;border:1px solid #22C55E;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟢 [VERDE] Entrada +{}</span>',
+                '<span style="color:#166534;background:#DCFCE7;border:1px solid #22C55E;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟢 Entrada +{}</span>',
                 obj.cantidad,
             )
         return format_html(
-            '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🔴 [ROJO] Salida {}</span>',
+            '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🔴 Salida {}</span>',
             obj.cantidad,
         )
 
