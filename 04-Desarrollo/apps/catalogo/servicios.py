@@ -1,6 +1,10 @@
-"""Servicios de escritura del catálogo y procesamiento seguro de imágenes a WebP."""
+"""Servicios de escritura del catálogo, compresión WebP y subida directa a Cloudflare R2."""
+from io import BytesIO
 from pathlib import Path
+from typing import Any
 
+import boto3
+from botocore.config import Config as BotoConfig
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from PIL import Image
@@ -9,6 +13,109 @@ from apps.nucleo.excepciones import EntradaInvalidaError
 
 EXTENSIONES_PROHIBIDAS = {".svg", ".html", ".htm", ".php", ".exe", ".js", ".sh", ".bat"}
 PESO_MAXIMO_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+def obtener_cliente_r2() -> Any:
+    """Crea y devuelve un cliente S3 (boto3) autenticado contra Cloudflare R2.
+
+    Qué hace:      Instancia boto3.client('s3') apuntando al endpoint R2_ACCOUNT_ID con firma s3v4.
+    Va hacia:      Retorna el cliente listo para put_object / head_bucket sobre R2_BUCKET_PUBLIC.
+    Depende de:    boto3 y variables R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY en settings.
+    Cuándo usarla: Desde subir_imagen_producto_a_r2() o utilidades de sincronización multimedia.
+    Si no opera:   Lanza RuntimeError si faltan las credenciales R2 en el entorno.
+    """
+    account_id = getattr(settings, "R2_ACCOUNT_ID", "")
+    access_key = getattr(settings, "R2_ACCESS_KEY_ID", "")
+    secret_key = getattr(settings, "R2_SECRET_ACCESS_KEY", "")
+    if not (account_id and access_key and secret_key):
+        raise RuntimeError("Faltan credenciales R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY.")
+
+    return boto3.client(
+        "s3",
+        endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name="auto",
+        config=BotoConfig(signature_version="s3v4"),
+    )
+
+
+def subir_imagen_producto_a_r2(
+    *,
+    ruta_archivo_origen: Path,
+    slug_producto: str,
+    orden: int,
+) -> tuple[str, str, str]:
+    """Convierte una foto local a WebP (400px y 900px) y la sube al bucket Cloudflare R2.
+
+    Qué hace:      Valida la imagen, genera miniatura/detalle WebP en memoria y hace put_object en R2.
+    Va hacia:      Retorna (clave_original, url_miniatura_publica, url_detalle_publica).
+    Depende de:    obtener_cliente_r2(), PIL.Image y settings.R2_BUCKET_PUBLIC / R2_PUBLIC_URL.
+    Cuándo usarla: Al cargar o sincronizar fotografías reales del catálogo hacia Cloudflare R2.
+    Si no opera:   Lanza ValidationError o EntradaInvalidaError si el archivo no existe o es inválido.
+    """
+    if not ruta_archivo_origen.exists():
+        raise EntradaInvalidaError(f"No existe el archivo de imagen: {ruta_archivo_origen}")
+
+    if ruta_archivo_origen.suffix.lower() in EXTENSIONES_PROHIBIDAS:
+        raise ValidationError("Formato de archivo no permitido por seguridad.")
+
+    if ruta_archivo_origen.stat().st_size > PESO_MAXIMO_BYTES:
+        raise ValidationError("La imagen supera el tamaño máximo permitido de 5 MB.")
+
+    try:
+        with Image.open(ruta_archivo_origen) as img_verificacion:
+            img_verificacion.verify()
+    except Exception as exc:
+        raise ValidationError("El archivo subido no es una imagen válida o está dañado.") from exc
+
+    buf_det = BytesIO()
+    buf_min = BytesIO()
+    with Image.open(ruta_archivo_origen) as img:
+        rgb = img.convert("RGB")
+        ancho, alto = rgb.size
+
+        alto_900 = max(1, int(alto * (900 / ancho)))
+        img_900 = rgb.resize((900, alto_900), Image.Resampling.LANCZOS)
+        img_900.save(buf_det, "WEBP", quality=82)
+
+        alto_400 = max(1, int(alto * (400 / ancho)))
+        img_400 = rgb.resize((400, alto_400), Image.Resampling.LANCZOS)
+        img_400.save(buf_min, "WEBP", quality=80)
+
+    bucket = getattr(settings, "R2_BUCKET_PUBLIC", "emunasport-fotos")
+    public_url = str(getattr(settings, "R2_PUBLIC_URL", "") or "").rstrip("/")
+    clave_orig = f"productos/{slug_producto}/originales/{slug_producto}_{orden}.jpg"
+    clave_min = f"productos/{slug_producto}/webp/{slug_producto}_{orden}_miniatura.webp"
+    clave_det = f"productos/{slug_producto}/webp/{slug_producto}_{orden}_detalle.webp"
+
+    s3 = obtener_cliente_r2()
+    s3.put_object(
+        Bucket=bucket,
+        Key=clave_orig,
+        Body=ruta_archivo_origen.read_bytes(),
+        ContentType="image/jpeg",
+        CacheControl="public, max-age=31536000",
+    )
+    s3.put_object(
+        Bucket=bucket,
+        Key=clave_min,
+        Body=buf_min.getvalue(),
+        ContentType="image/webp",
+        CacheControl="public, max-age=31536000, immutable",
+    )
+    s3.put_object(
+        Bucket=bucket,
+        Key=clave_det,
+        Body=buf_det.getvalue(),
+        ContentType="image/webp",
+        CacheControl="public, max-age=31536000, immutable",
+    )
+
+    url_min = f"{public_url}/{clave_min}" if public_url else clave_min
+    url_det = f"{public_url}/{clave_det}" if public_url else clave_det
+    url_orig = f"{public_url}/{clave_orig}" if public_url else clave_orig
+    return url_orig, url_min, url_det
 
 
 def validar_y_generar_versiones_webp(

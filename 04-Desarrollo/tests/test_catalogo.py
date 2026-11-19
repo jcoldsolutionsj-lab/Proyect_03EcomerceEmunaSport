@@ -9,8 +9,16 @@ from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.urls import reverse
 
-from apps.catalogo.models import Categoria, Producto, Variante
+from apps.catalogo.models import (
+    Categoria,
+    Equipo,
+    Producto,
+    TipoEquipacion,
+    TipoEquipo,
+    Variante,
+)
 from apps.catalogo.selectores import (
+    buscar_productos_para_ia,
     calcular_precio_unitario_aplicado,
     listar_productos_catalogo,
     obtener_producto_detalle_por_slug,
@@ -84,10 +92,18 @@ def test_servicio_procesamiento_webp_y_bloqueo_archivos_peligrosos(tmp_path: Pat
     Cuándo usarla: En la suite de pruebas de la Fase 1.
     Si no opera:   Falla si no genera los archivos .webp o si acepta una extensión prohibida.
     """
-    origen_real = (
+    candidatos = [
         Path(settings.REPO_DIR)
-        / "03-Diseno-Tecnico/assets/productos-demo/argentina-messi/originales/argentina_1.jpg"
-    )
+        / "03-Diseno-Tecnico/assets/productos-demo/ARGENTINA 2026 - 2027/argentina_1.jpg",
+        Path(settings.REPO_DIR)
+        / "03-Diseno-Tecnico/assets/productos-demo/argentina-messi/originales/argentina_1.jpg",
+    ]
+    origen_real = next((p for p in candidatos if p.exists()), None)
+    if origen_real is None:
+        from PIL import Image
+
+        origen_real = tmp_path / "origen_valido.jpg"
+        Image.new("RGB", (1000, 1200), color=(10, 10, 10)).save(origen_real, format="JPEG")
     rel_min, rel_det = validar_y_generar_versiones_webp(
         ruta_archivo_origen=origen_real,
         slug_producto="test-messi",
@@ -416,3 +432,63 @@ def test_vitrina_mas_vendidas_portada_periodos_y_fotos(client, monkeypatch) -> N
     assert len(slugs_fusionados) == len(set(slugs_fusionados)) == 2
     assert vitrina_fusionada[0]["etiqueta_pill"] == "Hoy · Semana"
     assert vitrina_fusionada[1]["etiqueta_pill"] == "Mes"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_normalizacion_equipo_y_busqueda_ia_en_cache(django_assert_num_queries) -> None:
+    """Verifica Equipo normalizado, filtro por alias/sinónimos e invalidación automática de caché IA.
+
+    Qué hace:      Crea Equipo Portugal con alias 'cr7', consulta caché IA con 0 SQL tras calentar y
+                   verifica invalidación automática al agotarse la variante vía transaction.on_commit.
+    Va hacia:      Garantiza velocidad constante sin golpear CPU en PostgreSQL para futura IA Gemini.
+    Depende de:    Equipo, Producto, Variante, signals.py y selectores.buscar_productos_para_ia().
+    Cuándo usarla: En la suite de pruebas tras normalización e índices de catálogo.
+    Si no opera:   Falla si requiere queries repetidas al consultar IA o no refresca stock agotado.
+    """
+    cat = Categoria.objects.create(nombre="Selecciones Mundial", slug="selecciones-mundial")
+    eq_portugal = Equipo.objects.create(
+        nombre="Portugal",
+        slug="portugal",
+        tipo=TipoEquipo.SELECCION,
+        alias_busqueda="cr7, cristiano, lusa",
+    )
+    prod = Producto.objects.create(
+        categoria=cat,
+        equipo=eq_portugal,
+        equipacion=TipoEquipacion.LOCAL,
+        temporada="2026-2027",
+        palabras_clave="euro, seleccion europea, granate",
+        nombre="Portugal Local – Edición Jugador",
+        slug="portugal-local-2026",
+        sku="EMU-POR26",
+        precio_unidad=Decimal("59.00"),
+        activo=True,
+    )
+    var_m = Variante.objects.create(
+        producto=prod,
+        talla="M",
+        sku="EMU-POR26-M",
+        cantidad_stock=4,
+        activa=True,
+    )
+
+    # Filtro ORM normalizado por equipo_slug y alias
+    assert listar_productos_catalogo(equipo_slug="portugal").count() == 1
+    assert listar_productos_catalogo(busqueda="cr7").count() == 1
+
+    # Primera consulta IA calienta caché; segunda consulta debe ejecutar exactamente 0 queries SQL
+    res_1 = buscar_productos_para_ia("Hola, ¿tienen camiseta de CR7 en talla M?")
+    assert len(res_1) == 1
+    assert res_1[0]["equipo"] == "Portugal"
+    assert res_1[0]["tallas_disponibles"] == ["M"]
+
+    with django_assert_num_queries(0):
+        res_2 = buscar_productos_para_ia("tienen portugal talla m?")
+    assert len(res_2) == 1
+    assert res_2[0]["sku"] == "EMU-POR26"
+
+    # Al agotarse el stock, signals.py (on_commit) invalida la caché y deja de ofrecerlo
+    var_m.cantidad_stock = 0
+    var_m.save()
+    res_agotado = buscar_productos_para_ia("tienen portugal?")
+    assert res_agotado == []

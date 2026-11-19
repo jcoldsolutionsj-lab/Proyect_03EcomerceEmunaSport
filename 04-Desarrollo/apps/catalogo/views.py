@@ -54,6 +54,9 @@ def vista_inicio_catalogo(request: HttpRequest) -> HttpResponse:
         "productos": productos,
         "destacados": destacados,
         "vitrina_portada": vitrina_portada,
+        "url_producto_estrella": (
+            destacados[0].get_absolute_url() if destacados else "#catalogo-completo"
+        ),
         "categoria_activa": categoria_slug,
         "talla_activa": talla_activa,
         "tallas_filtro": TALLAS_FILTRO,

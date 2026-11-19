@@ -331,7 +331,7 @@
         {% for item in carrito.items %}
         <div class="flex items-center justify-between gap-3 text-xs border-b border-silver/60 pb-2.5">
           <div class="flex items-center gap-2.5 min-w-0">
-            <img src="{% static item.ruta_miniatura %}" alt="{{ item.nombre_producto }}" class="w-10 h-12 object-cover border border-silver shrink-0">
+            <img src="{{ item.url_miniatura }}" alt="{{ item.nombre_producto }}" class="w-10 h-12 object-cover border border-silver shrink-0">
             <div class="min-w-0">
               <p class="font-bold text-ink truncate">{{ item.nombre_producto }}</p>
               <p class="text-silverDark">

@@ -1,13 +1,166 @@
-"""Modelos de datos del catálogo: Categoria, Producto, ImagenProducto, Variante, ReglaPrecio y MovimientoStock."""
+"""Modelos de datos del catálogo: Categoria, Equipo, Producto, ImagenProducto, Variante, ReglaPrecio y MovimientoStock."""
 from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.text import slugify
 
 from apps.nucleo.validadores import limpiar_texto_seguro
+
+
+def resolver_url_recurso_imagen(ruta: str | None) -> str:
+    """Resuelve una ruta de imagen como URL directa de Cloudflare R2, clave R2 o archivo estático.
+
+    Qué hace:      Devuelve la URL si empieza con http(s)://, antepone R2_PUBLIC_URL en claves productos/ o usa static().
+    Va hacia:      Atributo src="..." en plantillas del catálogo, carrito, checkout y OpenGraph.
+    Depende de:    django.conf.settings.R2_PUBLIC_URL y django.templatetags.static.static.
+    Cuándo usarla: Desde ImagenProducto.url_miniatura/url_detalle y obtener_carrito_detallado().
+    Si no opera:   Retorna cadena vacía si la ruta es nula o vacía.
+    """
+    texto = str(ruta or "").strip()
+    if not texto:
+        return ""
+    if texto.startswith(("http://", "https://", "/")):
+        return texto
+    r2_pub = str(getattr(settings, "R2_PUBLIC_URL", "") or "").strip().rstrip("/")
+    if texto.startswith("r2://"):
+        clave = texto.removeprefix("r2://").lstrip("/")
+        return f"{r2_pub}/{clave}" if r2_pub else static(clave)
+    if r2_pub and texto.startswith(("productos/", "webp/")):
+        return f"{r2_pub}/{texto.lstrip('/')}"
+    return static(texto)
+
+
+class TipoEquipo(models.TextChoices):
+    """Clasificación normalizada de equipos o líneas de camisetas (TBL_REQUIPO)."""
+
+    SELECCION = "SELECCION", "Selección nacional"
+    CLUB = "CLUB", "Club internacional"
+    ORIGINAL = "ORIGINAL", "Diseño propio Emuná Sport"
+
+
+class TipoEquipacion(models.TextChoices):
+    """Versión o equipación de la camiseta dentro de TBL_RPRODUCTO."""
+
+    LOCAL = "LOCAL", "Local / Titular"
+    ALTERNA = "ALTERNA", "Alterna / Visitante"
+    ESPECIAL = "ESPECIAL", "Edición especial"
+    RETRO = "RETRO", "Retro / Histórica"
+    ENTRENAMIENTO = "ENTRENAMIENTO", "Entrenamiento / Línea propia"
+
+
+class Equipo(models.Model):
+    """Maestro de selecciones, clubes y líneas para búsqueda rápida y futura IA (TBL_REQUIPO)."""
+
+    id = models.BigAutoField(
+        primary_key=True,
+        db_column="EQU_NID",
+        verbose_name="Identificador",
+    )
+    nombre = models.CharField(
+        max_length=80,
+        unique=True,
+        db_column="EQU_CNOMBRE",
+        verbose_name="Nombre del equipo o línea",
+    )
+    slug = models.SlugField(
+        max_length=100,
+        unique=True,
+        db_column="EQU_CSLUG",
+        verbose_name="Slug URL",
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TipoEquipo.choices,
+        default=TipoEquipo.SELECCION,
+        db_column="EQU_CTIPO",
+        verbose_name="Tipo",
+    )
+    alias_busqueda = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        db_column="EQU_CALIAS_BUSQUEDA",
+        verbose_name="Alias / apodos (separados por coma)",
+        help_text="Ej. cr7, cristiano, lusa para Portugal; barsa, cule, fcb para Barcelona.",
+    )
+    orden = models.IntegerField(
+        default=1,
+        db_column="EQU_NORDEN",
+        verbose_name="Orden de aparición",
+    )
+    activo = models.BooleanField(
+        default=True,
+        db_column="EQU_OACTIVO",
+        verbose_name="Equipo activo",
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        db_column="EQU_DFECHA_CREACION",
+        verbose_name="Fecha de creación",
+    )
+    fecha_actualizacion = models.DateTimeField(
+        auto_now=True,
+        db_column="EQU_DFECHA_ACTUALIZACION",
+        verbose_name="Fecha de última actualización",
+    )
+
+    class Meta:
+        db_table = "TBL_REQUIPO"
+        ordering = ["orden", "nombre"]
+        verbose_name = "Equipo / Selección / Club"
+        verbose_name_plural = "Equipos y Selecciones"
+        indexes = [
+            models.Index(
+                fields=["activo", "orden", "nombre"],
+                name="TBL_REQUIPO_ACT_ORD_NOM_IX",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        """Devuelve el nombre del equipo o línea deportiva.
+
+        Qué hace:      Retorna self.nombre.
+        Va hacia:      Selectores del panel administrativo, filtros y caché del catálogo.
+        Depende de:    Atributo nombre de la instancia.
+        Cuándo usarla: Automáticamente al convertir la instancia a cadena.
+        Si no opera:   Retorna cadena vacía si el nombre aún no existe.
+        """
+        return self.nombre
+
+    def clean(self) -> None:
+        """Sanitiza nombre y alias, y genera slug automático si está vacío.
+
+        Qué hace:      Limpia etiquetas HTML de nombre/alias y construye slug si falta.
+        Va hacia:      Normaliza los datos de TBL_REQUIPO antes de persistir.
+        Depende de:    limpiar_texto_seguro y slugify.
+        Cuándo usarla: Antes de guardar mediante full_clean().
+        Si no opera:   Lanza ValidationError si el nombre queda vacío.
+        """
+        self.nombre = limpiar_texto_seguro(self.nombre, longitud_maxima=80)
+        if not self.nombre:
+            raise ValidationError("El nombre del equipo o línea es obligatorio.")
+        self.alias_busqueda = limpiar_texto_seguro(
+            str(self.alias_busqueda or ""), longitud_maxima=200
+        ).lower()
+        if not self.slug:
+            self.slug = slugify(self.nombre)[:100]
+
+    def save(self, *args, **kwargs) -> None:
+        """Valida y persiste el equipo en TBL_REQUIPO.
+
+        Qué hace:      Ejecuta full_clean() y guarda el registro en base de datos.
+        Va hacia:      Tabla física TBL_REQUIPO.
+        Depende de:    clean() y models.Model.save().
+        Cuándo usarla: Desde el admin, comandos seed o servicios del catálogo.
+        Si no opera:   Propaga ValidationError o IntegrityError si hay duplicados.
+        """
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class Categoria(models.Model):
@@ -110,6 +263,15 @@ class Producto(models.Model):
         db_column="CAT_NID",
         verbose_name="Categoría",
     )
+    equipo = models.ForeignKey(
+        Equipo,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="productos",
+        db_column="EQU_NID",
+        verbose_name="Equipo / Selección / Club",
+    )
     nombre = models.CharField(
         max_length=150,
         db_column="PRO_CNOMBRE",
@@ -126,6 +288,28 @@ class Producto(models.Model):
         unique=True,
         db_column="PRO_CSKU",
         verbose_name="Código interno (SKU)",
+    )
+    equipacion = models.CharField(
+        max_length=20,
+        choices=TipoEquipacion.choices,
+        blank=True,
+        default="",
+        db_column="PRO_CEQUIPACION",
+        verbose_name="Versión / Equipación",
+    )
+    temporada = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        db_column="PRO_CTEMPORADA",
+        verbose_name="Temporada (ej. 2026-2027)",
+    )
+    palabras_clave = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        db_column="PRO_CPALABRAS_CLAVE",
+        verbose_name="Sinónimos de búsqueda (web e IA)",
     )
     descripcion = models.TextField(
         null=True,
@@ -180,6 +364,13 @@ class Producto(models.Model):
         ordering = ["-destacado", "-id"]
         verbose_name = "Producto"
         verbose_name_plural = "Productos"
+        indexes = [
+            models.Index(
+                fields=["categoria", "equipo", "destacado"],
+                condition=Q(activo=True),
+                name="TBL_RPRODUCTO_ACTIVO_CAT_EQU_IX",
+            ),
+        ]
 
     def __str__(self) -> str:
         """Devuelve el nombre del producto junto a su código SKU.
@@ -243,6 +434,10 @@ class Producto(models.Model):
         """
         self.nombre = limpiar_texto_seguro(self.nombre, longitud_maxima=150)
         self.sku = limpiar_texto_seguro(self.sku, longitud_maxima=30).upper()
+        self.temporada = limpiar_texto_seguro(str(self.temporada or ""), longitud_maxima=20)
+        self.palabras_clave = limpiar_texto_seguro(
+            str(self.palabras_clave or ""), longitud_maxima=200
+        ).lower()
         if self.descripcion:
             self.descripcion = limpiar_texto_seguro(self.descripcion, longitud_maxima=2000)
         if self.marca:
@@ -362,6 +557,52 @@ class ImagenProducto(models.Model):
             return self.texto_alternativo
         return f"{self.producto.nombre} – Estilo deportivo Emuná Sport (Vista {self.orden})"
 
+    @property
+    def url_miniatura(self) -> str:
+        """Devuelve la URL pública final de la miniatura (~400px WebP) en Cloudflare R2 o static.
+
+        Qué hace:      Resuelve ruta_miniatura (con respaldo a detalle u original) vía resolver_url_recurso_imagen.
+        Va hacia:      Tarjetas del catálogo, destacados, miniaturas de ficha y carrito.
+        Depende de:    resolver_url_recurso_imagen y atributos ruta_miniatura/ruta_detalle/ruta_original.
+        Cuándo usarla: En plantillas HTML en lugar de invocar {% static img.ruta_miniatura %}.
+        Si no opera:   Retorna cadena vacía si no hay ninguna ruta configurada.
+        """
+        return resolver_url_recurso_imagen(
+            self.ruta_miniatura or self.ruta_detalle or self.ruta_original
+        )
+
+    @property
+    def url_detalle(self) -> str:
+        """Devuelve la URL pública final de la imagen de detalle (~900px WebP) en Cloudflare R2 o static.
+
+        Qué hace:      Resuelve ruta_detalle (con respaldo a miniatura u original) vía resolver_url_recurso_imagen.
+        Va hacia:      Visor principal, lupa zoom, vitrina de portada y lightbox.
+        Depende de:    resolver_url_recurso_imagen y atributos ruta_detalle/ruta_miniatura/ruta_original.
+        Cuándo usarla: En plantillas HTML en lugar de invocar {% static img.ruta_detalle %}.
+        Si no opera:   Retorna cadena vacía si no hay ninguna ruta configurada.
+        """
+        return resolver_url_recurso_imagen(
+            self.ruta_detalle or self.ruta_miniatura or self.ruta_original
+        )
+
+    @property
+    def url_og_absoluta(self) -> str:
+        """Devuelve una URL absoluta (con https://) para etiquetas meta OpenGraph / WhatsApp.
+
+        Qué hace:      Usa url_detalle directamente si ya es http(s):// (R2), o antepone settings.SITE_URL.
+        Va hacia:      Bloque og_imagen en detalle_producto.html.
+        Depende de:    self.url_detalle y django.conf.settings.SITE_URL.
+        Cuándo usarla: Al renderizar metadatos OpenGraph para compartir en redes y WhatsApp.
+        Si no opera:   Retorna cadena vacía si url_detalle está vacía.
+        """
+        url = self.url_detalle
+        if not url:
+            return ""
+        if url.startswith(("http://", "https://")):
+            return url
+        base = str(getattr(settings, "SITE_URL", "") or "").rstrip("/")
+        return f"{base}{url}"
+
     def clean(self) -> None:
         """Sanitiza el texto alternativo y genera el valor por defecto si se dejó en blanco.
 
@@ -467,6 +708,11 @@ class Variante(models.Model):
         verbose_name_plural = "Variantes de talla"
         indexes = [
             models.Index(fields=["producto"], name="TBL_RVARIANTE_PRO_NID_IX"),
+            models.Index(
+                fields=["talla", "producto"],
+                condition=Q(activa=True, cantidad_stock__gt=0),
+                name="TBL_RVARIANTE_DISP_TALLA_IX",
+            ),
         ]
         constraints = [
             models.CheckConstraint(

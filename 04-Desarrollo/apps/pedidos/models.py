@@ -257,6 +257,14 @@ class Pedido(models.Model):
                 fields=["estado", "fecha_creacion"],
                 name="TBL_TPEDIDO_PED_CESTADO_PED_DFECHA_CREACION_IX",
             ),
+            models.Index(
+                fields=["cliente_telefono"],
+                name="TBL_TPEDIDO_TEL_IX",
+            ),
+            models.Index(
+                fields=["origen", "estado", "fecha_creacion"],
+                name="TBL_TPEDIDO_ORI_EST_FEC_IX",
+            ),
         ]
         constraints = [
             models.CheckConstraint(

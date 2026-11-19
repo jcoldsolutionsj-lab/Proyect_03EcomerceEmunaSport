@@ -56,14 +56,29 @@ TABLAS = [
              ("CAT_NORDEN", "orden", "integer", "N", "", "Orden de aparición"),
              ("CAT_OACTIVA", "activa", "boolean", "N", "", "Categoría visible"),
          ]),
+    dict(nombre="TBL_REQUIPO", sigla="EQU", clase="Equipo", app="catalogo",
+         tipo="Referencia", descripcion="Equipos, selecciones, clubes y líneas con alias para búsqueda e IA.",
+         columnas=[
+             ("EQU_NID", "id", "bigint", "N", "PK", "Identificador"),
+             ("EQU_CNOMBRE", "nombre", "varchar(80)", "N", "UK", "Nombre del equipo o línea"),
+             ("EQU_CSLUG", "slug", "varchar(100)", "N", "UK", "Texto para la URL"),
+             ("EQU_CTIPO", "tipo", "varchar(20)", "N", "", "SELECCION, CLUB o ORIGINAL"),
+             ("EQU_CALIAS_BUSQUEDA", "alias_busqueda", "varchar(200)", "N", "", "Alias / apodos separados por coma"),
+             ("EQU_NORDEN", "orden", "integer", "N", "", "Orden de aparición"),
+             ("EQU_OACTIVO", "activo", "boolean", "N", "", "Equipo activo"),
+         ]),
     dict(nombre="TBL_RPRODUCTO", sigla="PRO", clase="Producto", app="catalogo",
          tipo="Referencia", descripcion="Camisetas u otros productos del catálogo.",
          columnas=[
              ("PRO_NID", "id", "bigint", "N", "PK", "Identificador"),
              ("CAT_NID", "categoria", "bigint", "N", "FK:TBL_RCATEGORIA", "Categoría"),
+             ("EQU_NID", "equipo", "bigint", "S", "FK:TBL_REQUIPO", "Equipo / Selección / Club"),
              ("PRO_CNOMBRE", "nombre", "varchar(150)", "N", "", "Nombre"),
              ("PRO_CSLUG", "slug", "varchar(170)", "N", "UK", "Texto para la URL"),
              ("PRO_CSKU", "sku", "varchar(30)", "N", "UK", "Código interno, ej. EMU-001"),
+             ("PRO_CEQUIPACION", "equipacion", "varchar(20)", "N", "", "Versión: LOCAL, ALTERNA, ESPECIAL, RETRO o ENTRENAMIENTO"),
+             ("PRO_CTEMPORADA", "temporada", "varchar(20)", "N", "", "Temporada, ej. 2026-2027"),
+             ("PRO_CPALABRAS_CLAVE", "palabras_clave", "varchar(200)", "N", "", "Sinónimos de búsqueda para web y chat IA"),
              ("PRO_CDESCRIPCION", "descripcion", "text", "S", "", "Descripción"),
              ("PRO_CMARCA", "marca", "varchar(80)", "S", "", "Marca (opcional; solo se muestra si está activada)"),
              ("PRO_NPRECIO_UNIDAD", "precio_unidad", "numeric(10,2)", "N", "", "Precio base o de oferta actual por unidad en PEN (ej. 55.00)"),
@@ -197,10 +212,15 @@ TABLAS = [
 
 # Índices y restricciones propias: (tabla, nombre, tipo, definición)
 INDICES = [
+    ("TBL_REQUIPO", "TBL_REQUIPO_ACT_ORD_NOM_IX", "IX", "(EQU_OACTIVO, EQU_NORDEN, EQU_CNOMBRE)"),
+    ("TBL_RPRODUCTO", "TBL_RPRODUCTO_ACTIVO_CAT_EQU_IX", "IX", "(CAT_NID, EQU_NID, PRO_ODESTACADO) WHERE PRO_OACTIVO = true"),
     ("TBL_TPEDIDO", "TBL_TPEDIDO_PED_CESTADO_PED_DFECHA_CREACION_IX", "IX", "(PED_CESTADO, PED_DFECHA_CREACION)"),
+    ("TBL_TPEDIDO", "TBL_TPEDIDO_TEL_IX", "IX", "(PED_CCLIENTE_TELEFONO)"),
+    ("TBL_TPEDIDO", "TBL_TPEDIDO_ORI_EST_FEC_IX", "IX", "(PED_CORIGEN, PED_CESTADO, PED_DFECHA_CREACION)"),
     ("TBL_TPEDIDO", "TBL_TPEDIDO_PED_CCODIGO_UK", "UK", "(PED_CCODIGO)"),
     ("TBL_TPEDIDO", "TBL_TPEDIDO_TOTAL_CK", "CK", "PED_NTOTAL = PED_NSUBTOTAL + coalesce(PED_NCOSTO_ENVIO, 0)"),
     ("TBL_RVARIANTE", "TBL_RVARIANTE_PRO_NID_IX", "IX", "(PRO_NID)"),
+    ("TBL_RVARIANTE", "TBL_RVARIANTE_DISP_TALLA_IX", "IX", "(VAR_CTALLA, PRO_NID) WHERE VAR_OACTIVA = true AND VAR_NCANTIDAD_STOCK > 0"),
     ("TBL_RVARIANTE", "TBL_RVARIANTE_STOCK_CK", "CK", "VAR_NCANTIDAD_STOCK >= 0"),
     ("TBL_RVARIANTE", "TBL_RVARIANTE_PRO_NID_VAR_CTALLA_VAR_CCOLOR_VAR_CMODELO_UK", "UK", "(PRO_NID, VAR_CTALLA, VAR_CCOLOR, VAR_CMODELO)"),
     ("TBL_RREGLA_PRECIO", "TBL_RREGLA_PRECIO_PRO_NID_REG_NCANTIDAD_MINIMA_UK", "UK", "(PRO_NID, REG_NCANTIDAD_MINIMA)"),
@@ -250,11 +270,24 @@ VALORES = [
         ("AJUSTE", "Corrección de inventario (positiva o negativa)"),
         ("DEVOLUCION", "Regreso de stock por cancelación o rechazo (cantidad positiva)"),
     ]),
+    ("EQU_CTIPO", [
+        ("SELECCION", "Selección nacional"),
+        ("CLUB", "Club internacional"),
+        ("ORIGINAL", "Diseño propio Emuná Sport"),
+    ]),
+    ("PRO_CEQUIPACION", [
+        ("LOCAL", "Local / Titular"),
+        ("ALTERNA", "Alterna / Visitante"),
+        ("ESPECIAL", "Edición especial"),
+        ("RETRO", "Retro / Histórica"),
+        ("ENTRENAMIENTO", "Entrenamiento / Línea propia"),
+    ]),
 ]
 
 # Relaciones para el modelo ER: (padre, hijo, cardinalidad Mermaid, etiqueta)
 RELACIONES = [
     ("TBL_RCATEGORIA", "TBL_RPRODUCTO", "||--o{", "clasifica"),
+    ("TBL_REQUIPO", "TBL_RPRODUCTO", "|o--o{", "agrupa equipo"),
     ("TBL_RPRODUCTO", "TBL_RIMAGEN_PRODUCTO", "||--o{", "tiene fotos"),
     ("TBL_RPRODUCTO", "TBL_RVARIANTE", "||--o{", "tiene variantes"),
     ("TBL_RPRODUCTO", "TBL_RREGLA_PRECIO", "||--o{", "tiene precios por mayor"),

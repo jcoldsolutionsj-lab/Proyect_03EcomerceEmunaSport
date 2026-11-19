@@ -1,8 +1,10 @@
-"""Selectores optimizados de lectura del catálogo (cero consultas N+1)."""
+"""Selectores optimizados de lectura del catálogo (cero consultas N+1 y caché para futura IA)."""
+import unicodedata
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
+from django.core.cache import cache
 from django.db.models import DecimalField, Prefetch, Q, QuerySet, Sum, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
@@ -10,9 +12,23 @@ from django.utils import timezone
 
 from apps.nucleo.validadores import limpiar_texto_seguro
 
-from .models import Categoria, ImagenProducto, Producto, ReglaPrecio, Variante
+from .models import Categoria, Equipo, ImagenProducto, Producto, ReglaPrecio, Variante
+from .signals import CLAVE_CACHE_CATALOGO_IA
 
 MAX_PRODUCTOS_DESTACADOS = 8
+TTL_CACHE_CATALOGO_IA_SEGUNDOS = 300
+
+
+def listar_equipos_activos() -> QuerySet[Equipo]:
+    """Devuelve todos los equipos/selecciones activos ordenados para filtros y catálogo.
+
+    Qué hace:      Filtra TBL_REQUIPO con activo=True y ordena por EQU_NORDEN y nombre.
+    Va hacia:      Retorna un QuerySet de Equipo para filtros web y herramientas IA.
+    Depende de:    apps.catalogo.models.Equipo.
+    Cuándo usarla: En filtros de selección/club o vistas del catálogo.
+    Si no opera:   Retorna un QuerySet vacío si aún no se registran equipos.
+    """
+    return Equipo.objects.filter(activo=True).order_by("orden", "nombre")
 
 
 def listar_categorias_activas() -> QuerySet[Categoria]:
@@ -30,22 +46,23 @@ def listar_categorias_activas() -> QuerySet[Categoria]:
 def listar_productos_catalogo(
     *,
     categoria_slug: str | None = None,
+    equipo_slug: str | None = None,
     talla: str | None = None,
     busqueda: str | None = None,
     solo_con_stock: bool = False,
     solo_destacados: bool = False,
 ) -> QuerySet[Producto]:
-    """Consulta productos activos con sus fotos, tallas y stock total en una sola carga.
+    """Consulta productos activos con sus fotos, tallas, equipo y stock total en una sola carga.
 
-    Qué hace:      Aplica filtros de categoría, talla, texto y stock usando select_related y prefetch_related.
+    Qué hace:      Aplica filtros de categoría, equipo, talla, texto y stock con select/prefetch.
     Va hacia:      Retorna un QuerySet de Producto anotado con stock_total sin consultas N+1.
-    Depende de:    Producto, ImagenProducto, Variante, ReglaPrecio y limpiar_texto_seguro.
+    Depende de:    Producto, Equipo, ImagenProducto, Variante, ReglaPrecio y limpiar_texto_seguro.
     Cuándo usarla: En la vista principal del catálogo, buscador y endpoints públicos de lectura.
     Si no opera:   Retorna un QuerySet vacío si ningún producto coincide con los filtros.
     """
     qs = (
         Producto.objects.filter(activo=True, categoria__activa=True)
-        .select_related("categoria")
+        .select_related("categoria", "equipo")
         .prefetch_related(
             Prefetch(
                 "imagenes",
@@ -72,6 +89,10 @@ def listar_productos_catalogo(
         slug_limpio = limpiar_texto_seguro(categoria_slug, longitud_maxima=100)
         qs = qs.filter(categoria__slug=slug_limpio)
 
+    if equipo_slug:
+        eq_slug_limpio = limpiar_texto_seguro(equipo_slug, longitud_maxima=100)
+        qs = qs.filter(equipo__slug=eq_slug_limpio, equipo__activo=True)
+
     if talla:
         talla_limpia = limpiar_texto_seguro(talla, longitud_maxima=10).upper()
         qs = qs.filter(
@@ -85,6 +106,10 @@ def listar_productos_catalogo(
         if termino:
             qs = qs.filter(
                 Q(nombre__icontains=termino)
+                | Q(equipo__nombre__icontains=termino)
+                | Q(equipo__alias_busqueda__icontains=termino)
+                | Q(palabras_clave__icontains=termino)
+                | Q(temporada__icontains=termino)
                 | Q(descripcion__icontains=termino)
                 | Q(sku__icontains=termino)
                 | Q(categoria__nombre__icontains=termino)
@@ -288,3 +313,194 @@ def obtener_vitrina_mas_vendidas_portada(
             es_respaldo=True,
         )
     ]
+
+
+def _normalizar_texto_busqueda(texto: str) -> str:
+    """Convierte a minúsculas y remueve tildes para comparar términos sin sensibilidad ortográfica.
+
+    Qué hace:      Descompone caracteres Unicode (NFKD), elimina marcas diacríticas y limpia espacios.
+    Va hacia:      Retorna un str normalizado listo para tokenización y comparación rápida.
+    Depende de:    unicodedata.
+    Cuándo usarla: En búsquedas en memoria sobre la instantánea cacheada del catálogo.
+    Si no opera:   Retorna cadena vacía si el texto de entrada está vacío.
+    """
+    descompuesto = unicodedata.normalize("NFKD", str(texto or ""))
+    sin_tildes = "".join(c for c in descompuesto if not unicodedata.combining(c))
+    return " ".join(sin_tildes.lower().strip().split())
+
+
+def obtener_catalogo_compacto_para_ia() -> list[dict[str, Any]]:
+    """Obtiene desde caché (o construye una sola vez) el catálogo resumido para consultas rápidas.
+
+    Qué hace:      Lee CLAVE_CACHE_CATALOGO_IA o consulta productos activos con tallas disponibles.
+    Va hacia:      Retorna lista de dicts livianos evitando SUM/GROUP BY por cada turno de chat.
+    Depende de:    django.core.cache, Producto, Variante, ReglaPrecio y Equipo.
+    Cuándo usarla: Desde buscar_productos_para_ia() o futuros endpoints de asistente Gemini.
+    Si no opera:   Retorna lista vacía si no existen productos activos.
+    """
+    cacheado = cache.get(CLAVE_CACHE_CATALOGO_IA)
+    if cacheado is not None:
+        return cacheado
+
+    qs = (
+        Producto.objects.filter(activo=True, categoria__activa=True)
+        .select_related("categoria", "equipo")
+        .prefetch_related(
+            Prefetch(
+                "variantes",
+                queryset=Variante.objects.filter(activa=True, cantidad_stock__gt=0).order_by(
+                    "id"
+                ),
+            ),
+            Prefetch(
+                "reglas_precio",
+                queryset=ReglaPrecio.objects.order_by("cantidad_minima"),
+            ),
+        )
+        .only(
+            "id",
+            "nombre",
+            "slug",
+            "sku",
+            "equipacion",
+            "temporada",
+            "palabras_clave",
+            "precio_unidad",
+            "precio_anterior",
+            "destacado",
+            "categoria__nombre",
+            "categoria__slug",
+            "equipo__nombre",
+            "equipo__slug",
+            "equipo__alias_busqueda",
+            "equipo__activo",
+        )
+        .order_by("-destacado", "-id")
+    )
+
+    resumen: list[dict[str, Any]] = []
+    for prod in qs:
+        variantes_disp = list(prod.variantes.all())
+        tallas = list(dict.fromkeys(v.talla for v in variantes_disp))
+        stock_total = sum(v.cantidad_stock for v in variantes_disp)
+        equipo_obj = prod.equipo if prod.equipo and prod.equipo.activo else None
+        equipo_nombre = equipo_obj.nombre if equipo_obj else ""
+        alias_equipo = equipo_obj.alias_busqueda if equipo_obj else ""
+
+        reglas = [
+            {"desde": r.cantidad_minima, "precio": str(r.precio_unidad)}
+            for r in prod.reglas_precio.all()
+        ]
+        texto_indice = _normalizar_texto_busqueda(
+            " ".join(
+                filter(
+                    None,
+                    [
+                        prod.nombre,
+                        prod.sku,
+                        prod.get_equipacion_display() if prod.equipacion else "",
+                        prod.temporada,
+                        prod.palabras_clave,
+                        prod.categoria.nombre,
+                        equipo_nombre,
+                        alias_equipo,
+                    ],
+                )
+            )
+        )
+        resumen.append(
+            {
+                "id": prod.id,
+                "sku": prod.sku,
+                "nombre": prod.nombre,
+                "slug": prod.slug,
+                "url": prod.get_absolute_url(),
+                "categoria": prod.categoria.nombre,
+                "equipo": equipo_nombre,
+                "equipacion": prod.get_equipacion_display() if prod.equipacion else "",
+                "temporada": prod.temporada,
+                "precio_unidad": str(prod.precio_unidad),
+                "precio_anterior": str(prod.precio_anterior) if prod.precio_anterior else None,
+                "reglas_mayor": reglas,
+                "tallas_disponibles": tallas,
+                "stock_total": stock_total,
+                "_indice_equipo": _normalizar_texto_busqueda(
+                    f"{equipo_nombre} {alias_equipo}"
+                ),
+                "_indice_palabras": _normalizar_texto_busqueda(prod.palabras_clave),
+                "_indice_texto": texto_indice,
+            }
+        )
+
+    cache.set(CLAVE_CACHE_CATALOGO_IA, resumen, TTL_CACHE_CATALOGO_IA_SEGUNDOS)
+    return resumen
+
+
+def buscar_productos_para_ia(consulta: str, *, limite: int = 5) -> list[dict[str, Any]]:
+    """Filtra en memoria sobre la instantánea cacheada los productos más relevantes sin cargar la BD.
+
+    Qué hace:      Normaliza la pregunta, puntúa coincidencias por equipo/alias/nombre/talla y ordena.
+    Va hacia:      Retorna hasta `limite` fichas compactas listas para contextualizar a Gemini.
+    Depende de:    obtener_catalogo_compacto_para_ia(), _normalizar_texto_busqueda() y limpiar_texto_seguro().
+    Cuándo usarla: Antes de invocar la API externa de Gemini en el asistente web.
+    Si no opera:   Retorna lista vacía si ningún término coincide con productos con stock.
+    """
+    limpio = limpiar_texto_seguro(consulta or "", longitud_maxima=200)
+    normalizado = _normalizar_texto_busqueda(limpio)
+    if not normalizado:
+        return []
+
+    palabras_vacias = {
+        "hola",
+        "tienen",
+        "tienes",
+        "hay",
+        "camiseta",
+        "camisetas",
+        "polo",
+        "polos",
+        "de",
+        "la",
+        "el",
+        "en",
+        "talla",
+        "para",
+        "por",
+        "mayor",
+        "cuanto",
+        "cuesta",
+        "precio",
+        "una",
+        "un",
+        "quiero",
+        "busco",
+    }
+    tokens = [t for t in normalizado.replace(",", " ").split() if len(t) >= 2 and t not in palabras_vacias]
+    if not tokens:
+        tokens = [t for t in normalizado.split() if len(t) >= 2]
+    if not tokens:
+        return []
+
+    catalogo = obtener_catalogo_compacto_para_ia()
+    puntuados: list[tuple[int, dict[str, Any]]] = []
+    for item in catalogo:
+        if item["stock_total"] <= 0:
+            continue
+        puntaje = 0
+        for tok in tokens:
+            if tok in item["_indice_equipo"].split():
+                puntaje += 12
+            elif tok in item["_indice_equipo"]:
+                puntaje += 8
+            if tok in item["_indice_palabras"]:
+                puntaje += 7
+            if tok in item["_indice_texto"]:
+                puntaje += 4
+            if tok.upper() in item["tallas_disponibles"]:
+                puntaje += 2
+        if puntaje > 0:
+            ficha_limpia = {k: v for k, v in item.items() if not k.startswith("_")}
+            puntuados.append((puntaje, ficha_limpia))
+
+    puntuados.sort(key=lambda par: (-par[0], -par[1]["stock_total"]))
+    return [ficha for _, ficha in puntuados[: max(1, limite)]]
