@@ -18,14 +18,16 @@
                     Accesos rápidos de venta diaria, stock y métricas
                 </h2>
             </div>
-            <div class="flex flex-wrap gap-2.5">
+            <div class="flex flex-wrap" style="gap: 10px;">
                 <a href="{% url 'tablero:resumen' %}"
-                   class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-default bg-base-900 text-white text-xs sm:text-sm font-bold hover:bg-base-800 border border-base-900 no-underline">
-                    <span class="material-symbols-outlined text-[18px]">analytics</span>
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-default text-xs sm:text-sm font-bold no-underline"
+                   style="background: #0A0A0A; color: #FFFFFF; border: 1px solid #0A0A0A;">
+                    <span class="material-symbols-outlined text-[18px]" style="color: #39FF14;">analytics</span>
                     <span>Abrir Tablero y Alertas</span>
                 </a>
                 <a href="{% url 'admin:pedidos_pedido_venta_presencial' %}"
-                   class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-default bg-primary-600 text-white text-xs sm:text-sm font-bold hover:bg-primary-700 border border-primary-700 no-underline">
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-default text-xs sm:text-sm font-bold no-underline"
+                   style="background: #39FF14; color: #0A0A0A; border: 2px solid #0A0A0A; font-weight: 800;">
                     <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
                     <span>Registrar Venta Presencial (POS)</span>
                 </a>

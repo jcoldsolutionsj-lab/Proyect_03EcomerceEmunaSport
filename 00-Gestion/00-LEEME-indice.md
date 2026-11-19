@@ -40,6 +40,8 @@ Estos documentos describen la tienda web de Emuná Sport. Se actualizan a medida
 | – | Plan y scripts de pruebas de carga con Grafana k6 | `03-Diseno-Tecnico/pruebas-carga-k6/` | Cuándo y cómo medir tráfico y concurrencia de stock (`plan-pruebas-k6.md` y `escenarios-base.js`) |
 | 14 | Flujo Git, Ramas y DevOps con GitHub (`.md` y `.docx`) | `05-Despliegue/` | Ramas (`main`, `develop`, `feature/*`, `bugfix/*`, `release/*`, `hotfix/*`), versionado y CI/CD |
 | 15 | Checklist integral «Antes de lanzar la web» (20 puntos) | `05-Despliegue/` | Requisitos legales, SEO, velocidad, Cloudflare Turnstile, WhatsApp, analítica y un solo CTA por pantalla |
+| 16 | Los 10 Atributos de Calidad del Software | `03-Diseno-Tecnico/` | Estándar permanente de alineación Modalidad vs. Estados, minimalismo de datos, agilidad móvil, ayuda con ejemplos y clientes VIP |
+| 17 | Plan Técnico de Chat IA con Gemini | `02-Planificacion/` | Flujo de 5 preguntas máx., derivación a WhatsApp de Richard y arquitectura rápida sin impacto de CPU en PostgreSQL |
 
 ## Orden de lectura para la IA
 1. Reglas en `.agents/rules/00-emuna-proyecto.md` (siempre activas).

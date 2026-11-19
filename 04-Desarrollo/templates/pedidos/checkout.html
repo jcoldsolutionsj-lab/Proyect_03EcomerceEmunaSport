@@ -14,7 +14,9 @@
 <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10"
          x-data="{
            tipoEntrega: '{{ valores.tipo_entrega|default:'PUNTO_ENCUENTRO' }}',
-           agenciaSeleccionada: '{{ valores.agencia|default:'SHALOM' }}'
+           agenciaSeleccionada: '{{ valores.agencia|default:'SHALOM' }}',
+           modalAyudaModalidad: false,
+           tabAyudaModalidad: '{{ valores.tipo_entrega|default:'PUNTO_ENCUENTRO' }}'
          }">
 
   <div class="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-silver pb-5">
@@ -108,11 +110,18 @@
 
       <!-- BLOQUE 2: Modalidades de Entrega de Richard -->
       <div class="border border-silver bg-white p-6 sm:p-7 space-y-5">
-        <div class="flex items-center gap-2.5 border-b border-silver pb-3">
-          <span class="w-6 h-6 bg-ink text-neon font-extrabold text-xs flex items-center justify-center">2</span>
-          <h2 class="font-display italic font-extrabold text-2xl uppercase tracking-wide text-ink">
-            Elige tu Modalidad de Entrega
-          </h2>
+        <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-silver pb-3">
+          <div class="flex items-center gap-2.5">
+            <span class="w-6 h-6 bg-ink text-neon font-extrabold text-xs flex items-center justify-center">2</span>
+            <h2 class="font-display italic font-extrabold text-2xl uppercase tracking-wide text-ink">
+              Elige tu Modalidad de Entrega
+            </h2>
+          </div>
+          <button type="button"
+                  @click="tabAyudaModalidad = tipoEntrega; modalAyudaModalidad = true"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-ink bg-neon/20 hover:bg-neon text-ink font-extrabold text-[11px] uppercase tracking-wider transicion-tactil">
+            <span>❓ ¿Cómo funciona cada modalidad? Ver ejemplos</span>
+          </button>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -400,5 +409,138 @@
     </div>
 
   </form>
+
+  <!-- Ventana de Ayuda Interactiva: Ejemplos y Flujo de Estados por Modalidad -->
+  <div x-show="modalAyudaModalidad"
+       style="display: none;"
+       @keydown.escape.window="modalAyudaModalidad = false"
+       class="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-4">
+    <div @click.outside="modalAyudaModalidad = false"
+         class="bg-white border-2 border-ink max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 shadow-xl">
+      <div class="flex items-start justify-between gap-3 border-b border-silver pb-3">
+        <div>
+          <span class="text-[11px] font-extrabold uppercase tracking-wider text-neonDark">Guía Rápida para el Cliente</span>
+          <h3 class="font-display italic font-extrabold text-2xl uppercase tracking-wide text-ink">
+            ¿Qué pasará con tu pedido según la modalidad?
+          </h3>
+        </div>
+        <button type="button"
+                @click="modalAyudaModalidad = false"
+                aria-label="Cerrar ventana"
+                title="Cerrar ventana"
+                class="w-8 h-8 flex items-center justify-center shrink-0 border border-silver hover:border-ink text-sm font-extrabold leading-none">
+          ✕
+        </button>
+      </div>
+
+      <!-- Pestañas de las 4 modalidades -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+        <button type="button"
+                @click="tabAyudaModalidad = 'PUNTO_ENCUENTRO'"
+                :class="tabAyudaModalidad === 'PUNTO_ENCUENTRO' ? 'bg-ink text-neon border-ink font-extrabold' : 'bg-neutral-100 text-ink border-silver font-bold'"
+                class="p-2 border text-left uppercase tracking-wider">
+          📍 Punto Lima
+        </button>
+        <button type="button"
+                @click="tabAyudaModalidad = 'AGENCIA'"
+                :class="tabAyudaModalidad === 'AGENCIA' ? 'bg-ink text-neon border-ink font-extrabold' : 'bg-neutral-100 text-ink border-silver font-bold'"
+                class="p-2 border text-left uppercase tracking-wider">
+          🚚 Agencia
+        </button>
+        <button type="button"
+                @click="tabAyudaModalidad = 'DELIVERY_LIMA'"
+                :class="tabAyudaModalidad === 'DELIVERY_LIMA' ? 'bg-ink text-neon border-ink font-extrabold' : 'bg-neutral-100 text-ink border-silver font-bold'"
+                class="p-2 border text-left uppercase tracking-wider">
+          🛵 Delivery Lima
+        </button>
+        <button type="button"
+                @click="tabAyudaModalidad = 'RECOJO'"
+                :class="tabAyudaModalidad === 'RECOJO' ? 'bg-ink text-neon border-ink font-extrabold' : 'bg-neutral-100 text-ink border-silver font-bold'"
+                class="p-2 border text-left uppercase tracking-wider">
+          🏪 Recojo
+        </button>
+      </div>
+
+      <!-- Detalle 1: Punto de Encuentro en Lima -->
+      <div x-show="tabAyudaModalidad === 'PUNTO_ENCUENTRO'" class="border border-silver bg-neutral-50 p-4 space-y-3 text-xs leading-relaxed">
+        <div class="flex items-center justify-between">
+          <strong class="text-sm uppercase text-ink">📍 Punto de Encuentro en Lima (4 etapas)</strong>
+          <span class="bg-neon text-ink font-extrabold px-2 py-0.5 border border-ink">Envío S/ 0.00</span>
+        </div>
+        <p class="text-ink">
+          <strong>Datos necesarios:</strong> Solo tu Nombre completo, Celular con WhatsApp y el lugar sugerido (ej. Estación del Tren o Centro Comercial). No exige DNI.
+        </p>
+        <div class="bg-white border border-silver p-3 space-y-1">
+          <div class="font-extrabold uppercase text-ink">Estados que verás en tu pantalla:</div>
+          <p><strong>1. Recibido</strong> → <strong>2. Listo para coordinar</strong> (nace aquí con envío S/ 0.00) → <strong>3. Pago Confirmado</strong> → <strong>4. Entregado</strong>.</p>
+        </div>
+        <p class="text-silverDark">
+          <strong class="text-ink">Ejemplo práctico:</strong> Pides tu camiseta indicando <em>"Estación La Cultura"</em>. Coordinas la hora por WhatsApp con Richard. Si deseas asegurar tu prenda antes de la cita puedes yapear por adelantado (pasa a <strong>Pago Confirmado</strong>), o pagarle con Yape/efectivo en el mismo momento en que recibes tu camiseta en mano (pasa directo a <strong>Entregado</strong>).
+        </p>
+      </div>
+
+      <!-- Detalle 2: Envío a Provincia por Agencia -->
+      <div x-show="tabAyudaModalidad === 'AGENCIA'" style="display: none;" class="border border-silver bg-neutral-50 p-4 space-y-3 text-xs leading-relaxed">
+        <div class="flex items-center justify-between">
+          <strong class="text-sm uppercase text-ink">🚚 Agencia Shalom / Olva a Provincia (5 etapas)</strong>
+          <span class="bg-ink text-white font-bold px-2 py-0.5">Flete por cotizar</span>
+        </div>
+        <p class="text-ink">
+          <strong>Datos necesarios:</strong> Nombre completo, <strong>DNI (8 dígitos obligatorio para recoger en agencia)</strong>, Celular, Ciudad y Sede de destino.
+        </p>
+        <div class="bg-white border border-silver p-3 space-y-1">
+          <div class="font-extrabold uppercase text-ink">Estados que verás en tu pantalla:</div>
+          <p><strong>1. Recibido</strong> → <strong>2. Cotizado / Listo</strong> (ves el monto total y QR de Yape) → <strong>3. Pago Confirmado</strong> (stock separado) → <strong>4. En Camino</strong> (con N° de Orden) → <strong>5. Entregado</strong>.</p>
+        </div>
+        <p class="text-silverDark">
+          <strong class="text-ink">Ejemplo práctico (ej. Trujillo / Arequipa / Cusco):</strong> Envías tu pedido con tu DNI y sede Shalom. Richard cotiza el flete, tú yapeas y envías tu captura; Richard deja el paquete en Shalom, registra la boleta y te envía a tu WhatsApp el <strong>N° de Orden</strong> y tu <strong>Clave secreta de 4 dígitos</strong> para que recojas con total seguridad.
+        </p>
+      </div>
+
+      <!-- Detalle 3: Delivery en Lima -->
+      <div x-show="tabAyudaModalidad === 'DELIVERY_LIMA'" style="display: none;" class="border border-silver bg-neutral-50 p-4 space-y-3 text-xs leading-relaxed">
+        <div class="flex items-center justify-between">
+          <strong class="text-sm uppercase text-ink">🛵 Delivery en Lima Metropolitana (4 etapas)</strong>
+          <span class="bg-ink text-white font-bold px-2 py-0.5">Tarifa según distrito</span>
+        </div>
+        <p class="text-ink">
+          <strong>Datos necesarios:</strong> Nombre completo, Celular con WhatsApp y tu Dirección completa con distrito y referencia.
+        </p>
+        <div class="bg-white border border-silver p-3 space-y-1">
+          <div class="font-extrabold uppercase text-ink">Estados que verás en tu pantalla:</div>
+          <p><strong>1. Recibido</strong> → <strong>2. Cotizado / Listo</strong> (se suma el delivery y aparece el QR de Yape) → <strong>3. Pago Confirmado</strong> → <strong>4. Entregado</strong>.</p>
+        </div>
+        <p class="text-silverDark">
+          <strong class="text-ink">Ejemplo práctico:</strong> Indicas <em>"Av. Brasil 1500, Jesús María"</em>. Richard cotiza el delivery, tu página se actualiza en vivo con el total y el QR de Yape, envías tu comprobante y recibes las camisetas en tu puerta.
+        </p>
+      </div>
+
+      <!-- Detalle 4: Recojo Acordado -->
+      <div x-show="tabAyudaModalidad === 'RECOJO'" style="display: none;" class="border border-silver bg-neutral-50 p-4 space-y-3 text-xs leading-relaxed">
+        <div class="flex items-center justify-between">
+          <strong class="text-sm uppercase text-ink">🏪 Recojo Acordado con Richard (4 etapas)</strong>
+          <span class="bg-neon text-ink font-extrabold px-2 py-0.5 border border-ink">Envío S/ 0.00</span>
+        </div>
+        <p class="text-ink">
+          <strong>Datos necesarios:</strong> Nombre completo y Celular con WhatsApp.
+        </p>
+        <div class="bg-white border border-silver p-3 space-y-1">
+          <div class="font-extrabold uppercase text-ink">Estados que verás en tu pantalla:</div>
+          <p><strong>1. Recibido</strong> → <strong>2. Listo para recojo</strong> (nace aquí con envío S/ 0.00) → <strong>3. Pago Confirmado</strong> → <strong>4. Entregado</strong>.</p>
+        </div>
+        <p class="text-silverDark">
+          <strong class="text-ink">Ejemplo práctico:</strong> Tu pedido queda listo de inmediato con costo de envío S/ 0.00. Coordinas con Richard por WhatsApp la hora de recojo y pagas con Yape o efectivo al retirar tus prendas.
+        </p>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button type="button"
+                @click="tipoEntrega = tabAyudaModalidad; modalAyudaModalidad = false"
+                class="px-4 py-2 bg-neon text-ink border-2 border-ink font-extrabold text-xs uppercase tracking-wider">
+          ✓ Usar esta modalidad y continuar
+        </button>
+      </div>
+    </div>
+  </div>
 </section>
 {% endblock %}

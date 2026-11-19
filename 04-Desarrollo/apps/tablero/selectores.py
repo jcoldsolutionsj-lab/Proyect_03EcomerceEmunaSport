@@ -381,6 +381,55 @@ def obtener_resumen_tablero(
         horas_limite=config.horas_pedido_pendiente
     )
 
+    # Ranking de Clientes VIP y Recurrentes a partir de los campos principales (Nombre, Teléfono, DNI)
+    mapa_clientes: dict[str, dict[str, Any]] = {}
+    pedidos_clientes_raw = (
+        pedidos_periodo_qs.annotate(
+            unidades_pedido=Coalesce(Sum("items__cantidad"), Value(0))
+        )
+        .values("cliente_nombre", "cliente_telefono", "cliente_dni", "total", "unidades_pedido")
+        .order_by("fecha_creacion")
+    )
+    url_changelist_pedidos = reverse("admin:pedidos_pedido_changelist")
+    for ped_c in pedidos_clientes_raw:
+        tel = (ped_c["cliente_telefono"] or "").strip()
+        nom = (ped_c["cliente_nombre"] or "").strip()
+        dni = (ped_c["cliente_dni"] or "").strip()
+        if not tel and (not nom or nom.lower() == "venta presencial"):
+            continue
+        clave_cliente = tel if tel else f"NOM:{nom.upper()}"
+        if clave_cliente not in mapa_clientes:
+            busqueda_q = tel or nom
+            mapa_clientes[clave_cliente] = {
+                "nombre": nom or "Cliente Registrado",
+                "telefono": tel,
+                "dni": dni,
+                "pedidos": 0,
+                "unidades": 0,
+                "total_gastado": Decimal("0.00"),
+                "url_historial": f"{url_changelist_pedidos}?q={busqueda_q}",
+                "url_whatsapp": f"https://api.whatsapp.com/send?phone=51{tel}" if tel else "",
+            }
+        registro_cli = mapa_clientes[clave_cliente]
+        if nom and nom.lower() != "venta presencial":
+            registro_cli["nombre"] = nom
+        if dni and not registro_cli["dni"]:
+            registro_cli["dni"] = dni
+        registro_cli["pedidos"] += 1
+        registro_cli["unidades"] += int(ped_c["unidades_pedido"] or 0)
+        registro_cli["total_gastado"] = (
+            registro_cli["total_gastado"] + Decimal(ped_c["total"] or Decimal("0.00"))
+        ).quantize(Decimal("0.01"))
+
+    clientes_vip = sorted(
+        mapa_clientes.values(),
+        key=lambda c: (c["total_gastado"], c["pedidos"], c["unidades"]),
+        reverse=True,
+    )[:10]
+    for idx_cli, cli in enumerate(clientes_vip, start=1):
+        cli["posicion"] = idx_cli
+        cli["es_vip_recurrente"] = cli["pedidos"] >= 2 or cli["unidades"] >= 3
+
     return {
         "configuracion": config,
         "periodo_activo": periodo_activo,
@@ -405,6 +454,7 @@ def obtener_resumen_tablero(
         "total_variantes_bajo_umbral": sum(1 for a in alertas_stock if a["nivel"] == "AMBAR"),
         "pedidos_pendientes_antiguos": pendientes_antiguos,
         "mas_vendidos": mas_vendidos,
+        "clientes_vip": clientes_vip,
         "productos_sin_ventas": productos_sin_ventas,
         "ventas_por_dia": ventas_por_dia,
         "dias_sin_ventas_limite": config.dias_sin_ventas,

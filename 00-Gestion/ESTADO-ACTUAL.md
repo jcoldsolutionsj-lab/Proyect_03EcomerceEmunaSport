@@ -2,8 +2,8 @@
 
 > La IA lee este archivo al empezar cada sesión y lo actualiza al terminar. Mantenerlo corto.
 
-**Última actualización:** 2026-11-13
-**Fase actual:** **Fase 4 fusionada en `develop` (`48ce0b9`) + Rediseño Flat Design exclusivo para `/gestion/` completado en `feature/panel-flat-design-unfold`** (`32 passed` en `pytest`, **0 errores** en `ruff`, verificación visual Playwright móvil `360x740` y escritorio `1280x800` aprobada en las 17 vistas del panel). La tienda web pública quedó intacta. Lista para revisar y fusionar `feature/panel-flat-design-unfold` en `develop` antes de iniciar la **Fase 5: Piloto en demo y observaciones**.
+**Última actualización:** 2026-11-19
+**Fase actual:** **Cierre integral del Panel Flat Design (`django-unfold`) y alineación UI/UX móvil y de calidad, fusionado en `develop` y `main`** (`35 passed` en `pytest`, **0 errores** en `ruff`, auditoría visual Chrome `1280x800` y `375x812` aprobada en las 10 vistas principales y fichas detalle). Listo para revisar la propuesta de **normalización PostgreSQL + índices para futura IA Gemini** y luego migrar a PostgreSQL/Render en **Fase 5: Piloto en demo**.
 
 ## Dónde quedamos
 - Documentos **01 al 15** completos y alineados; copia intacta de los originales en `01-Relevamiento/fuentes/documentos-originales/`.
@@ -50,12 +50,12 @@
   - Pruebas integrales aprobadas (`ruff check 04-Desarrollo` sin errores, `32/32` en `pytest` y 17 capturas Edge headless móvil/escritorio sin desborde horizontal).
 
 ## En curso
-- Revisión final por Jonathan del nuevo panel Flat Design en `feature/panel-flat-design-unfold` para autorizar su merge a `develop`.
+- Revisión técnica de normalización e índices PostgreSQL orientada a alto rendimiento y futura integración de Chat IA con Gemini (`02-Planificacion/17-plan-ia-chat-gemini.md`) previa a la migración a PostgreSQL y despliegue en Render.
 
 ## Siguiente paso
-1. Con el visto bueno de Jonathan, fusionar (`--no-ff`) `feature/panel-flat-design-unfold` en `develop` y subir a `origin`.
-2. Recordar instalar/actualizar dependencias (`pip install -r 04-Desarrollo/requirements/base.txt`) o usar la `.venv` actualizada con `django-unfold==0.110.1`.
-3. Iniciar la **Fase 5: Piloto en demo y observaciones** (configuración PostgreSQL/Render, endpoints REST/Swagger, CORS/whitenoise y pruebas k6).
+1. Confirmar con Jonathan el alcance de normalización/índices antes de crear la migración hacia **PostgreSQL** (y si se sube a `origin` `develop` y `main`).
+2. Configurar **PostgreSQL gratuito 30 días en Render** (`requirements.txt`, `render.yaml`, soporte `/media/` demo o R2) y ejecutar pruebas de humo y concurrencia `k6` en **Fase 5: Piloto en demo**.
+3. En fase posterior al piloto, implementar el módulo de **Chat IA Gemini** según `02-Planificacion/17-plan-ia-chat-gemini.md` (límite de 5 consultas + derivación a Richard).
 
 ## Bloqueos y pendientes con Richard
 Ver los 7 puntos de negocio en `00-Gestion/11-decisiones-cambios.md`.

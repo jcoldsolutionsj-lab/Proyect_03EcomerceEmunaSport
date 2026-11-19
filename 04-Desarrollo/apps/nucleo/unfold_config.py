@@ -1,7 +1,9 @@
 """Configuración de navegación, insignia en tiempo real y tablero Flat Design para django-unfold."""
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
+from django.conf import settings
 from django.http import HttpRequest
 from django.templatetags.static import static
 from django.urls import reverse_lazy
@@ -22,13 +24,43 @@ def obtener_url_logo_panel(request: HttpRequest) -> str:
 def obtener_url_estilo_flat_unfold(request: HttpRequest) -> str:
     """Devuelve la URL de la hoja de estilos Flat Design personalizada para /gestion/.
 
-    Qué hace:      Resuelve static('css/emuna_flat_unfold.css') para cargarse en Unfold.
-    Va hacia:      Inyecta las reglas de cero sombras, zoom 0.85, tooltips y móvil en el panel.
+    Qué hace:      Resuelve static('css/emuna_flat_unfold.css') con control de caché en desarrollo.
+    Va hacia:      Inyecta los colores de Emuná Sport (#0A0A0A / #39FF14), zoom 0.85 y reglas móvil.
     Depende de:    django.templatetags.static.static y static/css/emuna_flat_unfold.css.
-    Cuándo usarla: En UNFOLD['STYLES'] para aplicar diseño Flat consistente en todo /gestion/.
+    Cuándo usarla: En UNFOLD['STYLES'] para aplicar diseño Flat consistente en todo el panel.
     Si no opera:   Unfold sigue cargando normalmente con sus estilos base Tailwind.
     """
-    return static("css/emuna_flat_unfold.css")
+    url_base = static("css/emuna_flat_unfold.css")
+    if getattr(settings, "DEBUG", False):
+        ruta_css = Path(settings.BASE_DIR) / "static" / "css" / "emuna_flat_unfold.css"
+        if ruta_css.exists():
+            return f"{url_base}?v={int(ruta_css.stat().st_mtime)}"
+    return url_base
+
+
+def es_menu_pos_activo(request: HttpRequest) -> bool:
+    """Marca activo el ítem 'Venta presencial (POS)' solo dentro de la vista POS.
+
+    Qué hace:      Evalúa si 'venta-presencial' forma parte de request.path.
+    Va hacia:      Controla el resaltado del ítem POS en UNFOLD['SIDEBAR']['navigation'].
+    Depende de:    request.path normalizado por Django o por vista_alias_panel_perfil.
+    Cuándo usarla: Como callback 'active' del ítem POS en el menú lateral.
+    Si no opera:   Retorna False evitando resaltados duplicados.
+    """
+    return "venta-presencial" in getattr(request, "path", "")
+
+
+def es_menu_pedidos_activo(request: HttpRequest) -> bool:
+    """Marca activo 'Pedidos web y tienda' únicamente en listado/ficha de pedidos (excluye POS).
+
+    Qué hace:      Evita que /pedidos/pedido/venta-presencial/ encienda también 'Pedidos web y tienda'.
+    Va hacia:      Controla el resaltado exclusivo del ítem de pedidos en el menú lateral.
+    Depende de:    request.path.
+    Cuándo usarla: Como callback 'active' del ítem 'Pedidos web y tienda' en UNFOLD['SIDEBAR'].
+    Si no opera:   Retorna False cuando la ruta activa corresponde al POS presencial.
+    """
+    ruta = getattr(request, "path", "")
+    return "/pedidos/pedido/" in ruta and "venta-presencial" not in ruta
 
 
 def contar_pedidos_por_atender(request: HttpRequest) -> str | None:
@@ -111,10 +143,117 @@ def preparar_contexto_dashboard(request: HttpRequest, context: dict[str, Any]) -
     return context
 
 
+def preparar_contexto_global_panel(request: HttpRequest) -> dict[str, Any]:
+    """Construye los datos detallados del perfil del usuario autenticado y su ruta dinámica.
+
+    Qué hace:      Extrae nombre, rol (Dueño vs Superadministrador), DNI, teléfono, registro y ruta.
+    Va hacia:      Inyecta 'emuna_perfil_usuario' en todas las pantallas del panel vía GLOBAL_CALLBACK.
+    Depende de:    request.user, auth.Group y obtener_configuracion_tienda.
+    Cuándo usarla: En cada petición de Unfold para el modal de perfil y la URL dinámica por rol.
+    Si no opera:   Si el usuario es anónimo (pantalla login), retorna diccionario vacío seguro.
+    """
+    usuario = getattr(request, "user", None)
+    if not usuario or not getattr(usuario, "is_authenticated", False):
+        return {}
+
+    try:
+        from apps.nucleo.selectores import obtener_configuracion_tienda
+
+        config = obtener_configuracion_tienda()
+        whatsapp_tienda = config.numero_whatsapp if config else "932859746"
+    except Exception:
+        whatsapp_tienda = "932859746"
+
+    try:
+        grupos = list(usuario.groups.values_list("name", flat=True))
+    except Exception:
+        grupos = []
+
+    es_super = bool(getattr(usuario, "is_superuser", False))
+    username = usuario.get_username()
+    nombre_completo = usuario.get_full_name().strip()
+    if not nombre_completo:
+        if username.lower() == "richard":
+            nombre_completo = "Richard Alexander Ramos Hinostroza"
+        elif username.lower() == "jonathan" or es_super:
+            nombre_completo = "Jonathan Vera"
+        else:
+            nombre_completo = username
+
+    if es_super:
+        rol_titulo = "Superadministrador Técnico y Operativo"
+        nombre_panel = "PanelAdministrativo"
+        prefijo_url_panel = "/PanelAdministrativo/"
+        dni_perfil = "Administrador Principal (Acceso Total)"
+        alcance = "Acceso total a configuración técnica, usuarios, base de datos, catálogo, POS y pedidos."
+    else:
+        rol_titulo = "Dueño Operativo – Emuná Sport"
+        nombre_panel = "PanelDueño"
+        prefijo_url_panel = "/PanelDueño/"
+        dni_perfil = "48348911" if username.lower() == "richard" else "Registrado en tienda"
+        alcance = "Gestión integral de tienda: Tablero VIP, Pedidos, POS Presencial, Productos, Tallas y Kárdex."
+
+    inicial = (nombre_completo or username)[:1].upper()
+    grupos_texto = ", ".join(grupos) if grupos else ("Superusuario" if es_super else "Staff Operativo")
+
+    return {
+        "emuna_perfil_usuario": {
+            "username": username,
+            "inicial": inicial,
+            "nombre_completo": nombre_completo,
+            "email": usuario.email or "Sin correo registrado",
+            "es_superusuario": es_super,
+            "rol_titulo": rol_titulo,
+            "nombre_panel": nombre_panel,
+            "prefijo_url_panel": prefijo_url_panel,
+            "grupos": grupos_texto,
+            "dni": dni_perfil,
+            "telefono": f"+51 {whatsapp_tienda}",
+            "fecha_registro": getattr(usuario, "date_joined", None),
+            "ultimo_acceso": getattr(usuario, "last_login", None),
+            "alcance": alcance,
+        }
+    }
+
+
+def obtener_subtitulo_panel(request: HttpRequest) -> str:
+    """Devuelve el subtítulo dinámico del panel según el perfil del usuario conectado.
+
+    Qué hace:      Muestra 'PanelAdministrativo' para superusuario o 'PanelDueño' para el grupo Dueño.
+    Va hacia:      Cabecera lateral de Unfold (SITE_SUBHEADER).
+    Depende de:    preparar_contexto_global_panel.
+    Cuándo usarla: Al renderizar la marca superior izquierda del panel administrativo.
+    Si no opera:   Retorna 'Panel Flat · Estilo deportivo' en la pantalla de login.
+    """
+    datos = preparar_contexto_global_panel(request).get("emuna_perfil_usuario")
+    if not datos:
+        return "Panel Flat · Estilo deportivo"
+    return f"{datos['nombre_panel']} · {datos['rol_titulo']}"
+
+
+def obtener_etiqueta_entorno_perfil(request: HttpRequest) -> list[str]:
+    """Devuelve la insignia superior derecha con el nombre del panel según el rol activo.
+
+    Qué hace:      Construye la tupla [texto, variante] para UNFOLD['ENVIRONMENT'].
+    Va hacia:      Barra superior derecha junto al avatar del usuario.
+    Depende de:    preparar_contexto_global_panel.
+    Cuándo usarla: En cada vista del panel para identificar si opera en PanelDueño o PanelAdministrativo.
+    Si no opera:   Retorna etiqueta general de Emuná Sport.
+    """
+    datos = preparar_contexto_global_panel(request).get("emuna_perfil_usuario")
+    if not datos:
+        return ["Emuná Sport · Gestión", "success"]
+    if datos["es_superusuario"]:
+        return [f"⚡ {datos['nombre_panel']} · Superusuario", "info"]
+    return [f"👑 {datos['nombre_panel']} · Dueño", "success"]
+
+
 UNFOLD_CONFIG_EMUNA: dict[str, Any] = {
     "SITE_TITLE": "Emuná Sport – Panel de Gestión",
     "SITE_HEADER": "Emuná Sport",
-    "SITE_SUBHEADER": "Panel Flat · Estilo deportivo",
+    "SITE_SUBHEADER": obtener_subtitulo_panel,
+    "ENVIRONMENT": "apps.nucleo.unfold_config.obtener_etiqueta_entorno_perfil",
+    "GLOBAL_CALLBACK": "apps.nucleo.unfold_config.preparar_contexto_global_panel",
     "SITE_SYMBOL": "sports_soccer",
     "SITE_URL": "/",
     "SITE_ICON": {
@@ -197,6 +336,7 @@ UNFOLD_CONFIG_EMUNA: dict[str, Any] = {
                         "title": "Venta presencial (POS)",
                         "icon": "point_of_sale",
                         "link": reverse_lazy("admin:pedidos_pedido_venta_presencial"),
+                        "active": "apps.nucleo.unfold_config.es_menu_pos_activo",
                     },
                     {
                         "title": "Pedidos web y tienda",
@@ -204,6 +344,7 @@ UNFOLD_CONFIG_EMUNA: dict[str, Any] = {
                         "link": reverse_lazy("admin:pedidos_pedido_changelist"),
                         "badge": contar_pedidos_por_atender,
                         "badge_variant": "info",
+                        "active": "apps.nucleo.unfold_config.es_menu_pedidos_activo",
                     },
                     {
                         "title": "Envíos por agencia",

@@ -2,6 +2,16 @@
 
 Una entrada breve por sesión de trabajo, la más reciente **arriba**. Cada entrada responde: qué se hizo, qué se decidió, qué queda.
 
+## 2026-11-19 – Alineación de modalidades, identidad Emuná, UX móvil (`Ver +`, header, quicknav) y merge a `develop` / `main`
+- **Hecho:**
+  - Se formalizaron **Los 10 Atributos de Calidad del Software** (`03-Diseno-Tecnico/16-diez-atributos-calidad-software.md`), se adaptó la barra de seguimiento web por modalidad (`PUNTO_ENCUENTRO`/`RECOJO`/`DELIVERY_LIMA` en 4 pasos sin *En Camino* y `AGENCIA` en 5 pasos), se añadió ayuda interactiva con ejemplos en checkout y seguimiento, y captura directa de boleta con cámara (`📷 Tomar foto`) o galería/PDF.
+  - Se implementaron rutas dinámicas por perfil (`/PanelDueño/`, `/PanelDueno/`, `/PanelAdministrativo/`), modal compacto de perfil y reporte de Clientes VIP / Top Compradores en Tablero.
+  - Se resolvió la identidad Emuná Sport (`#0A0A0A` + `#39FF14`) y toda la adaptación móvil del Panel: separación correcta de activos entre POS y Pedidos, botón **`Ver +`** con modal de detalle único `✕` en listados operativos y Tablero (eliminando desplazamiento horizontal en móvil), autocentrado de la pestaña activa (incluyendo **📏 Tallas**) en `.emuna-mobile-quicknav`, migas de pan legibles en 2 niveles (`header_title.html`) y barra superior de carga real (`#emuna-nav-progress`).
+  - Se redactó el plan separado de **Chat IA con Gemini** (`02-Planificacion/17-plan-ia-chat-gemini.md`) con límite de 5 preguntas, derivación a WhatsApp de Richard y diseño orientado a cero impacto en CPU de PostgreSQL.
+  - Verificación integral aprobada: `ruff check 04-Desarrollo` (**0 errores**), `pytest 04-Desarrollo/tests/` (**35/35 passed**) y auditoría visual Chrome headless (`1280x800` y `375x812`, `overflowX: false`, `crumbTruncated: false` en móvil y `quicknavActiveVisible: true`).
+- **Decidido:** fusionar `feature/panel-flat-design-unfold` en `develop` y `main`, y realizar primero el análisis de normalización e índices de catálogo antes de migrar a **PostgreSQL** en Render (**Fase 5**).
+- **Queda:** aprobación de Jonathan sobre los ajustes de normalización e índices para PostgreSQL, configuración del despliegue en Render (`requirements.txt`, `render.yaml`, `/media/` o Cloudflare R2) y confirmación para `git push`.
+
 ## 2026-11-13 (Panel Flat Design con `django-unfold`) – Merge Fase 4 a `develop` y rediseño integral de `/gestion/`
 - **Hecho:**
   - Se fusionó `feature/fase-4-tablero-alertas` en `develop` (`--no-ff`, commit `48ce0b9`) y se creó la rama `feature/panel-flat-design-unfold`.

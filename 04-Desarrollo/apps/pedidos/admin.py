@@ -515,13 +515,13 @@ class PedidoAdmin(UnfoldModelAdmin, SimpleHistoryAdmin):
         Si no opera:   Retorna texto plano del estado.
         """
         estilos = {
-            EstadoPedido.NUEVO: ("#334155", "#F1F5F9", "#94A3B8", "⚪ [GRIS]"),
-            EstadoPedido.COTIZADO: ("#92400E", "#FEF3C7", "#F59E0B", "🟡 [ÁMBAR]"),
-            EstadoPedido.PAGADO: ("#166534", "#DCFCE7", "#22C55E", "🟢 [VERDE]"),
-            EstadoPedido.ENVIADO: ("#1E40AF", "#DBEAFE", "#3B82F6", "🔵 [AZUL]"),
-            EstadoPedido.ENTREGADO: ("#14532D", "#DCFCE7", "#16A34A", "🟢 [VERDE]"),
-            EstadoPedido.CANCELADO: ("#991B1B", "#FEE2E2", "#EF4444", "🔴 [ROJO]"),
-            EstadoPedido.RECHAZADO: ("#991B1B", "#FEE2E2", "#EF4444", "🔴 [ROJO]"),
+            EstadoPedido.NUEVO: ("#334155", "#F1F5F9", "#94A3B8", "⚪"),
+            EstadoPedido.COTIZADO: ("#92400E", "#FEF3C7", "#F59E0B", "🟡"),
+            EstadoPedido.PAGADO: ("#166534", "#DCFCE7", "#22C55E", "🟢"),
+            EstadoPedido.ENVIADO: ("#1E40AF", "#DBEAFE", "#3B82F6", "🔵"),
+            EstadoPedido.ENTREGADO: ("#14532D", "#DCFCE7", "#16A34A", "🟢"),
+            EstadoPedido.CANCELADO: ("#991B1B", "#FEE2E2", "#EF4444", "🔴"),
+            EstadoPedido.RECHAZADO: ("#991B1B", "#FEE2E2", "#EF4444", "🔴"),
         }
         fg, bg, bdr, prefijo = estilos.get(obj.estado, ("#334155", "#F1F5F9", "#94A3B8", ""))
         return format_html(
@@ -717,7 +717,7 @@ class PedidoAdmin(UnfoldModelAdmin, SimpleHistoryAdmin):
 
 
 
-    @admin.action(description="🟣 Confirmar Pago (Yape/Transferencia) y descontar stock")
+    @admin.action(description="💳 Confirmar Pago Adelantado y descontar stock (→ PAGADO)")
     def accion_confirmar_pago(self, request: HttpRequest, queryset: QuerySet[Pedido]) -> None:
         """Confirma el pago recibido en pedidos cotizados y descuenta el inventario de inmediato.
 
@@ -757,7 +757,7 @@ class PedidoAdmin(UnfoldModelAdmin, SimpleHistoryAdmin):
                 level=messages.SUCCESS,
             )
 
-    @admin.action(description="⚡ Confirmar Pago y Entrega en Punto de Encuentro (1 solo paso)")
+    @admin.action(description="🤝 Ya entregué y cobré en persona · 1 paso (→ ENTREGADO)")
     def accion_confirmar_pago_y_entregar(
         self, request: HttpRequest, queryset: QuerySet[Pedido]
     ) -> None:

@@ -1,8 +1,58 @@
 /* Sistema de diseño Flat Design para el Panel de Gestión (/gestion/) con django-unfold */
 
+@view-transition {
+  navigation: auto;
+}
+
 html {
   zoom: 0.85;
   color-scheme: light;
+}
+
+#emuna-nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #0A0A0A;
+  z-index: 10050;
+  display: none;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.emuna-nav-progress-fill {
+  height: 100%;
+  width: 45%;
+  background: #39FF14;
+  animation: emunaNavSweep 0.85s ease-in-out infinite;
+}
+
+@keyframes emunaNavSweep {
+  0% {
+    transform: translateX(-100%);
+    width: 38%;
+  }
+  50% {
+    transform: translateX(70%);
+    width: 55%;
+  }
+  100% {
+    transform: translateX(230%);
+    width: 38%;
+  }
+}
+
+.emuna-breadcrumb-wrap {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.emuna-crumb-trail-mobile {
+  display: none;
 }
 
 body {
@@ -107,6 +157,7 @@ h2 img[src*="toltip.png"] {
 
 /* Barra rápida táctil exclusiva para celular/tablet */
 .emuna-mobile-quicknav {
+  position: relative;
   display: none;
   background: #FFFFFF;
   border-bottom: 1px solid #CBD5E1;
@@ -133,16 +184,282 @@ h2 img[src*="toltip.png"] {
   flex-shrink: 0;
 }
 
-.emuna-mobile-quicknav a.qn-activo {
-  background: #0F172A;
-  color: #FFFFFF;
-  border-color: #0F172A;
+.emuna-mobile-quicknav a.qn-activo,
+.emuna-mobile-quicknav a.qn-pos.qn-activo {
+  background: #0A0A0A;
+  color: #39FF14;
+  border: 2px solid #39FF14;
 }
 
-.emuna-mobile-quicknav a.qn-pos {
-  background: #15803D;
+/* Identidad Oficial Emuná Sport (#0A0A0A Negro Carbón + #39FF14 Verde Neón) en el Panel */
+.emuna-mobile-sticky-bar > div:first-child {
+  border-bottom: 2px solid #0A0A0A !important;
+  box-shadow: 0 2px 0 #39FF14 !important;
+}
+
+#nav-sidebar a.active,
+#nav-sidebar a.active:hover,
+#nav-sidebar-apps a.active,
+#nav-sidebar-apps a.active:hover {
+  background-color: #0A0A0A !important;
+  color: #39FF14 !important;
+  border-left: 4px solid #39FF14 !important;
+  font-weight: 800 !important;
+}
+
+#nav-sidebar a.active > span.material-symbols-outlined,
+#nav-sidebar a.active > span:first-of-type,
+#nav-sidebar-apps a.active > span.material-symbols-outlined,
+#nav-sidebar-apps a.active > span:first-of-type {
+  color: #39FF14 !important;
+}
+
+.emuna-avatar-badge {
+  background-color: #0A0A0A !important;
+  color: #39FF14 !important;
+  border: 2px solid #39FF14 !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+}
+
+.emuna-top-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #0A0A0A;
   color: #FFFFFF;
-  border-color: #166534;
+  border: 2px solid #0A0A0A;
+  border-radius: 4px;
+  padding: 4px 10px 4px 5px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.emuna-top-profile-btn:hover {
+  border-color: #39FF14;
+}
+
+.emuna-top-profile-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #39FF14;
+  color: #0A0A0A;
+  font-weight: 900;
+  font-size: 12px;
+  border-radius: 3px;
+}
+
+.emuna-top-profile-text {
+  color: #39FF14;
+  letter-spacing: 0.02em;
+}
+
+.emuna-top-profile-text-short,
+.emuna-btn-pos-texto-short {
+  display: none;
+}
+
+.emuna-header-userlinks {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px !important;
+  flex-shrink: 0;
+}
+
+.emuna-object-tools-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.emuna-header-userlinks .addlink {
+  margin: 0 !important;
+  background: #0A0A0A !important;
+  color: #39FF14 !important;
+  border: 2px solid #0A0A0A !important;
+  flex-shrink: 0;
+}
+
+.emuna-header-userlinks .addlink span {
+  color: #39FF14 !important;
+}
+
+/* Botón y columna "Ver +" exclusiva para móvil en tablas operativas */
+.emuna-col-vermas {
+  display: none;
+}
+
+.emuna-btn-vermas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #0A0A0A;
+  color: #39FF14;
+  border: 2px solid #0A0A0A;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.emuna-btn-vermas:hover {
+  border-color: #39FF14;
+}
+
+.emuna-row-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Modal de Detalle del Perfil del Usuario (PanelDueño / PanelAdministrativo) */
+.emuna-profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(10, 10, 10, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.emuna-profile-modal-card {
+  background: #FFFFFF;
+  border: 2px solid #0A0A0A;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.emuna-profile-modal-header {
+  background: #0A0A0A;
+  color: #FFFFFF;
+  border-bottom: 3px solid #39FF14;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.emuna-profile-modal-avatar {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  background: #0A0A0A;
+  color: #39FF14;
+  border: 2px solid #39FF14;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.emuna-profile-modal-close {
+  background: #1E293B;
+  color: #FFFFFF;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.emuna-profile-modal-close:hover {
+  border-color: #39FF14;
+  color: #39FF14;
+}
+
+.emuna-profile-modal-body {
+  padding: 18px;
+  background: #FFFFFF;
+}
+
+.emuna-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.emuna-profile-item {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 4px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.emuna-profile-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748B;
+}
+
+.emuna-profile-val {
+  font-size: 13px;
+  color: #0F172A;
+  word-break: break-word;
+}
+
+.emuna-profile-code {
+  display: inline-block;
+  background: #0A0A0A;
+  color: #39FF14;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 3px;
+  width: fit-content;
+}
+
+.emuna-profile-alcance {
+  margin-top: 14px;
+  padding: 11px 13px;
+  background: #F0FDF4;
+  border: 1px solid #15803D;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #14532D;
+  line-height: 1.45;
+}
+
+.emuna-profile-modal-footer {
+  padding: 12px 18px;
+  background: #F8FAFC;
+  border-top: 1px solid #CBD5E1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 /* Tarjetas planas compartidas para flujos operativos (Pedido, Variante, Tablero, POS) */
@@ -155,10 +472,10 @@ h2 img[src*="toltip.png"] {
 }
 
 .emuna-panel-header {
-  background: #0F172A;
+  background: #0A0A0A;
   color: #FFFFFF;
   padding: 14px 18px;
-  border-bottom: 3px solid #15803D;
+  border-bottom: 3px solid #39FF14;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -198,6 +515,27 @@ h2 img[src*="toltip.png"] {
   box-sizing: border-box;
   white-space: nowrap;
   box-shadow: none !important;
+}
+
+.emuna-btn:active {
+  transform: translateY(1px);
+}
+
+.emuna-btn-tip-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.emuna-btn-tip-group .emuna-icon-tip {
+  width: 17px;
+  height: 17px;
+  padding: 5px;
+  box-sizing: content-box;
+  margin: 0;
+  flex-shrink: 0;
+  border-radius: 4px;
 }
 
 .emuna-input-corto {
@@ -273,12 +611,144 @@ h2 img[src*="toltip.png"] {
     margin-bottom: 0 !important;
   }
 
+  .emuna-mobile-sticky-bar > div:first-child > div {
+    height: auto !important;
+    min-height: 52px;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  #header-inner > div {
+    flex-wrap: wrap !important;
+    row-gap: 8px !important;
+    column-gap: 8px !important;
+  }
+
+  #header-inner > div > div:first-child {
+    flex: 1 1 220px !important;
+    min-width: 0 !important;
+    margin-right: 0 !important;
+  }
+
   .emuna-mobile-quicknav {
     display: flex;
   }
 }
 
 @media (max-width: 767px) {
+  .emuna-top-profile-text-full,
+  .emuna-btn-pos-texto-full,
+  .emuna-crumb-desktop-only {
+    display: none !important;
+  }
+
+  .emuna-top-profile-text-short,
+  .emuna-btn-pos-texto-short {
+    display: inline;
+  }
+
+  .emuna-breadcrumb-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+  }
+
+  .emuna-crumb-trail-mobile {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #64748B;
+  }
+
+  .emuna-crumb-parent-link {
+    color: #15803D;
+    text-decoration: none;
+  }
+
+  .emuna-crumb-dot {
+    color: #94A3B8;
+  }
+
+  #header-inner h1 {
+    font-size: 14px !important;
+    line-height: 1.25 !important;
+    max-width: 100%;
+    white-space: normal !important;
+    overflow: visible !important;
+    min-width: 0;
+  }
+
+  #header-inner h1 .emuna-crumb-current {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word;
+    font-size: 14.5px;
+    font-weight: 800;
+    line-height: 1.25;
+    color: #0F172A;
+  }
+
+  .emuna-header-userlinks,
+  .emuna-object-tools-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    max-width: 100%;
+  }
+
+  .emuna-header-userlinks:has(> :nth-child(2)) {
+    width: 100%;
+    margin-left: 0 !important;
+    padding-top: 6px;
+    border-top: 1px solid #E2E8F0;
+    justify-content: flex-end;
+  }
+
+  .emuna-header-userlinks:has(> :nth-child(2)) > .emuna-top-profile-btn {
+    margin-right: auto;
+  }
+
+  .emuna-header-userlinks > div {
+    margin-left: 0 !important;
+  }
+
+  .emuna-header-userlinks > div[x-data*="showActions"] > a {
+    height: 34px !important;
+    width: 34px !important;
+    padding: 0 !important;
+  }
+
+  .emuna-top-profile-btn {
+    height: 34px;
+    padding: 3px 8px 3px 4px;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .emuna-top-profile-avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+
+  .emuna-btn-header-pos {
+    height: 34px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+  }
+
+  .emuna-header-userlinks .addlink {
+    height: 34px !important;
+    width: 34px !important;
+  }
+
   #content,
   #content-main {
     max-width: 100% !important;
@@ -299,6 +769,16 @@ h2 img[src*="toltip.png"] {
     width: 100%;
     white-space: normal;
     text-align: center;
+  }
+
+  .emuna-form-card .emuna-btn-tip-group {
+    width: 100%;
+  }
+
+  .emuna-form-card .emuna-btn-tip-group .emuna-btn {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
   }
 
   .emuna-form-card {
@@ -324,13 +804,66 @@ h2 img[src*="toltip.png"] {
     display: block;
   }
 
+  .emuna-swipe-hint-modal {
+    display: none !important;
+  }
+
   #result_list {
     min-width: 680px;
+  }
+
+  #result_list.emuna-mob-ready,
+  .tablero-table.emuna-mob-ready {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: auto !important;
   }
 
   #result_list th,
   #result_list td {
     white-space: nowrap;
+  }
+
+  table.emuna-mob-ready .emuna-mob-hide {
+    display: none !important;
+  }
+
+  table.emuna-mob-ready .emuna-col-vermas {
+    display: table-cell !important;
+    text-align: center;
+    white-space: nowrap !important;
+    width: 1%;
+    padding: 8px 6px !important;
+    vertical-align: middle;
+  }
+
+  #result_list.emuna-mob-ready th.emuna-mob-keep,
+  .tablero-table.emuna-mob-ready th.emuna-mob-keep {
+    white-space: normal !important;
+    height: auto !important;
+    min-width: 0 !important;
+    word-break: normal;
+    overflow-wrap: normal;
+    padding: 8px 6px !important;
+    vertical-align: middle;
+  }
+
+  #result_list.emuna-mob-ready td.emuna-mob-keep,
+  .tablero-table.emuna-mob-ready td.emuna-mob-keep {
+    white-space: normal !important;
+    height: auto !important;
+    min-width: 0 !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+    padding: 8px 6px !important;
+    vertical-align: middle;
+  }
+
+  #result_list.emuna-mob-ready td span[style*="border-radius"],
+  #result_list.emuna-mob-ready td a[style*="border-radius"] {
+    white-space: normal !important;
+    max-width: 100%;
+    line-height: 1.25;
   }
 
   .emuna-inline-scroll table {

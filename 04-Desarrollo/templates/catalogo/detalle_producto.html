@@ -313,8 +313,10 @@
         </span>
         <button type="button"
                 @click="modalZoomAbierto = false"
-                class="text-xs font-bold uppercase tracking-wider bg-white/10 hover:bg-neon hover:text-ink px-3 py-1">
-          Cerrar ✕
+                aria-label="Cerrar imagen"
+                title="Cerrar imagen"
+                class="w-8 h-8 flex items-center justify-center shrink-0 text-sm font-bold leading-none bg-white/10 hover:bg-neon hover:text-ink">
+          ✕
         </button>
       </div>
       <div class="max-h-[80vh] overflow-auto bg-neutral-100 flex items-center justify-center">

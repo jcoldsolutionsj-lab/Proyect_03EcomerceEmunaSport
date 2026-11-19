@@ -480,8 +480,8 @@ class VarianteAdmin(UnfoldModelAdmin):
                 "fg": "#991B1B",
                 "bg": "#FEE2E2",
                 "border": "#EF4444",
-                "etiqueta_lista": "🔴 [ROJO] Agotado (0)",
-                "etiqueta_ficha": "🔴 [ROJO] Agotado: 0 und.",
+                "etiqueta_lista": "🔴 Agotado (0)",
+                "etiqueta_ficha": "🔴 Agotado: 0 und.",
             }
         from apps.nucleo.selectores import obtener_configuracion_tienda
 
@@ -495,15 +495,15 @@ class VarianteAdmin(UnfoldModelAdmin):
                 "fg": "#92400E",
                 "bg": "#FEF3C7",
                 "border": "#F59E0B",
-                "etiqueta_lista": f"🟡 [ÁMBAR] Bajo ({obj.cantidad_stock})",
-                "etiqueta_ficha": f"🟡 [ÁMBAR] Stock bajo: {obj.cantidad_stock} und. (mín. {umbral_efectivo})",
+                "etiqueta_lista": f"🟡 Bajo ({obj.cantidad_stock})",
+                "etiqueta_ficha": f"🟡 Stock bajo: {obj.cantidad_stock} und. (mín. {umbral_efectivo})",
             }
         return {
             "fg": "#166534",
             "bg": "#DCFCE7",
             "border": "#22C55E",
-            "etiqueta_lista": f"🟢 [VERDE] {obj.cantidad_stock} und.",
-            "etiqueta_ficha": f"🟢 [VERDE] Stock actual: {obj.cantidad_stock} und.",
+            "etiqueta_lista": f"🟢 {obj.cantidad_stock} und.",
+            "etiqueta_ficha": f"🟢 Stock actual: {obj.cantidad_stock} und.",
         }
 
     def stock_semaforo(self, obj: Variante) -> str:
@@ -777,11 +777,11 @@ class MovimientoStockAdmin(UnfoldModelAdmin):
         """
         if obj.cantidad > 0:
             return format_html(
-                '<span style="color:#166534;background:#DCFCE7;border:1px solid #22C55E;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟢 [VERDE] Entrada +{}</span>',
+                '<span style="color:#166534;background:#DCFCE7;border:1px solid #22C55E;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🟢 Entrada +{}</span>',
                 obj.cantidad,
             )
         return format_html(
-            '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🔴 [ROJO] Salida {}</span>',
+            '<span style="color:#991B1B;background:#FEE2E2;border:1px solid #EF4444;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px;">🔴 Salida {}</span>',
             obj.cantidad,
         )
 

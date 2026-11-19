@@ -928,5 +928,230 @@ def test_seguimiento_en_vivo_contextual_y_tooltips_admin(datos_base: dict) -> No
     resp_var_cero = http_client.get(reverse("admin:catalogo_variante_change", args=[var_s.pk]))
     assert resp_var_cero.status_code == 200
     html_var_cero = resp_var_cero.content.decode("utf-8")
-    assert "🔴 [ROJO] Agotado: 0 und." in html_var_cero
-    assert "🟢 [VERDE] Stock actual: 0 und." not in html_var_cero
+    assert "🔴 Agotado: 0 und." in html_var_cero
+    assert "🟢 Stock actual: 0 und." not in html_var_cero
+
+
+@pytest.mark.django_db
+def test_barra_seguimiento_adaptada_por_modalidad_y_botones_cotizado_con_tooltip(
+    datos_base: dict,
+) -> None:
+    """Verifica la barra adaptada por modalidad y los botones verde/azul con tooltip en /gestion/.
+
+    Qué hace:      Prueba 4 pasos en Punto de Encuentro/Recojo/Delivery Lima, 5 en Agencia, y audita
+                   los botones y tooltips de ayuda contextual en change_form para COTIZADO.
+    Va hacia:      Evita confusión de 'En Camino' en Lima y evita cierres prematuros a ENTREGADO.
+    Depende de:    obtener_pedido_publico, parcial_seguimiento_pedido.html y change_form.html.
+    Cuándo usarla: En la verificación integral del flujo MODALIDAD vs Estados.
+    Si no opera:   Falla si Punto de Encuentro muestra En Camino o faltan tooltips verde/azul.
+    """
+    richard = datos_base["richard"]
+    var_s = datos_base["var_s"]
+
+    # 1. PUNTO_ENCUENTRO nace COTIZADO con 4 pasos reales (sin "En Camino")
+    ses_pe: dict = {}
+    agregar_al_carrito(sesion=ses_pe, variante_id=var_s.id, cantidad=1)
+    ped_pe = crear_pedido_web(
+        sesion=ses_pe,
+        datos_cliente={
+            "cliente_nombre": "Cliente Punto Lima",
+            "cliente_telefono": "987654321",
+            "tipo_entrega": TipoEntrega.PUNTO_ENCUENTRO,
+            "punto_encuentro": "Estación Angamos",
+            "cf_turnstile_response": "mock-token-local",
+            "acepta_privacidad": True,
+        },
+    )
+
+    cliente_http = Client()
+    url_pe = reverse("pedidos:detalle_pedido", kwargs={"codigo": ped_pe.codigo})
+    html_pe_cot = cliente_http.get(f"{url_pe}?parcial=1").content.decode("utf-8")
+    assert "sm:grid-cols-4" in html_pe_cot
+    assert "1. Recibido" in html_pe_cot
+    assert "2. Listo para coordinar" in html_pe_cot
+    assert "3. Pago Confirmado" in html_pe_cot
+    assert "4. Entregado" in html_pe_cot
+    assert "En Camino" not in html_pe_cot
+
+    # 2. En /gestion/, COTIZADO para PUNTO_ENCUENTRO muestra botón verde y azul aclarados + toltip.png
+    cliente_http.force_login(richard)
+    resp_ficha_pe = cliente_http.get(reverse("admin:pedidos_pedido_change", args=[ped_pe.pk]))
+    assert resp_ficha_pe.status_code == 200
+    html_ficha_pe = resp_ficha_pe.content.decode("utf-8")
+    assert "Ya entregué y cobré en persona (→ ENTREGADO)" in html_ficha_pe
+    assert "Pagó por adelantado (Separar → PAGADO)" in html_ficha_pe
+    assert "/static/toltip.png" in html_ficha_pe
+    assert "Botón verde (1 paso):" in html_ficha_pe
+    assert "Botón azul (2 pasos):" in html_ficha_pe
+
+    # 3. Pago adelantado (botón azul -> PAGADO) adapta mensaje y barra de Punto de Encuentro
+    confirmar_pago(pedido=ped_pe, metodo_pago="YAPE", usuario=richard)
+    html_pe_pagado = cliente_http.get(f"{url_pe}?parcial=1").content.decode("utf-8")
+    assert "¡Tus camisetas ya están separadas!" in html_pe_pagado
+    assert "En Camino" not in html_pe_pagado
+
+    # 4. Cierre en 1 paso en otro pedido PUNTO_ENCUENTRO deja los 4 pasos con check sin En Camino
+    ses_pe2: dict = {}
+    agregar_al_carrito(sesion=ses_pe2, variante_id=var_s.id, cantidad=1)
+    ped_pe2 = crear_pedido_web(
+        sesion=ses_pe2,
+        datos_cliente={
+            "cliente_nombre": "Cliente Contraentrega",
+            "cliente_telefono": "987654322",
+            "tipo_entrega": TipoEntrega.PUNTO_ENCUENTRO,
+            "punto_encuentro": "Centro Cívico",
+            "cf_turnstile_response": "mock-token-local",
+            "acepta_privacidad": True,
+        },
+    )
+    confirmar_pago_y_entregar(pedido=ped_pe2, metodo_pago="YAPE", usuario=richard)
+    html_pe2_entregado = cliente_http.get(
+        reverse("pedidos:detalle_pedido", kwargs={"codigo": ped_pe2.codigo}) + "?parcial=1"
+    ).content.decode("utf-8")
+    assert "4. Entregado" in html_pe2_entregado
+    assert "En Camino" not in html_pe2_entregado
+    assert html_pe2_entregado.count("✓</span>") == 4
+
+    # 5. DELIVERY_LIMA usa 4 pasos reales sin En Camino (mientras no pase por ENVIADO)
+    ses_del: dict = {}
+    agregar_al_carrito(sesion=ses_del, variante_id=var_s.id, cantidad=1)
+    ped_del = crear_pedido_web(
+        sesion=ses_del,
+        datos_cliente={
+            "cliente_nombre": "Cliente Delivery Lima",
+            "cliente_telefono": "987654323",
+            "tipo_entrega": TipoEntrega.DELIVERY_LIMA,
+            "punto_encuentro": "Av. Brasil 1500, Jesús María",
+            "cf_turnstile_response": "mock-token-local",
+            "acepta_privacidad": True,
+        },
+    )
+    html_del = cliente_http.get(
+        reverse("pedidos:detalle_pedido", kwargs={"codigo": ped_del.codigo}) + "?parcial=1"
+    ).content.decode("utf-8")
+    assert "sm:grid-cols-4" in html_del
+    assert "2. Cotizado / Listo" in html_del
+    assert "En Camino" not in html_del
+
+    # 6. AGENCIA conserva 5 pasos (con 4. En Camino) y ficha COTIZADO solo muestra confirmación de pago
+    ses_ag: dict = {}
+    agregar_al_carrito(sesion=ses_ag, variante_id=var_s.id, cantidad=1)
+    ped_ag = crear_pedido_web(
+        sesion=ses_ag,
+        datos_cliente={
+            "cliente_nombre": "Cliente Provincia",
+            "cliente_telefono": "987654324",
+            "cliente_dni": "44556677",
+            "tipo_entrega": TipoEntrega.AGENCIA,
+            "agencia": AgenciaEnvio.SHALOM,
+            "agencia_ciudad": "Trujillo",
+            "agencia_referencia": "Av. América",
+            "cf_turnstile_response": "mock-token-local",
+            "acepta_privacidad": True,
+        },
+    )
+    cotizar_envio(pedido=ped_ag, costo_envio=Decimal("15.00"), usuario=richard)
+    html_ag = cliente_http.get(
+        reverse("pedidos:detalle_pedido", kwargs={"codigo": ped_ag.codigo}) + "?parcial=1"
+    ).content.decode("utf-8")
+    assert "sm:grid-cols-5" in html_ag
+    assert "4. En Camino" in html_ag
+    assert "5. Entregado" in html_ag
+
+    html_ficha_ag = cliente_http.get(
+        reverse("admin:pedidos_pedido_change", args=[ped_ag.pk])
+    ).content.decode("utf-8")
+    assert "Confirmar Pago Verificado (→ PAGADO)" in html_ficha_ag
+    assert "Ya entregué y cobré en persona" not in html_ficha_ag
+    assert "/static/toltip.png" in html_ficha_ag
+    assert "¿Cómo avanza mi pedido en esta modalidad? Ver ejemplo paso a paso" in html_ag
+
+    # 7. En PAGADO de AGENCIA ofrece botones "Tomar foto" (cámara) y "Adjuntar galería/PDF" + auto cobrado
+    confirmar_pago(pedido=ped_ag, metodo_pago="YAPE", usuario=richard)
+    html_ficha_ag_pag = cliente_http.get(
+        reverse("admin:pedidos_pedido_change", args=[ped_ag.pk])
+    ).content.decode("utf-8")
+    assert "📷 Tomar foto" in html_ficha_ag_pag
+    assert "📎 Adjuntar galería/PDF" in html_ficha_ag_pag
+    assert "capture','environment'" in html_ficha_ag_pag
+    assert "id_env_cobrado" in html_ficha_ag_pag
+
+    # 8. En /pedidos/checkout/ aparece la ventana de ayuda con ejemplos por modalidad
+    ses_chk = cliente_http.session
+    agregar_al_carrito(sesion=ses_chk, variante_id=var_s.id, cantidad=1)
+    ses_chk.save()
+    html_chk = cliente_http.get(reverse("pedidos:checkout")).content.decode("utf-8")
+    assert "¿Cómo funciona cada modalidad? Ver ejemplos" in html_chk
+    assert "¿Qué pasará con tu pedido según la modalidad?" in html_chk
+
+    # 9. Rutas dinámicas /PanelDueño/, /PanelDueno/ y /PanelAdministrativo/ + Modal de Perfil de Usuario
+    resp_dueno = cliente_http.get("/PanelDueño/")
+    assert resp_dueno.status_code == 200
+    html_dueno = resp_dueno.content.decode("utf-8")
+    assert "emuna-user-profile-modal" in html_dueno
+    assert "emuna-avatar-badge" in html_dueno
+    assert "PanelDueño" in html_dueno
+    assert "Richard Alexander Ramos Hinostroza" in html_dueno
+    assert "Dueño Operativo – Emuná Sport" in html_dueno
+    assert "48348911" in html_dueno
+
+    resp_dueno_tab = cliente_http.get("/PanelDueno/tablero/")
+    assert resp_dueno_tab.status_code == 200
+    assert "Tablero Operativo y Alertas" in resp_dueno_tab.content.decode("utf-8")
+
+    User = get_user_model()
+    jonathan = User.objects.get(username="jonathan")
+    cliente_http.force_login(jonathan)
+    resp_admin_panel = cliente_http.get("/PanelAdministrativo/")
+    assert resp_admin_panel.status_code == 200
+    html_admin_panel = resp_admin_panel.content.decode("utf-8")
+    assert "PanelAdministrativo" in html_admin_panel
+    assert "Jonathan Vera" in html_admin_panel
+    assert "Superadministrador Técnico y Operativo" in html_admin_panel
+    assert "emuna-user-profile-modal" in html_admin_panel
+
+    # 10. En POS (/PanelAdministrativo/pedidos/pedido/venta-presencial/) solo POS queda activo, NO Pedidos web
+    resp_pos_panel = cliente_http.get("/PanelAdministrativo/pedidos/pedido/venta-presencial/")
+    assert resp_pos_panel.status_code == 200
+    html_pos_panel = resp_pos_panel.content.decode("utf-8")
+    import re
+
+    m_pos = re.search(
+        r'<a href="[^"]*/pedidos/pedido/venta-presencial/"[^>]*class="([^"]*)"',
+        html_pos_panel,
+    )
+    m_ped = re.search(
+        r'<a href="[^"]*/pedidos/pedido/"[^>]*class="([^"]*)"',
+        html_pos_panel,
+    )
+    assert m_pos is not None and "active" in m_pos.group(1).split()
+    assert m_ped is not None and "active" not in m_ped.group(1).split()
+    assert "#0A0A0A" in html_pos_panel
+    assert "#39FF14" in html_pos_panel
+
+    # 11. Cabeceras de Pedidos y Envíos separan botones en escritorio y móvil sin clases faltantes
+    for ruta_lista in (
+        "/PanelAdministrativo/pedidos/pedido/",
+        "/PanelAdministrativo/pedidos/envio/",
+    ):
+        html_lista = cliente_http.get(ruta_lista).content.decode("utf-8")
+        assert "emuna-header-userlinks" in html_lista
+        assert "emuna-top-profile-text-short" in html_lista
+        assert "gap-2.5" not in html_lista
+        if ruta_lista.endswith("/pedidos/pedido/"):
+            assert "emuna-object-tools-row" in html_lista
+            assert "emuna-btn-pos-texto-short" in html_lista
+        assert "emuna-row-detail-modal" in html_lista
+        assert "emuna-btn-vermas" in html_lista
+        assert 'id="emuna-mobile-quicknav"' in html_lista
+        assert "centrarTabActivo" in html_lista
+        assert "emuna-nav-progress" in html_lista
+        assert "emuna-breadcrumb-wrap" in html_lista
+        assert "emuna-crumb-trail-mobile" in html_lista
+        assert html_lista.count('data-emuna-close-row="1"') == 1
+        assert html_lista.count('data-emuna-close-perfil="1"') == 1
+
+    # 12. Ficha detalle (change_form) usa breadcrumb responsivo sin aplastar títulos en móvil
+    html_ped_det = cliente_http.get(f"/PanelAdministrativo/pedidos/pedido/{ped_pe.pk}/change/").content.decode("utf-8")
+    assert "emuna-crumb-trail-mobile" in html_ped_det
+    assert "emuna-crumb-current" in html_ped_det

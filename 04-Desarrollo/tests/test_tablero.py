@@ -286,7 +286,8 @@ def test_alertas_stock_bajo_umbral_global_y_pendientes_antiguos(
 
     admin_var = VarianteAdmin(Variante, AdminSite())
     html_bajo = admin_var.stock_semaforo(var_baja_global)
-    assert "ÁMBAR" in html_bajo
+    assert "🟡 Bajo (2)" in html_bajo
+    assert "[ÁMBAR]" not in html_bajo
     assert admin_var.umbral_col(var_baja_global) == "Global"
 
 
@@ -351,6 +352,9 @@ def test_vistas_tablero_permisos_ui_movil_y_csv_seguro(escenario_tablero: dict) 
     assert "emuna-table-scroll" in html_tab
     assert "emuna-swipe-hint" in html_tab
     assert "EMU-CRIT01-S" in html_tab
+    assert "Clientes VIP y Top Compradores" in html_tab
+    assert 'data-emuna-mob-modal="Alertas de Stock"' in html_tab
+    assert 'data-emuna-mob-modal="Cliente VIP"' in html_tab
 
     # CSV de ventas: BOM UTF-8, sin caché, descarga y sanitización de fórmula '=HYPERLINK...'
     resp_csv_v = c_richard.get(f"{url_csv_ventas}?periodo=hoy")

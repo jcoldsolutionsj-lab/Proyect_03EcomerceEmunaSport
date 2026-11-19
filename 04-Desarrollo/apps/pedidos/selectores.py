@@ -249,6 +249,17 @@ def _construir_siguiente_paso_publico(
             "es_cta_principal": True,
         }
     if est == EstadoPedido.PAGADO:
+        if pedido.tipo_entrega in (TipoEntrega.PUNTO_ENCUENTRO, TipoEntrega.RECOJO):
+            return {
+                "badge": "✅ Pago Confirmado · Prenda Separada",
+                "titulo": "¡Tus camisetas ya están separadas!",
+                "descripcion": (
+                    f"¡Gracias! Tu pago por S/ {pedido.total:.2f} fue confirmado y tus camisetas "
+                    "quedaron separadas en almacén. Coordina o confirma con Richard la entrega en mano por WhatsApp."
+                ),
+                "texto_boton": "COORDINAR ENTREGA POR WHATSAPP",
+                "es_cta_principal": False,
+            }
         return {
             "badge": "✅ Pago Confirmado · Separado",
             "titulo": "Richard está preparando tu paquete",
@@ -299,6 +310,121 @@ def _construir_siguiente_paso_publico(
     }
 
 
+def _construir_pasos_seguimiento_publico(*, pedido: Pedido) -> list[dict[str, Any]]:
+    """Construye los pasos de la barra de progreso pública adaptados a la modalidad del pedido.
+
+    Qué hace:      Define las etapas reales según TipoEntrega (4 en Lima/Recojo, 5 en Agencia).
+    Va hacia:      Retorna la lista ordenada para templates/pedidos/parcial_seguimiento_pedido.html.
+    Depende de:    EstadoPedido y TipoEntrega.
+    Cuándo usarla: En obtener_pedido_publico() al renderizar /pedidos/<codigo>/.
+    Si no opera:   Si un pedido llegara a ENVIADO de forma excepcional, agrega el paso En Camino.
+    """
+    estado = pedido.estado
+    tipo = pedido.tipo_entrega
+
+    if tipo == TipoEntrega.AGENCIA:
+        pasos_def = [
+            (EstadoPedido.NUEVO, "Recibido"),
+            (EstadoPedido.COTIZADO, "Cotizado / Listo"),
+            (EstadoPedido.PAGADO, "Pago Confirmado"),
+            (EstadoPedido.ENVIADO, "En Camino"),
+            (EstadoPedido.ENTREGADO, "Entregado"),
+        ]
+    else:
+        etiquetas_paso_2 = {
+            TipoEntrega.PUNTO_ENCUENTRO: "Listo para coordinar",
+            TipoEntrega.RECOJO: "Listo para recojo",
+        }
+        pasos_def = [
+            (EstadoPedido.NUEVO, "Recibido"),
+            (EstadoPedido.COTIZADO, etiquetas_paso_2.get(tipo, "Cotizado / Listo")),
+            (EstadoPedido.PAGADO, "Pago Confirmado"),
+            (EstadoPedido.ENTREGADO, "Entregado"),
+        ]
+        if estado == EstadoPedido.ENVIADO:
+            pasos_def.insert(3, (EstadoPedido.ENVIADO, "En Camino"))
+
+    estados_orden = [codigo for codigo, _ in pasos_def]
+    indice_actual = estados_orden.index(estado) if estado in estados_orden else -1
+
+    pasos: list[dict[str, Any]] = []
+    for idx, (codigo_paso, etiqueta) in enumerate(pasos_def, start=1):
+        es_actual = codigo_paso == estado
+        completado = indice_actual > (idx - 1) or (
+            estado == EstadoPedido.ENTREGADO and codigo_paso == EstadoPedido.ENTREGADO
+        )
+        pasos.append(
+            {
+                "numero": idx,
+                "codigo": codigo_paso,
+                "etiqueta": etiqueta,
+                "es_actual": es_actual,
+                "completado": completado,
+            }
+        )
+    return pasos
+
+
+def _construir_guia_modalidad_publica(*, tipo_entrega: str) -> dict[str, str]:
+    """Construye la explicación y ejemplo paso a paso de la modalidad elegida por el cliente.
+
+    Qué hace:      Describe qué estados recorre el pedido en la web y qué hace Richard en gestión.
+    Va hacia:      Retorna diccionario con titulo, resumen_flujo y ejemplo_practico para la vista pública.
+    Depende de:    TipoEntrega.
+    Cuándo usarla: En obtener_pedido_publico() para la ventana/desplegable de ayuda del cliente.
+    Si no opera:   Retorna la guía estándar de Punto de Encuentro.
+    """
+    guias = {
+        TipoEntrega.PUNTO_ENCUENTRO: {
+            "titulo": "📍 Punto de Encuentro en Lima (4 etapas · Envío S/ 0.00)",
+            "resumen_flujo": (
+                "1. Recibido → 2. Listo para coordinar (nace aquí con envío S/ 0.00) → "
+                "3. Pago Confirmado (si yapeas antes para separar o al momento de vernos) → 4. Entregado."
+            ),
+            "ejemplo_practico": (
+                "Ejemplo: Pides tu camiseta indicando 'Estación La Cultura'. Coordinas hora con Richard por WhatsApp; "
+                "si deseas asegurar tu talla antes de la cita puedes yapear por adelantado (pasa a Pago Confirmado), "
+                "o pagarle ahí mismo al recibir tu prenda en mano (pasa directo a Entregado)."
+            ),
+        },
+        TipoEntrega.AGENCIA: {
+            "titulo": "🚚 Envío a Provincia por Agencia Shalom / Olva (5 etapas)",
+            "resumen_flujo": (
+                "1. Recibido (falta cotizar flete) → 2. Cotizado / Listo (ya ves el total con QR Yape) → "
+                "3. Pago Confirmado (stock separado) → 4. En Camino (N° Orden registrado) → 5. Entregado."
+            ),
+            "ejemplo_practico": (
+                "Ejemplo (Trujillo / Arequipa / Cusco): Registras tu pedido con tu DNI de 8 dígitos. Richard cotiza el "
+                "flete, tú yapeas tus camisetas y envías la captura; Richard deja el paquete en Shalom/Olva, sube la "
+                "boleta y te envía por WhatsApp tu N° de Orden y tu Clave secreta de 4 dígitos para recoger."
+            ),
+        },
+        TipoEntrega.DELIVERY_LIMA: {
+            "titulo": "🛵 Delivery en Lima Metropolitana (4 etapas)",
+            "resumen_flujo": (
+                "1. Recibido (Richard revisa tu distrito) → 2. Cotizado / Listo (tarifa de delivery sumada al total) → "
+                "3. Pago Confirmado (camisetas separadas tras tu Yape) → 4. Entregado en tu dirección."
+            ),
+            "ejemplo_practico": (
+                "Ejemplo: Indicas tu dirección exacta en Lima. Richard cotiza el costo del delivery según tu distrito, "
+                "realizas el Yape usando el QR de tu pedido y recibes el paquete en tu domicilio o centro de trabajo."
+            ),
+        },
+        TipoEntrega.RECOJO: {
+            "titulo": "🏪 Recojo Acordado con Richard (4 etapas · Envío S/ 0.00)",
+            "resumen_flujo": (
+                "1. Recibido → 2. Listo para recojo (nace aquí con envío S/ 0.00) → "
+                "3. Pago Confirmado → 4. Entregado al recoger."
+            ),
+            "ejemplo_practico": (
+                "Ejemplo: Tu pedido nace listo sin recargo de envío. Escribes a Richard por WhatsApp para acordar "
+                "el horario de recojo y pagas con Yape o efectivo al retirar tus camisetas."
+            ),
+        },
+    }
+    return guias.get(tipo_entrega, guias[TipoEntrega.PUNTO_ENCUENTRO])
+
+
 def obtener_pedido_publico(*, codigo: str) -> dict[str, Any]:
     """Obtiene los datos públicos de un pedido excluyendo DNI completo, teléfono y claves privadas.
 
@@ -332,6 +458,8 @@ def obtener_pedido_publico(*, codigo: str) -> dict[str, Any]:
     siguiente_paso = _construir_siguiente_paso_publico(
         pedido=pedido, envio_publico=envio_publico
     )
+    pasos_seguimiento = _construir_pasos_seguimiento_publico(pedido=pedido)
+    guia_modalidad = _construir_guia_modalidad_publica(tipo_entrega=pedido.tipo_entrega)
     es_estado_terminal = pedido.estado in (
         EstadoPedido.ENTREGADO,
         EstadoPedido.CANCELADO,
@@ -363,6 +491,8 @@ def obtener_pedido_publico(*, codigo: str) -> dict[str, Any]:
         "metodo_yape": metodo_yape,
         "envio_publico": envio_publico,
         "siguiente_paso": siguiente_paso,
+        "pasos_seguimiento": pasos_seguimiento,
+        "guia_modalidad": guia_modalidad,
         "es_estado_terminal": es_estado_terminal,
     }
 
