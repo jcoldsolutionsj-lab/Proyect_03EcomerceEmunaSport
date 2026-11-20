@@ -492,3 +492,94 @@ def test_normalizacion_equipo_y_busqueda_ia_en_cache(django_assert_num_queries) 
     var_m.save()
     res_agotado = buscar_productos_para_ia("tienen portugal?")
     assert res_agotado == []
+
+
+@pytest.mark.django_db
+def test_admin_producto_adjuntar_foto_optimiza_a_webp_unico(client, settings) -> None:
+    """Verifica que al adjuntar una foto JPG en ProductoAdmin se optimice a 1 WebP sin exigir URL manual."""
+    from io import BytesIO
+
+    from django.contrib.auth import get_user_model
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from PIL import Image
+
+    admin_user = get_user_model().objects.create_superuser(
+        username="admin_fotos",
+        email="admin@emunasport.pe",
+        password="ClaveAdminSegura2026!",
+    )
+    client.force_login(admin_user)
+    cat = Categoria.objects.create(nombre="Selecciones", slug="selecciones", activa=True)
+    eq = Equipo.objects.create(
+        nombre="Argentina", slug="argentina", tipo=TipoEquipo.SELECCION, activo=True
+    )
+
+    buf = BytesIO()
+    Image.new("RGB", (1400, 1800), color=(20, 90, 200)).save(buf, format="JPEG")
+    foto_jpg = SimpleUploadedFile("alterna_frente.jpg", buf.getvalue(), content_type="image/jpeg")
+
+    url_add = reverse("admin:catalogo_producto_add")
+    res_get = client.get(url_add)
+    assert res_get.status_code == 200
+    assert 'type="file"' in res_get.content.decode("utf-8")
+
+    payload = {
+        "nombre": "ARGENTINA ALTERNA 2026",
+        "slug": "argentina-alterna-2026",
+        "sku": "EMU-ARG26-ALT",
+        "categoria": str(cat.pk),
+        "equipo": str(eq.pk),
+        "equipacion": TipoEquipacion.ALTERNA,
+        "temporada": "2026-2027",
+        "palabras_clave": "argentina, alterna, negra, azul",
+        "descripcion": "Camiseta alterna 2026.",
+        "precio_unidad": "55.00",
+        "precio_anterior": "69.90",
+        "activo": "on",
+        "destacado": "on",
+        "variantes-TOTAL_FORMS": "1",
+        "variantes-INITIAL_FORMS": "0",
+        "variantes-MIN_NUM_FORMS": "0",
+        "variantes-MAX_NUM_FORMS": "1000",
+        "variantes-0-talla": "M",
+        "variantes-0-sku": "EMU-ARG26-ALT-M",
+        "variantes-0-cantidad_stock": "5",
+        "variantes-0-umbral_stock_bajo": "3",
+        "variantes-0-activa": "on",
+        "reglas_precio-TOTAL_FORMS": "0",
+        "reglas_precio-INITIAL_FORMS": "0",
+        "reglas_precio-MIN_NUM_FORMS": "0",
+        "reglas_precio-MAX_NUM_FORMS": "1000",
+        "imagenes-TOTAL_FORMS": "1",
+        "imagenes-INITIAL_FORMS": "0",
+        "imagenes-MIN_NUM_FORMS": "0",
+        "imagenes-MAX_NUM_FORMS": "1000",
+        "imagenes-0-orden": "1",
+        "imagenes-0-es_principal": "on",
+        "imagenes-0-ruta_original": "",
+        "imagenes-0-texto_alternativo": "",
+        "imagenes-0-archivo_imagen": foto_jpg,
+    }
+    res_post = client.post(url_add, payload)
+    assert res_post.status_code == 302
+
+    prod = Producto.objects.get(slug="argentina-alterna-2026")
+    img = prod.imagenes.get()
+    assert img.ruta_original.endswith(".webp")
+    assert img.ruta_original == img.ruta_miniatura == img.ruta_detalle
+    assert "ARGENTINA ALTERNA 2026" in img.texto_alternativo
+
+    archivos_webp = list((Path(settings.MEDIA_ROOT) / "webp").glob("*.webp"))
+    assert len(archivos_webp) == 1
+    with Image.open(archivos_webp[0]) as out_img:
+        assert out_img.width == 800
+
+    # Bloqueo de archivo peligroso .svg en el inline
+    svg_malo = SimpleUploadedFile("xss.svg", b"<svg onload=alert(1)></svg>", content_type="image/svg+xml")
+    payload_svg = {**payload, "slug": "argentina-svg-malo", "sku": "EMU-ARG-SVG"}
+    payload_svg["variantes-0-sku"] = "EMU-ARG-SVG-M"
+    payload_svg["imagenes-0-archivo_imagen"] = svg_malo
+    res_svg = client.post(url_add, payload_svg)
+    assert res_svg.status_code == 200
+    assert "no permitido por seguridad" in res_svg.content.decode("utf-8")
+    assert not Producto.objects.filter(slug="argentina-svg-malo").exists()

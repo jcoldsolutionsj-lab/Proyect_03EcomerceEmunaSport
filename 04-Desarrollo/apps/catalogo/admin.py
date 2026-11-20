@@ -25,33 +25,118 @@ from .models import (
     Variante,
 )
 from .selectores import MAX_PRODUCTOS_DESTACADOS
+from .servicios import (
+    procesar_y_subir_archivo_imagen_producto,
+    validar_y_convertir_bytes_a_webp,
+)
+
+
+class ImagenProductoInlineForm(forms.ModelForm):
+    """Formulario inline para adjuntar foto directa (auto-WebP + R2) o pegar URL manual."""
+
+    archivo_imagen = forms.FileField(
+        required=False,
+        label="Adjuntar foto (auto WebP)",
+        help_text="Sube JPG, PNG o WebP desde PC/celular: se comprime automático a 1 WebP (~800px) en R2.",
+        widget=forms.ClearableFileInput(
+            attrs={
+                "accept": "image/jpeg,image/png,image/webp,image/*",
+                "style": "max-width:210px;font-size:12px;",
+            }
+        ),
+    )
+    ruta_original = forms.CharField(
+        max_length=255,
+        required=False,
+        label="URL directa (opcional)",
+        widget=forms.TextInput(
+            attrs={"placeholder": "Se llena solo al subir foto o pega https://..."}
+        ),
+    )
+
+    class Meta:
+        model = ImagenProducto
+        fields = (
+            "archivo_imagen",
+            "orden",
+            "es_principal",
+            "ruta_original",
+            "texto_alternativo",
+        )
+
+    def clean(self) -> dict[str, Any]:
+        """Valida que exista un archivo adjunto válido o una URL manual antes de persistir."""
+        cleaned_data = super().clean()
+        if cleaned_data.get("DELETE"):
+            return cleaned_data
+
+        archivo = cleaned_data.get("archivo_imagen")
+        ruta = str(cleaned_data.get("ruta_original") or "").strip()
+
+        if archivo:
+            archivo.seek(0)
+            bytes_archivo = archivo.read()
+            archivo.seek(0)
+            try:
+                validar_y_convertir_bytes_a_webp(
+                    contenido_bytes=bytes_archivo,
+                    nombre_archivo=getattr(archivo, "name", "foto.jpg"),
+                )
+            except ValidationError as exc:
+                self.add_error("archivo_imagen", exc)
+                return cleaned_data
+            if not ruta:
+                cleaned_data["ruta_original"] = "__pendiente_subida_r2__"
+        elif not ruta:
+            if self.instance and self.instance.pk and self.instance.ruta_original:
+                cleaned_data["ruta_original"] = self.instance.ruta_original
+            elif self.has_changed():
+                self.add_error(
+                    "archivo_imagen",
+                    "Adjunta una fotografía o pega una URL directa.",
+                )
+        return cleaned_data
 
 
 class ImagenProductoInline(UnfoldTabularInline):
-    """Permite gestionar las fotos del producto en la misma pantalla del producto."""
+    """Permite gestionar y subir las fotos del producto directo en la misma pantalla."""
 
     model = ImagenProducto
+    form = ImagenProductoInlineForm
     extra = 1
+    readonly_fields = ("vista_previa",)
     tooltip_titulo = (
         "Fotografías que verá el cliente en la tienda para este modelo de camiseta. "
-        "Marca una como principal y ordena con 0, 1, 2..."
+        "Adjunta tu foto directo (se optimiza a WebP automáticamente en Cloudflare R2) "
+        "o pega un enlace si ya lo tienes subido."
     )
     tooltips_columnas = {
-        "orden": "Posición en la galería (0 aparece primero).",
+        "vista_previa": "Vista previa de la foto actual guardada.",
+        "archivo_imagen": "Adjunta una foto JPG/PNG/WebP: al guardar se comprime a 1 WebP (~800px) en R2.",
+        "orden": "Posición en la galería (1 aparece primero).",
         "es_principal": "Si está marcada, esta foto será la portada en el catálogo y tarjetas.",
-        "ruta_original": "Archivo o URL de la foto en alta resolución.",
-        "ruta_miniatura": "Archivo o URL de miniatura optimizada para el catálogo.",
-        "ruta_detalle": "Archivo o URL para la vista ampliada del producto.",
-        "texto_alternativo": "Descripción corta de la imagen (accesibilidad y SEO).",
+        "ruta_original": "Opcional si subes foto: se llena automático con la URL de R2, o puedes pegar una URL manual.",
+        "texto_alternativo": "Descripción corta (SEO). Si lo dejas vacío se completa automáticamente.",
     }
     fields = (
+        "vista_previa",
+        "archivo_imagen",
         "orden",
         "es_principal",
         "ruta_original",
-        "ruta_miniatura",
-        "ruta_detalle",
         "texto_alternativo",
     )
+
+    @admin.display(description="Actual")
+    def vista_previa(self, obj: ImagenProducto) -> str:
+        """Muestra una miniatura cuadrada de la imagen actual si ya existe."""
+        url = obj.url_miniatura if obj and obj.pk else ""
+        if not url:
+            return "—"
+        return format_html(
+            '<img src="{}" alt="" style="width:46px;height:46px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1;" />',
+            url,
+        )
 
 
 class VarianteInline(UnfoldTabularInline):
@@ -348,6 +433,67 @@ class ProductoAdmin(UnfoldModelAdmin):
     prepopulated_fields = {"slug": ("nombre",)}
     list_per_page = 15
     inlines = [VarianteInline, ReglaPrecioInline, ImagenProductoInline]
+
+    def save_formset(
+        self,
+        request: HttpRequest,
+        form: Any,
+        formset: Any,
+        change: bool,
+    ) -> None:
+        """Procesa fotos adjuntadas en ImagenProductoInline optimizándolas a 1 WebP único en R2."""
+        if formset.model is not ImagenProducto:
+            super().save_formset(request, form, formset, change)
+            return
+
+        producto_padre = form.instance
+        instancias = formset.save(commit=False)
+        for obj_borrado in formset.deleted_objects:
+            obj_borrado.delete()
+
+        archivos_por_instancia: dict[int, Any] = {}
+        for inline_form in formset.forms:
+            if not inline_form.is_valid():
+                continue
+            cd = inline_form.cleaned_data
+            if cd.get("DELETE"):
+                continue
+            archivo = cd.get("archivo_imagen")
+            if archivo:
+                archivos_por_instancia[id(inline_form.instance)] = archivo
+
+        subidas_webp = 0
+        for idx, instancia in enumerate(instancias, start=1):
+            archivo = archivos_por_instancia.get(id(instancia))
+            if archivo is not None:
+                url_webp = procesar_y_subir_archivo_imagen_producto(
+                    archivo_subido=archivo,
+                    slug_producto=producto_padre.slug or "camiseta",
+                    orden=instancia.orden or idx,
+                )
+                instancia.ruta_original = url_webp
+                instancia.ruta_miniatura = url_webp
+                instancia.ruta_detalle = url_webp
+                subidas_webp += 1
+            else:
+                url_manual = (instancia.ruta_original or "").strip()
+                if url_manual and url_manual != "__pendiente_subida_r2__":
+                    if not instancia.ruta_miniatura:
+                        instancia.ruta_miniatura = url_manual
+                    if not instancia.ruta_detalle:
+                        instancia.ruta_detalle = url_manual
+            if not instancia.texto_alternativo:
+                instancia.texto_alternativo = (
+                    f"{producto_padre.nombre} – Vista {instancia.orden or idx} Emuná Sport"
+                )
+            instancia.save()
+
+        formset.save_m2m()
+        if subidas_webp:
+            messages.success(
+                request,
+                f"Se optimizaron y subieron {subidas_webp} foto(s) a WebP (800px) en Cloudflare R2.",
+            )
 
     @admin.display(
         description=encabezado_con_tooltip(

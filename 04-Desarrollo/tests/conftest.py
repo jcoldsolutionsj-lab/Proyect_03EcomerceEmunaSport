@@ -16,4 +16,6 @@ def aislar_media_y_cache_en_tests(settings, tmp_path) -> None:
     media_tmp = tmp_path / "media_test"
     media_tmp.mkdir(parents=True, exist_ok=True)
     settings.MEDIA_ROOT = str(media_tmp)
+    settings.USE_S3_STORAGE = False
+    settings.R2_PUBLIC_URL = ""
     cache.clear()
