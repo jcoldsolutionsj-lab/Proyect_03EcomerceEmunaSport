@@ -116,13 +116,18 @@ class Command(BaseCommand):
             "Vista de espalda con dorsal oficial MESSI 10 microperforado",
         ]
         for idx in range(1, 6):
+            ruta_webp_arg = (
+                f"productos-demo/{carpeta_arg}/webp/argentina_{idx}.webp"
+                if carpeta_arg == "ARGENTINA 2026 - 2027"
+                else f"productos-demo/{carpeta_arg}/webp/argentina_{idx}_detalle.webp"
+            )
             ImagenProducto.objects.update_or_create(
                 producto=argentina,
                 orden=idx,
                 defaults={
                     "ruta_original": f"{prefijo_orig}/argentina_{idx}.jpg",
-                    "ruta_miniatura": f"productos-demo/{carpeta_arg}/webp/argentina_{idx}_miniatura.webp",
-                    "ruta_detalle": f"productos-demo/{carpeta_arg}/webp/argentina_{idx}_detalle.webp",
+                    "ruta_miniatura": ruta_webp_arg,
+                    "ruta_detalle": ruta_webp_arg,
                     "texto_alternativo": textos_alt_argentina[idx - 1],
                     "es_principal": idx == 1,
                 },
@@ -257,13 +262,18 @@ class Command(BaseCommand):
                 },
             )
             idx_foto = item["foto_orden"]
+            ruta_webp_item = (
+                f"productos-demo/{carpeta_arg}/webp/argentina_{idx_foto}.webp"
+                if carpeta_arg == "ARGENTINA 2026 - 2027"
+                else f"productos-demo/{carpeta_arg}/webp/argentina_{idx_foto}_detalle.webp"
+            )
             ImagenProducto.objects.update_or_create(
                 producto=prod,
                 orden=1,
                 defaults={
                     "ruta_original": f"{prefijo_orig}/argentina_{idx_foto}.jpg",
-                    "ruta_miniatura": f"productos-demo/{carpeta_arg}/webp/argentina_{idx_foto}_miniatura.webp",
-                    "ruta_detalle": f"productos-demo/{carpeta_arg}/webp/argentina_{idx_foto}_detalle.webp",
+                    "ruta_miniatura": ruta_webp_item,
+                    "ruta_detalle": ruta_webp_item,
                     "texto_alternativo": f"{prod.nombre} – Vista principal",
                     "es_principal": True,
                 },

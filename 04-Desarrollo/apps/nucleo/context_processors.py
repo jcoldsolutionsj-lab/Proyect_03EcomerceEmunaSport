@@ -66,23 +66,23 @@ def contexto_tienda(request: HttpRequest) -> dict[str, Any]:
             "banners/banner_3.mp4", "banners-inicio/banner_3.mp4"
         ),
         "URL_CALIDAD_1": _url_recurso_r2_o_static(
-            "webp/argentina_1_detalle.webp",
-            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_1_detalle.webp",
+            "webp/argentina_1.webp",
+            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_1.webp",
         ),
         "URL_CALIDAD_2": _url_recurso_r2_o_static(
-            "webp/argentina_2_detalle.webp",
-            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_2_detalle.webp",
+            "webp/argentina_2.webp",
+            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_2.webp",
         ),
         "URL_CALIDAD_3": _url_recurso_r2_o_static(
-            "webp/argentina_3_detalle.webp",
-            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_3_detalle.webp",
+            "webp/argentina_3.webp",
+            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_3.webp",
         ),
         "URL_CALIDAD_4": _url_recurso_r2_o_static(
-            "webp/argentina_4_detalle.webp",
-            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_4_detalle.webp",
+            "webp/argentina_4.webp",
+            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_4.webp",
         ),
         "URL_CALIDAD_5": _url_recurso_r2_o_static(
-            "webp/argentina_5_detalle.webp",
-            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_5_detalle.webp",
+            "webp/argentina_5.webp",
+            "productos-demo/ARGENTINA 2026 - 2027/webp/argentina_5.webp",
         ),
     }

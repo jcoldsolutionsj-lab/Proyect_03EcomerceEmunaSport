@@ -416,7 +416,7 @@ def test_vitrina_mas_vendidas_portada_periodos_y_fotos(client, monkeypatch) -> N
     assert "🔥 Más vendida de hoy" in html
     assert "🔥 Más vendida de la semana" in html
     assert "🔥 Más vendida del mes" in html
-    assert "argentina_2_detalle.webp" in html
+    assert "argentina_2.webp" in html
     assert "max-w-[360px]" in html
 
     # 3. Sin duplicar camiseta: si Argentina también supera en Semana (6 uds hoy), fusiona Hoy y Semana
